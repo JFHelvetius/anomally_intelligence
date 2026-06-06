@@ -6,9 +6,9 @@
 
 ## Sobre este repositorio
 
-AIP es un proyecto de horizonte largo (5+ años). Su primer artefacto no es código sino un cuerpo de decisiones arquitectónicas explícitas. Antes de escribir la primera línea queremos saber qué problema resuelve, qué propiedades no podrá violar nunca, y bajo qué condiciones el proyecto debería archivarse dignamente.
+AIP es un proyecto de horizonte largo (5+ años). Su construcción siguió un proceso ADR-first: antes de escribir la primera línea de código se redactaron 31 decisiones arquitectónicas explícitas (`docs/adr/`) que delimitan el alcance, las propiedades irrenunciables, y las condiciones de archivo digno. Con `v0.1.0` esa fundación arquitectónica produjo un primer artefacto ejecutable —el modelo de evidencia y procedencia, reproducible bit a bit— sin abandonar la disciplina documental original.
 
-Toda esa conversación vive en [docs/adr/](docs/adr/). Si quieres entender el proyecto, ese es el único lugar donde empezar. El ADR-0000 es la brújula; todos los demás se alinean con él.
+Toda la conversación arquitectónica vive en [docs/adr/](docs/adr/). Si quieres entender el proyecto, ese es el único lugar donde empezar. El ADR-0000 es la brújula; todos los demás se alinean con él. ADR-0023 (Scope Reduction) congela el alcance V1; cualquier ampliación requiere ADR explícito de levantamiento.
 
 ## La pregunta central
 
@@ -41,7 +41,14 @@ El detalle vive en los ADRs.
 
 ## V1 ejecutable
 
-Una vez instalado el paquete (`pip install -e .` en el clone), tres comandos cubren la totalidad del alcance V1:
+Instalación canónica conforme a [ADR-0029](docs/adr/0029-runtime-language-decision.md) con [`uv`](https://github.com/astral-sh/uv) y el lockfile committeado:
+
+```sh
+# Desde un clone del repositorio:
+uv sync --frozen --all-extras
+```
+
+`uv sync --frozen` instala exactamente las versiones declaradas en `uv.lock` (sin re-resolver). Tras la instalación, tres comandos cubren la totalidad del alcance V1:
 
 ```sh
 aip evidence ingest <pdf> \
@@ -74,7 +81,7 @@ Distribuido bajo [Apache License 2.0](LICENSE). Uso comercial permitido. Cláusu
 
 ## Lengua
 
-La documentación inicial se escribe en español. Una traducción al inglés está prevista como prerrequisito de la primera release pública (ver ADR pendiente sobre internacionalización).
+La documentación se escribe en español. Una traducción al inglés se considerará cuando aparezca contribuyente angloparlante sostenido; ningún calendario está comprometido y ningún ADR vigente exige la traducción para una versión específica.
 
 ## No-objetivos
 

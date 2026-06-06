@@ -40,6 +40,13 @@ V1_TABLES: Final[tuple[str, ...]] = (
     "sources",
     "provenance",
     "provenance_steps",
+    # NOTA: ``authentication_assessments`` queda reservada por ADR-0015 pero
+    # permanece **vacía** en V1: ``AuthenticationAssessment`` está embebido
+    # en :class:`Evidence` (ADR-0023 §V1.3 lo consolida). El directorio se
+    # crea de todos modos porque entra en el cómputo de ``blobs_root`` /
+    # ``tables_root`` y por tanto contribuye al ``EXPECTED_DEMO_MANIFEST_HASH``
+    # pinned. Eliminarlo rompería reproducibilidad bit a bit sin ADR de
+    # levantamiento.
     "authentication_assessments",
 )
 """Tablas comprometidas por ADR-0023 §V1.3 + V1.4. Diferidas explícitamente:

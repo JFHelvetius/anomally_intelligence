@@ -25,11 +25,19 @@ on:
   pull_request:
     branches: [main]
 
+# Principio de mínimo privilegio: este workflow sólo lee el repositorio.
+# No publica releases, no escribe comentarios en PRs, no toca el container
+# registry. Si una acción transitiva intentara usar GITHUB_TOKEN para
+# operaciones de escritura, fallará en vez de actuar silenciosamente.
+permissions:
+  contents: read
+
 jobs:
   # ---- BLOQUEANTE: Ubuntu × Python 3.11/3.12 ------------------------------
   quality-gates:
     name: gates (Ubuntu / py${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -73,6 +81,7 @@ jobs:
     name: smoke (${{ matrix.os }} / py3.11)
     needs: quality-gates
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     continue-on-error: true
     strategy:
       fail-fast: false

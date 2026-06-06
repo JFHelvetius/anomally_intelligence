@@ -351,4 +351,31 @@ Este ADR se revisa si:
 
 ## Historial de enmiendas
 
-*Sin enmiendas a fecha de aceptación.*
+### Enmienda al pie — 2026-06-06 (post-cierre F1)
+
+Durante la implementación de V1 (commits Pre-F1 → `v0.1.0`), el layout real divergió del árbol descrito arriba en cinco puntos. Ninguna divergencia altera S1–S5 ni la separación por responsabilidad; se documentan aquí como **enmienda al pie** en vez de abrir ADR de levantamiento porque las cinco son consolidaciones que reducen superficie (no la amplían) y todas son **observables en el árbol committeado** de `v0.1.0`.
+
+**E1. `src/aip/archive.py` a nivel raíz del paquete.**
+La fachada de alto nivel que orquesta ingest/show/verify (consumida por `cli/` y por la API Python pública de ADR-0017) vive en `src/aip/archive.py`, no en un subpaquete. Razón: el módulo es delgado (compone `core/` + `storage/` + `audit/`) y meterlo en un subpaquete propio introduciría un nodo vacío sin ganar separación lógica. Conserva S1–S5: `archive.py` depende de las tres capas inferiores, ninguna depende de él.
+
+**E2. `src/aip/__main__.py` a nivel raíz (no en `cli/`).**
+Para que `python -m aip` funcione, el shim de entry point debe vivir en la raíz del paquete distribuible, no en un subpaquete. El módulo es de **dos líneas** y delega a `aip.cli.main:main`. `src/aip/cli/__main__.py` no existe; el ADR original lo ubicaba por error allí.
+
+**E3. Consolidaciones de `core/` por ADR-0023.**
+ADR-0023 §V1.3 consolidó tipos que el árbol original separaba:
+- `AuthenticationAssessment` queda **embebido** en `evidence.py` (sin `authentication.py`).
+- `Actor` queda **embebido** en `source.py` (sin `actor.py`).
+La tabla `authentication_assessments` se reserva en `V1_TABLES` (ADR-0015) pero permanece vacía en V1; ver nota en `src/aip/storage/layout.py:38`.
+
+**E4. CAOS implementado dentro de `layout.py` (no en `caos.py`).**
+Las primitivas del Content-Addressed Object Store (`caos_path_for`, `caos_relative_uri_for`, `ensure_archive_layout`) viven en `storage/layout.py` junto con las constantes de paths canónicos, no en `storage/caos.py`. Razón: el CAOS V1 es **convención de paths sin estado**, no un servicio con ciclo de vida propio. Separar `caos.py` introduciría import circular con `layout.py` o duplicación de constantes. Si en F2+ aparece lógica con estado (locking, GC, dedup), la división se reabrirá por ADR.
+
+**E5. Convención de naming de tests: `test_*.py` (no `*_test.py`).**
+El árbol original mostraba `demo_pipeline_test.py` y `manifest_hash_test.py`. La convención efectiva, alineada con el default de pytest y con C6 ("Tests reflejan el árbol de `src/`"), es **prefijo**: `test_demo_pipeline.py`, `test_manifest_hash.py`. No requiere configuración custom en `pyproject.toml`.
+
+**E6. `docs/models/` permanece vacío.**
+El directorio existe (heredado del árbol original) pero V1 no genera modelos UML/ER separados: el modelo canónico vive en los tipos Pydantic de `src/aip/core/`. ADR-0024 §formato canónico hace de los `schema_hash` la fuente de verdad del esquema, no de diagramas. El directorio se conserva por simetría con futuros ADRs de F2+ que sí podrían poblarlo (por ejemplo, esquemas de hipótesis o grafo).
+
+**Alineación P5 / P8:** ninguna de E1–E6 mueve bytes hasheados (los `EXPECTED_*_HASH` pinned se mantienen idénticos). E1–E5 son verificables leyendo `src/aip/` y `tests/`. E6 es un no-op observable como directorio vacío.
+
+**No requiere ADR de enmienda formal porque:** ninguna divergencia introduce dependencias nuevas, viola S1–S5, ni amplía el alcance V1 más allá de lo comprometido por ADR-0023. Son simplificaciones efectuadas durante implementación y consignadas aquí para que cualquier lector del ADR encuentre el árbol real sin trabajar con un mapa obsoleto.

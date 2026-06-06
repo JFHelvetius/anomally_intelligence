@@ -1,7 +1,7 @@
 # PROJECT_STATUS — Anomaly Intelligence Platform
 
-**Última actualización:** 2026-06-06 (cierre de Fase 1)
-**Estado del proyecto:** **Fase 1 cerrada · release `v0.1.0` publicado**
+**Última actualización:** 2026-06-06 (cierre de Fase 1 + tracks de mantenimiento C/B/A + auditoría post-release)
+**Estado del proyecto:** **Fase 1 cerrada · release `v0.1.0` publicado · drift documental post-audit cerrado**
 **Bus factor declarado:** 1 (ver ADR-0026 · próxima revisión semestral 2026-12-04)
 
 ---
@@ -11,7 +11,7 @@
 - **¿Qué es AIP hoy?** Un cuerpo de **32 ADRs aceptados** y un V1 ejecutable que ingesta evidencia, la direcciona por hash, registra procedencia y verifica integridad bit a bit. Demo cerrada con el Twining Memo (1947).
 - **¿Qué hace V1?** `aip evidence ingest <pdf> --source-id … --ingested-by …` → `aip evidence show <hash>` → `aip archive verify` → cadena reproducible.
 - **¿Qué NO hace V1?** Claims, hipótesis, conclusiones, grafo, timeline, geospatial, OSINT, búsqueda, HTTP API, LLM, enclave. Todos diferidos por ADR-0023 (recorte deliberado de alcance).
-- **¿Quality gates?** ruff (0 errores) + mypy strict (0 errores) + 248 tests pasando + 93.57% cobertura global. CI Ubuntu × Python 3.11/3.12 en cada push.
+- **¿Quality gates?** ruff (0 errores) + mypy strict (0 errores) + 264 tests pasando (incluye 16 property-based de Hypothesis sobre JCS y audit chain + 13 reproducibility con valores canónicos pinned) + 93.57% cobertura global. CI Ubuntu × Python 3.11/3.12 (bloqueante) + macOS-latest + Windows-latest (best-effort) con `uv sync --frozen` desde `uv.lock`.
 - **¿Próxima fase?** Ninguna comprometida. Mantenimiento de V1 con criterios D1/D2 del MAINTAINERS.md. Cualquier ampliación de alcance requiere ADR explícito de levantamiento de ADR-0023.
 
 ---
@@ -22,32 +22,60 @@
 
 ```
 anomaly-intelligence-platform/
-├── PROJECT_STATUS.md                       (este documento)
-├── README.md                                (resumen público)
-├── LICENSE                                  (Apache 2.0)
-├── MAINTAINERS.md                           (artefacto obligatorio ADR-0026 C1)
-└── docs/
-    ├── adr/
-    │   ├── README.md                        (índice de ADRs con estado de implementación V1)
-    │   ├── template.md                      (plantilla canónica)
-    │   ├── 0000-long-term-vision.md         (la brújula; con enmiendas al pie)
-    │   ├── 0001 .. 0022                     (bloque fundacional, 23 ADRs)
-    │   ├── 0023-scope-reduction.md          (recorte deliberado a V1)
-    │   ├── 0024-epistemic-honesty-amendment.md (7 límites operativos)
-    │   ├── 0025-neutrality-clarification.md (4 sesgos declarados; reformula P4)
-    │   ├── 0026-sustainable-stewardship.md  (5 compromisos operativos)
-    │   ├── 0027-graceful-archive-policy.md  (triggers temporales + procedimiento)
-    │   ├── 0028-license-reassessment.md     (reafirma Apache + CC BY-SA corpus)
-    │   ├── 0029-runtime-language-decision.md (Python 3.11+ + uv formalizado)
-    │   ├── 0030-repository-layout.md         (src layout + 4 subpaquetes)
-    │   └── 0031-testing-strategy.md          (unit/integration/reproducibility, sin red)
-    ├── phase-1/
-    │   ├── demo-evidence-selection.md       (Pre-F1.C: PDF canónico, S1–S7, P1–P5, V1–V3)
-    │   └── command-specification.md         (Pre-F1.D: contrato testeable de los 3 comandos)
-    ├── models/                              (vacío; reservado para fases futuras)
-    └── reviews/
-        ├── adr_red_team_review.md           (crítica hostil del 2026-06-03, intacta)
-        └── red_team_response.md             (informe formal de cierre 2026-06-04)
+├── PROJECT_STATUS.md                              (este documento)
+├── README.md                                       (resumen público)
+├── LICENSE                                         (Apache 2.0)
+├── MAINTAINERS.md                                  (artefacto obligatorio ADR-0026 C1)
+├── pyproject.toml                                  (PEP 621 + ruff + mypy + pytest config)
+├── uv.lock                                         (lockfile reproducible, ADR-0029 §M2)
+├── .python-version                                 (3.11 mínimo declarado)
+├── .gitignore .gitattributes                       (convenciones repo)
+├── .github/
+│   ├── workflows/ci.yml                            (ruff + mypy + pytest --cov, matrix Py 3.11/3.12 sobre Ubuntu + smoke macOS/Windows)
+│   ├── dependabot.yml                              (security-only)
+│   ├── pull_request_template.md                    (checklist de las 4 garantías)
+│   └── ISSUE_TEMPLATE/                             (bug, provenance-concern, config)
+├── docs/
+│   ├── adr/                                        (32 ADRs + README + template)
+│   │   ├── 0000–0022                               (23 fundacionales)
+│   │   ├── 0023–0028                               (6 enmiendas post-Red Team)
+│   │   └── 0029–0031                               (3 operativos Pre-F1)
+│   ├── phase-1/
+│   │   ├── demo-evidence-selection.md              (Pre-F1.C con pinned values)
+│   │   └── command-specification.md                (Pre-F1.D contrato CLI)
+│   ├── ethics-procedures/
+│   │   └── classified-material.md                  (procedimiento operacional honesto con capacidades V1)
+│   ├── legal-compliance.md                         (responsabilidad operador, asunción material público)
+│   ├── schema-migrations/
+│   │   └── README.md                               (plantilla canónica; cero migraciones a v0.1.0)
+│   └── reviews/
+│       ├── adr_red_team_review.md                  (crítica hostil 2026-06-03, intacta)
+│       ├── red_team_response.md                    (informe formal de cierre)
+│       └── phase-1-review.md                       (cierre formal de F1)
+├── src/aip/                                        (paquete distribuible)
+│   ├── __init__.py __main__.py _version.py archive.py errors.py py.typed
+│   ├── audit/      (log, verify)
+│   ├── cli/        (main, evidence_commands, archive_commands)
+│   ├── core/       (hashing, evidence, source, provenance)
+│   └── storage/    (layout, manifest, tables)
+├── tests/
+│   ├── conftest.py
+│   ├── data/
+│   │   ├── README.md
+│   │   └── twining-memo-1947-09-23.pdf             (250 022 bytes, SHA-256 65539d95…)
+│   ├── integration/test_demo_pipeline.py
+│   ├── reproducibility/   (test_jcs, test_audit_chain, test_manifest_hash)
+│   └── unit/
+│       ├── core/          (test_hashing, test_evidence, test_source, test_provenance)
+│       ├── storage/       (test_layout, test_manifest, test_tables, test_tables_corrupt)
+│       ├── audit/         (test_log, test_verify)
+│       ├── cli/           (test_main)
+│       ├── properties/    (test_hashing_properties, test_audit_properties — Hypothesis)
+│       ├── test_archive.py
+│       └── test_paso_0_smoke.py
+└── scripts/                                        (utilidades auxiliares, no producción)
+    ├── README.md
+    └── fetch_demo_fixture.py                       (helper Pre-F1.C, stdlib-only)
 ```
 
 ### Total ADRs aprobados: 32
