@@ -60,18 +60,18 @@ anomaly-intelligence-platform/
 
 | Documento | ADR que lo exige | Estado |
 |---|---|---|
-| `MAINTAINERS.md` | ADR-0026 C1 | **Creado 2026-06-04** |
-| `docs/phase-1/demo-evidence-selection.md` | Pre-F1.C | **Creado 2026-06-04** (pinned values pendientes — acción puntual del mantenedor) |
+| `MAINTAINERS.md` | ADR-0026 C1 | **Creado 2026-06-04** (extendido 2026-06-06 con quality gates + branch protection plan) |
+| `docs/phase-1/demo-evidence-selection.md` | Pre-F1.C | **Creado 2026-06-04** (pinned values completados 2026-06-06) |
 | `docs/phase-1/command-specification.md` | Pre-F1.D | **Creado 2026-06-04** |
-| `docs/ethics-procedures/` | ADR-0026 C4 | Pendiente (no crítico para F1; sí antes de cualquier ingestión que no sea el fixture de demo) |
-| `docs/ethics-procedures/classified-material.md` | ADR-0026 §RTR §8.3 | Pendiente (mismo criterio) |
-| `docs/legal-compliance.md` | ADR-0019 | Pendiente (mismo criterio) |
-| `docs/osint-code-of-practice.md` | ADR-0014 | Diferido (fuera de V1) |
+| `docs/ethics-procedures/classified-material.md` | ADR-0026 C4 + RTR §8.3 | **Creado 2026-06-06** (track A de mantenimiento) |
+| `docs/legal-compliance.md` | ADR-0019 | **Creado 2026-06-06** (track A) |
+| `docs/schema-migrations/README.md` | ADR-0016 | **Creado 2026-06-06** (track A; directorio inicial sin migraciones) |
+| `docs/reviews/phase-1-review.md` | ADR-0004 §F1 cierre | **Creado 2026-06-06** |
+| `docs/osint-code-of-practice.md` | ADR-0014 | Diferido (fuera de V1; entra cuando se levante ADR-0023 sobre `aip.osint`) |
 | `docs/vocabulary/` | ADR-0011, ADR-0025 | Diferido (fuera de V1) |
 | `docs/visualization-guidelines.md` | ADR-0012, ADR-0013 | Diferido (fuera de V1) |
-| `docs/schema-migrations/` | ADR-0016 | Pendiente (vacío al inicio; se llena con cambios reales) |
 
-Para implementación de F1 strictu sensu, los únicos documentos bloqueantes están **creados**. Los pendientes restantes son obligaciones para fases posteriores, no para abrir F1.
+Para V1 strictu sensu, **todos los documentos comprometidos por ADRs aceptados están creados**. Los diferidos son obligaciones de fases que aún no se han abierto y no las tiene que cumplir V1.
 
 ---
 
