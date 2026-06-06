@@ -1,0 +1,354 @@
+# ADR-0030: Repository Layout — estructura física del repositorio para V1
+
+**Estado:** Aceptado
+**Fecha:** 2026-06-04
+**Autor:** AIP — autor fundador
+**Supersede a:** ninguno
+**Relacionado con:** ADR-0017, ADR-0023, ADR-0029, ADR-0031
+
+---
+
+## Contexto
+
+Hasta este ADR, el repositorio contiene exclusivamente documentación:
+
+```
+anomaly-intelligence-platform/
+├── LICENSE
+├── MAINTAINERS.md
+├── PROJECT_STATUS.md
+├── README.md
+└── docs/
+    ├── adr/...
+    ├── models/        (vacío)
+    ├── phase-1/...
+    └── reviews/...
+```
+
+Antes de escribir la primera línea de código, conviene decidir:
+
+- Dónde vive el código del paquete `aip`.
+- Dónde viven los tests.
+- Dónde viven los scripts auxiliares, fixtures, datos de ejemplo.
+- Cómo se separan componentes lógicos del paquete sin caer en sobre-modularización prematura.
+- Qué convenciones se aplican a nombres, imports, y exportación pública.
+
+Una decisión tardía sobre layout es una refactorización costosa. Una decisión temprana, formalizada, evita la refactorización.
+
+ADR-0023 (Scope Reduction) compromete tres comandos: `evidence ingest`, `evidence show`, `archive verify`. ADR-0017 declara API Python como fuente de verdad semántica con CLI delgada encima. ADR-0029 fija Python 3.11+ con uv y pyproject.toml. Este ADR define la geometría física que materializa esos compromisos.
+
+## Decisión
+
+El repositorio adopta el **src layout estándar de Python** con un solo paquete distribuible (`aip`) y tres subpaquetes que reflejan la separación natural de V1:
+
+```
+anomaly-intelligence-platform/
+├── LICENSE
+├── MAINTAINERS.md
+├── PROJECT_STATUS.md
+├── README.md
+├── pyproject.toml                 # PEP 621, dependencias, entry points
+├── uv.lock                        # lockfile reproducible
+├── ruff.toml                      # linting/format config (o sección en pyproject)
+├── .gitignore
+├── .python-version                # 3.11 mínimo declarado
+├── src/
+│   └── aip/                       # único paquete distribuible
+│       ├── __init__.py            # exporta API pública estable
+│       ├── _version.py            # versión del software
+│       ├── cli/
+│       │   ├── __init__.py
+│       │   ├── __main__.py        # entry point `python -m aip`
+│       │   ├── main.py            # dispatch principal de la CLI
+│       │   ├── evidence_commands.py
+│       │   └── archive_commands.py
+│       ├── core/                  # modelo de evidencia y dominio
+│       │   ├── __init__.py
+│       │   ├── hashing.py         # SHA-256, BLAKE3 opcional, JCS
+│       │   ├── identifiers.py     # ULID, aip: URI
+│       │   ├── evidence.py        # tipo Evidence, EvidenceKind, EvidenceStatus
+│       │   ├── source.py          # tipo Source, AuthorityLevel, SourceKind
+│       │   ├── provenance.py      # Provenance, ProvenanceStep
+│       │   ├── authentication.py  # AuthenticationAssessment, AuthStatus
+│       │   └── actor.py           # Actor mínimo
+│       ├── storage/               # persistencia local
+│       │   ├── __init__.py
+│       │   ├── caos.py            # content-addressed object store en filesystem
+│       │   ├── tables.py          # capa Parquet/DuckDB
+│       │   ├── manifest.py        # ArchiveManifest + cómputo
+│       │   └── layout.py          # paths convencionales del archive
+│       ├── audit/                 # audit log
+│       │   ├── __init__.py
+│       │   ├── log.py             # append-only con hash chain
+│       │   └── verify.py          # verificación de la cadena
+│       └── errors.py              # jerarquía de excepciones tipadas
+├── tests/
+│   ├── conftest.py                # fixtures pytest compartidos
+│   ├── data/                      # fixtures físicos versionados (pequeños)
+│   │   └── README.md              # describe qué hay y por qué
+│   ├── unit/
+│   │   ├── core/
+│   │   ├── storage/
+│   │   ├── audit/
+│   │   └── cli/
+│   ├── integration/
+│   │   └── demo_pipeline_test.py  # PDF → ingest → show → verify
+│   └── reproducibility/
+│       └── manifest_hash_test.py  # mismo input → mismo hash
+├── docs/
+│   ├── adr/
+│   ├── models/
+│   ├── phase-1/
+│   └── reviews/
+└── scripts/                       # utilidades auxiliares; no código de producción
+    └── README.md                  # describe qué hay
+```
+
+Esta estructura es deliberadamente compacta: cuatro subpaquetes en `src/aip/`, una raíz limpia, un solo paquete distribuible.
+
+## Justificación
+
+### Por qué src layout y no flat layout
+
+Un `src/` separado garantiza que los tests **no importan accidentalmente** desde el directorio del proyecto sin pasar por la instalación del paquete. Eso obliga a que la suite de tests refleje el comportamiento real del paquete instalado, no la geometría local del checkout. Es defensa estructural contra el bug clásico "funciona en el repo pero no cuando se instala".
+
+### Por qué un solo paquete `aip` y no múltiples
+
+Múltiples paquetes (e.g., `aip-core`, `aip-cli`, `aip-storage`) introducen overhead de empaquetado, versionado independiente, dependencias internas declaradas. Para V1 con 8 piezas implementadas, no hay beneficio. La unificación es defensa contra over-engineering bajo bus factor = 1.
+
+Si en fases posteriores la separación se justifica (paquete `aip-osint` opcional, paquete `aip-graph` opcional), un ADR de enmienda la introduce con motivación concreta.
+
+### Por qué cuatro subpaquetes (`cli`, `core`, `storage`, `audit`)
+
+Los cuatro reflejan la **separación natural por responsabilidad** de los 8 componentes comprometidos en V1:
+
+- `core` → modelo de dominio (4–6 tipos). Sin I/O, sin filesystem, sin dependencias pesadas. Es la pieza más fácil de testear unitariamente y la que define la semántica.
+- `storage` → toda la persistencia. CAOS, Parquet, manifest. Es la pieza que toca disco.
+- `audit` → audit log con hash chain. Aislado porque su política (append-only, sin mutación) merece código separado.
+- `cli` → adapter delgado sobre `core` + `storage` + `audit`. Su test confirma que la CLI **no añade lógica**, solo orquesta.
+
+Esta separación responde a ADR-0017 ("API Python como fuente de verdad, CLI delgado encima") materializada físicamente: `cli/` no implementa lógica de dominio.
+
+### Por qué `errors.py` en raíz de `aip/`
+
+Las excepciones cruzan capas. Centralizarlas en raíz evita ciclos de import entre subpaquetes y hace clara la superficie de errores pública.
+
+### Por qué `__main__.py` en `cli/`
+
+Permite `python -m aip` además de la entry point del console_script. Útil para entornos donde la entry point no está en `PATH`.
+
+### Por qué `tests/` fuera de `src/`
+
+Práctica estándar Python. Tests no se distribuyen con el paquete. La separación es nítida.
+
+### Por qué tres categorías de tests (`unit/`, `integration/`, `reproducibility/`)
+
+Refleja el ADR-0031 (Testing Strategy):
+
+- `unit/` → tests rápidos, aislados, deterministas.
+- `integration/` → demo de cierre F1 ejecutada como test automatizado. Confirma que pipeline completo funciona.
+- `reproducibility/` → tests específicos de bit-a-bit hash y manifest. Confirman P5.
+
+La separación física permite ejecutar subsets sin coste cognitivo.
+
+### Por qué `tests/data/` con README explicativo
+
+Cualquier fixture binario versionado lleva justificación. Sin README, los fixtures se vuelven artefactos opacos.
+
+### Por qué `scripts/` separado y declarado no-producción
+
+Cualquier utilidad auxiliar (herramientas de desarrollo, scripts de empaquetado, generadores de fixtures) vive en `scripts/`. No se distribuye, no entra en el paquete, no está sujeta al mismo nivel de tests. La separación es honesta: cierto código tiene status de "ayuda al mantenedor", no de "código de producción".
+
+V1 puede empezar con `scripts/` vacío salvo su README.
+
+### Por qué `.python-version`
+
+Compatibilidad con pyenv y herramientas que respetan el fichero. Declaración secundaria de la versión mínima (la primaria está en `pyproject.toml`).
+
+### Por qué no carpeta `notebooks/`
+
+Notebooks no son código de producción. Si surgen notebooks (exploración, demostración), viven en `scripts/notebooks/` o en repositorio separado. No se mezclan con código de paquete.
+
+### Por qué no carpeta `examples/` en V1
+
+Los ejemplos viven en la documentación de la demo (`docs/phase-1/`). Una carpeta `examples/` separada añade superficie sin necesidad en V1.
+
+## Convenciones
+
+### C1. Nombres de módulos
+
+- snake_case para módulos.
+- Nombres descriptivos sin abreviaturas crípticas: `provenance.py`, no `prov.py`.
+- Singular para módulos que definen un tipo principal: `evidence.py`, no `evidences.py`.
+
+### C2. API pública vs. privada
+
+- Símbolos públicos exportados desde `aip/__init__.py`.
+- Símbolos internos viven con prefijo `_` o en módulos no re-exportados.
+- Re-exportación de un símbolo desde múltiples lugares se documenta como conveniencia, no como duplicación.
+
+### C3. Imports
+
+- Imports absolutos siempre: `from aip.core.evidence import Evidence`, no `from .evidence import Evidence` entre subpaquetes.
+- Imports relativos permitidos solo dentro del mismo subpaquete (vecinos cercanos).
+- `__init__.py` de un subpaquete re-exporta los símbolos públicos del subpaquete.
+
+### C4. Tipos y anotaciones
+
+- Anotaciones obligatorias en toda función pública (firma + retorno).
+- Anotaciones obligatorias en atributos públicos de clases.
+- Modelos de dominio (Evidence, Source, etc.) usan dataclasses o pydantic; la elección concreta se decide al implementar con criterio: dataclasses si la validación necesaria es mínima; pydantic si necesitamos validación al construir desde JSON.
+
+### C5. Organización del orden dentro de un módulo
+
+Cuando un módulo es no trivial, el orden esperado:
+
+1. Docstring del módulo.
+2. Imports (stdlib → terceros → propios).
+3. Constantes.
+4. Tipos auxiliares (enums, type aliases).
+5. Clases principales.
+6. Funciones de alto nivel.
+7. Helpers privados (prefijo `_`).
+
+Esta convención reduce la fricción de lectura.
+
+### C6. Tests reflejan el árbol de `src/`
+
+`tests/unit/core/test_evidence.py` testea `src/aip/core/evidence.py`. La correspondencia 1:1 es deseable pero no obligatoria.
+
+### C7. Sin estado global
+
+Ningún módulo expone singleton mutable (sin `current_archive`, sin caches globales modificables). El handle del archivo se pasa como argumento o se construye explícitamente. Esto facilita tests y operaciones multi-archive (un usuario operando dos archivos a la vez).
+
+### C8. Sin reflexión mágica
+
+Sin metaclasses propias, sin decoradores que muten clases en tiempo de import, sin lookups dinámicos sobre namespaces. Python permite muchas cosas; este proyecto se mantiene en el subconjunto explícito por defecto. Excepciones se documentan.
+
+### C9. Encoding y line endings
+
+- UTF-8 sin BOM en todos los ficheros de texto.
+- LF como line ending en todos los ficheros de código y documentación.
+- `.gitattributes` declara la normalización.
+
+## Separación de módulos: principios
+
+### S1. `core/` no depende de `storage/` ni de `cli/` ni de `audit/`
+
+`core/` define el modelo de dominio. Es la pieza más pura. Si `core/` depende de capas externas, la testabilidad y la reusabilidad colapsan.
+
+### S2. `storage/` puede depender de `core/`
+
+`storage/` persiste tipos de `core/`. Esa dirección de dependencia es legítima.
+
+### S3. `audit/` puede depender de `core/` y `storage/`
+
+`audit/` lee/escribe usando primitivas de storage y referencia tipos de core.
+
+### S4. `cli/` depende de todo lo demás
+
+`cli/` es el adapter. Importa de los tres subpaquetes y orquesta.
+
+### S5. Sin dependencias circulares
+
+Cualquier import circular detectado en CI es bug, no estilo.
+
+Estos cinco principios son verificables automáticamente con herramientas (e.g., `import-linter`). La verificación se integra en CI conforme a ADR-0031.
+
+## Alineación con alcance V1
+
+Esta estructura **materializa exactamente** los 8 componentes comprometidos por ADR-0023:
+
+| Componente V1 (ADR-0023)          | Vive en                                 |
+|-----------------------------------|-----------------------------------------|
+| CLI con 3 comandos                | `src/aip/cli/`                          |
+| API Python equivalente            | `src/aip/core/`, `src/aip/storage/`     |
+| Modelo de evidencia (ADR-0006)    | `src/aip/core/evidence.py`              |
+| Modelo de fuente y procedencia    | `src/aip/core/source.py`, `provenance.py` |
+| CAOS en filesystem                | `src/aip/storage/caos.py`               |
+| Almacenamiento Parquet            | `src/aip/storage/tables.py`             |
+| ArchiveManifest y URI `aip:`      | `src/aip/storage/manifest.py`, `src/aip/core/identifiers.py` |
+| Audit log con hash chain          | `src/aip/audit/`                        |
+
+No hay módulos para componentes diferidos (`claim/`, `hypothesis/`, `graph/`, `temporal/`, `spatial/`, `osint/`, `search/`, `http/`, `enclave/`, `llm/`). Su ausencia es deliberada.
+
+## Lo que no entra en V1
+
+Para preservar la disciplina del recorte:
+
+- **Sin `src/aip/claim/`**. Diferido por ADR-0023.
+- **Sin `src/aip/hypothesis/`**. Diferido por ADR-0023.
+- **Sin `src/aip/graph/`**. Diferido por ADR-0023.
+- **Sin `src/aip/temporal/`** ni `src/aip/spatial/`. Diferidos por ADR-0023.
+- **Sin `src/aip/osint/`**. Diferido por ADR-0023.
+- **Sin `src/aip/search/`**. Diferido por ADR-0023.
+- **Sin `src/aip/http/`**. Diferido por ADR-0023.
+- **Sin `src/aip/enclave/`**. Diferido por ADR-0023.
+- **Sin `src/aip/llm/`**. Diferido por ADR-0023.
+
+Cuando estos componentes entren en su fase correspondiente, su layout se decidirá por ADR de enmienda específico. Por defecto, cada uno será un subpaquete adicional bajo `src/aip/`. Si alguno crece a paquete distribuible separado, requerirá decisión explícita.
+
+## Consecuencias
+
+**Positivas**
+- Estructura clara, audita por cualquier lector externo.
+- Compatible con herramientas estándar de Python (pip install, uv, ruff, mypy, pytest).
+- Dependencias internas explícitas y verificables.
+- Sin sobreingeniería: cuatro subpaquetes para 8 componentes.
+
+**Negativas**
+- Cualquier reorganización futura (e.g., extraer `core/` como paquete propio) tendrá coste de refactorización.
+- La cardinalidad pequeña de subpaquetes puede sentirse "incompleta" comparada con proyectos similares en otras industrias.
+
+**Neutras**
+- La separación física no impide cohesión lógica: nada impide que un tipo de `core/` y su persistencia en `storage/` evolucionen juntos en un mismo PR.
+
+## Declaración de limitaciones
+
+Este ADR **no decide**:
+
+- Si los modelos de dominio usan dataclasses o pydantic (decisión de implementación local).
+- Versiones exactas de librerías (decisión del `uv.lock`).
+- Política de versionado SemVer del paquete (cubierto en ADR-0016 a nivel de esquema; la versión del paquete sigue convención SemVer estándar implícita).
+
+Estas decisiones se documentan al implementar.
+
+## Declaración de riesgo de mantenedor único
+
+Bajo mantenedor único:
+
+- La disciplina de respetar S1–S5 depende de la auto-disciplina del mantenedor.
+- Sin revisión por pares interna, una dependencia circular o un acoplamiento inadecuado puede colarse hasta CI.
+- Mitigación: la verificación automática de imports en CI compensa parcialmente la falta de revisión humana.
+
+## Trigger de revisión
+
+Este ADR se revisa si:
+
+- Alguno de los componentes diferidos entra en fase de implementación (cada uno trae su propio ADR de layout).
+- Surge necesidad de paquetes distribuibles separados.
+- Aparece colaborador externo cuyo perfil sugiera reorganización beneficiosa.
+
+## Alineación con ADR-0000
+
+**Propiedades afectadas:** P5, P6, P8.
+
+**Cómo se alinean:**
+- **P5 (reproducibilidad):** layout claro facilita reproducir el build desde el lockfile.
+- **P6 (local-first):** ninguna parte de la estructura depende de servicios externos.
+- **P8 (documentación):** este ADR documenta una decisión hasta ahora no formalizada.
+
+**Tensión:** ninguna nueva.
+
+## Referencias
+
+- Python Packaging Authority. *Packaging Python Projects* (src layout).
+- PEP 621 (pyproject.toml metadata).
+- import-linter. Verificación automática de dependencias entre módulos.
+- `orbital-sentinel` ADR-0003 (src layout + uv) como prior art coherente.
+
+---
+
+## Historial de enmiendas
+
+*Sin enmiendas a fecha de aceptación.*
