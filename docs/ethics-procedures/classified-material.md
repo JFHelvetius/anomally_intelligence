@@ -146,15 +146,26 @@ La entrada **no es una afirmación legal** sobre el estatus del documento. Es un
 
 ## 6. Material ya ingestado que aparece sospechoso post-ingesta
 
-Si después de ingerir material V1 (o futuro) emerge evidencia de que el material era clasificado vigente al momento de la ingestión:
+Si después de ingestar material emerge evidencia de que el material era clasificado vigente al momento de la ingestión, la respuesta del operador depende de lo que el código del proyecto puede ejecutar **en la versión que está usando**. Esta sección describe **solo** lo que V1 (`v0.1.0`) puede hacer; no describe capacidades futuras como si existieran.
 
-1. **No se borra el blob del CAOS.** [`ADR-0006 §P11`](../adr/0006-formal-evidence-model.md) y [`ADR-0024 §L2`](../adr/0024-epistemic-honesty-amendment.md) prohíben mutar evidencia raw. La inmutabilidad protege la cadena.
-2. El `EvidenceStatus` del registro afectado pasa a `quarantined` (valor existente en [`aip.core.evidence.EvidenceStatus`](../../src/aip/core/evidence.py)).
-3. El cambio de status se registra como entrada del audit log (acción `change_evidence_status` cuando esté implementada; en V1 se anota en `Evidence.notes` con prefijo `[CLASSIFIED_STATUS_REVISION]` hasta que el comando exista).
-4. Se documenta una entrada bajo §5 con `decision = P3a_no_ingest`, `followup.blob_disposition = ingested_as_<hash> · quarantined`.
-5. Cualquier sucesor que clone el archive recibe el blob con status `quarantined` y debe respetar el quarantine para sus propias decisiones.
+### 6.1 Lo que V1 NO puede hacer
 
-El quarantine no es "borrado dignified"; es marcaje honesto. La cadena de evidencia documenta tanto la ingestión original como la decisión posterior.
+V1 **no** tiene mecanismo programático para mutar una `Evidence` ya ingestada. `Evidence` está declarada `model_config = ConfigDict(frozen=True, extra="forbid")` en [`aip.core.evidence`](../../src/aip/core/evidence.py); ningún comando CLI (`aip evidence ingest|show`, `aip archive verify`) ni método de `Archive` transiciona su `status` ni añade contenido a `Evidence.notes`. Tampoco existe en V1 una acción `change_evidence_status` en [`aip.audit.log.ActionKind`](../../src/aip/audit/log.py) — la enumeración V1 solo contiene `ARCHIVE_BOOTSTRAP` e `INGEST_EVIDENCE`.
+
+La transición a `EvidenceStatus.QUARANTINED` aparece como **valor válido del enum** porque [`ADR-0006`](../adr/0006-formal-evidence-model.md) la diseña como parte del modelo completo, pero su valor por defecto al ingestar es `ACTIVE` y en V1 ningún code path la cambia. Cualquier mutación manual del fichero `tables/evidence/<hash>.parquet` rompe el `entry_hash` del audit log y el `archive_manifest_hash` pinned; los tests de tampering ([`test_*_mutation_breaks_chain`](../../tests/unit/properties/test_audit_properties.py) y [`test_verify_row_integrity_detects_tampered_payload`](../../tests/unit/storage/test_tables_corrupt.py)) detectarían exactamente esa mutación como ataque sobre la cadena de evidencia.
+
+### 6.2 Lo que V1 SÍ puede hacer
+
+El operador puede, **fuera del sistema**, ejecutar la siguiente respuesta operacional:
+
+1. **Detener la operación sobre el archive afectado.** No ingestar más material. No publicar snapshots. No compartir copias del archive.
+2. **Preservar el archive en su estado actual** sobre almacenamiento aislado (disco offline, carpeta retirada del uso operativo) para conservar la cadena de evidencia intacta. La inmutabilidad de [`ADR-0006 §P11`](../adr/0006-formal-evidence-model.md) sigue aplicando: **no se borra ningún blob del CAOS** ni se reescribe ningún fichero del archive.
+3. **Documentar la situación en un fichero de registro mantenido por el operador fuera del archive**, usando la plantilla YAML de §5. La entrada describe el material ingestado, la verificación post-hoc del estatus, y la decisión del operador. Esta documentación vive aparte del archive porque V1 no expone una vía interna para almacenarla.
+4. **Si el operador valora que el daño potencial de mantener el archive operativo supera el valor de su preservación**, puede retirarlo completamente del sistema operativo. La copia preservada en almacenamiento aislado (paso 2) cumple la función de auditoría. El `ARCHIVED.md` del proyecto ([`ADR-0027`](../adr/0027-graceful-archive-policy.md)) cubre el archivado del proyecto entero, no de un archive individual; el operador es responsable de su propio procedimiento de archivado para instancias.
+
+### 6.3 Cuándo este procedimiento dejará de aplicar tal cual
+
+Cuando un ADR habilite la transición programática de `EvidenceStatus` (probablemente bajo el levantamiento de [`ADR-0010`](../adr/0010-case-lifecycle.md) §lifecycle de caso, que ya define las transiciones, o un ADR específico sobre acciones del audit log que añada `change_evidence_status` a `ActionKind`), esta sección §6 se reescribirá para reflejar el nuevo mecanismo. Hasta entonces, el procedimiento V1 es el descrito en §6.2.
 
 ## 7. Lo que este procedimiento NO hace
 

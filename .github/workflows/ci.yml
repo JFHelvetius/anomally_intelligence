@@ -13,6 +13,11 @@ name: CI
 # en el Checks tab y dispara investigación si los pinned hashes divergen
 # entre plataformas (eso sería bug arquitectónico crítico, no degradación
 # aceptable — ver ADR-0024 §formato canónico vs. motor).
+#
+# Gestor de entornos: uv con uv.lock committeado (ADR-0029 §"Decisión" y §M2).
+# `uv sync --frozen` instala exactamente las versiones del lockfile sin
+# resolver de nuevo; las versiones de dependencias quedan pinned bit a bit
+# entre el repositorio y CI.
 
 on:
   push:
@@ -34,36 +39,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
-
-      - name: Install package + dev tooling
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+      - name: Install package + dev tooling (frozen)
+        run: uv sync --frozen --all-extras --python ${{ matrix.python-version }}
 
       - name: Ruff lint
-        run: ruff check src tests
+        run: uv run ruff check src tests
 
       - name: mypy strict
-        run: mypy
+        run: uv run mypy
 
       - name: pytest with coverage
-        run: pytest --cov=aip --cov-report=term --cov-fail-under=90 -q
+        run: uv run pytest --cov=aip --cov-report=term --cov-fail-under=90 -q
 
       - name: Show coverage summary
         if: always()
-        run: pytest --cov=aip --cov-report=term-missing -q --no-header
+        run: uv run pytest --cov=aip --cov-report=term-missing -q --no-header
 
   # ---- BEST-EFFORT: macOS arm64 + Windows x86_64 --------------------------
   # Reproducibilidad cross-platform: los pinned hashes DEBEN coincidir aquí.
@@ -84,15 +83,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.11"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
-      - name: Install package + dev tooling
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Install package + dev tooling (frozen)
+        run: uv sync --frozen --all-extras --python 3.11
 
       - name: pytest (sin coverage, sin lint — solo invariantes)
-        run: pytest -q
+        run: uv run pytest -q
