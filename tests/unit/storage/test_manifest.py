@@ -14,9 +14,13 @@ from aip.storage import layout
 from aip.storage.manifest import (
     ArchiveManifest,
     TableManifest,
+    _compute_blobs_root,
+    _list_blob_hashes,
     compute_manifest,
     write_manifest_atomic,
 )
+
+_EMPTY_BLOBS_ROOT_HASH = hash_object([])
 
 CANONICAL_GENERATED_AT = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.UTC)
 EMPTY_LIST_HASH = "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
@@ -263,3 +267,91 @@ def test_write_manifest_atomic_no_tmp_left(archive_root: Path) -> None:
     write_manifest_atomic(target, m)
     # No quedan ficheros .tmp sueltos en el directorio del archive root.
     assert not list(archive_root.glob("*.tmp"))
+
+
+# ---------------------------------------------------------------- _list_blob_hashes (CAOS corrupto)
+# Las ramas defensivas de ``_list_blob_hashes`` (skips silenciosos sobre
+# entradas que no encajan con el contrato del CAOS) sólo se ejercen cuando
+# el disco está parcialmente corrupto o cuando un agente externo dejó
+# residuos. Cubrir cada rama explícitamente blinda la canonicalización del
+# ``blobs_root`` (P5 — reproducibilidad bit a bit) ante FS anómalo.
+
+
+def test_list_blob_hashes_returns_empty_when_objects_dir_missing(
+    archive_root: Path,
+) -> None:
+    # Archive root vacío: no existe `objects/sha256/`.
+    assert _list_blob_hashes(archive_root) == []
+
+
+def test_list_blob_hashes_skips_files_at_prefix_level(archive_root: Path) -> None:
+    # Un fichero (no directorio) bajo `objects/sha256/` debe ser ignorado.
+    objects_root = archive_root / layout.OBJECTS_DIRNAME / layout.SHA256_ALGO_DIRNAME
+    objects_root.mkdir(parents=True, exist_ok=True)
+    rogue_file = objects_root / "rogue.txt"
+    rogue_file.write_bytes(b"not a prefix dir")
+
+    assert _list_blob_hashes(archive_root) == []
+
+
+def test_list_blob_hashes_skips_prefix_dirs_with_wrong_length(
+    archive_root: Path,
+) -> None:
+    # Subdirs de longitud != 2 chars deben ignorarse (no son prefijos CAOS).
+    objects_root = archive_root / layout.OBJECTS_DIRNAME / layout.SHA256_ALGO_DIRNAME
+    objects_root.mkdir(parents=True, exist_ok=True)
+    (objects_root / "x").mkdir()
+    (objects_root / "xyz").mkdir()
+    (objects_root / "xxxx").mkdir()
+
+    assert _list_blob_hashes(archive_root) == []
+
+
+def test_list_blob_hashes_skips_subdirs_under_prefix(archive_root: Path) -> None:
+    # Dentro de `aa/` un subdir (no fichero) debe ignorarse.
+    objects_root = archive_root / layout.OBJECTS_DIRNAME / layout.SHA256_ALGO_DIRNAME
+    prefix = objects_root / "aa"
+    prefix.mkdir(parents=True, exist_ok=True)
+    (prefix / "nested-dir").mkdir()
+
+    assert _list_blob_hashes(archive_root) == []
+
+
+def test_list_blob_hashes_skips_blob_names_with_wrong_length(
+    archive_root: Path,
+) -> None:
+    # Ficheros bajo `aa/` con nombre de longitud != 62 chars no son blobs.
+    objects_root = archive_root / layout.OBJECTS_DIRNAME / layout.SHA256_ALGO_DIRNAME
+    prefix = objects_root / "aa"
+    prefix.mkdir(parents=True, exist_ok=True)
+    (prefix / "too-short").write_bytes(b"x")
+    (prefix / ("z" * 61)).write_bytes(b"x")
+    (prefix / ("z" * 63)).write_bytes(b"x")
+
+    assert _list_blob_hashes(archive_root) == []
+
+
+def test_list_blob_hashes_picks_only_valid_caos_entries(archive_root: Path) -> None:
+    # Mezcla: una entrada válida + residuos varios. Sólo la válida sobrevive.
+    objects_root = archive_root / layout.OBJECTS_DIRNAME / layout.SHA256_ALGO_DIRNAME
+    valid_prefix = objects_root / "aa"
+    valid_prefix.mkdir(parents=True, exist_ok=True)
+    valid_blob_name = "b" * 62
+    (valid_prefix / valid_blob_name).write_bytes(b"payload")
+
+    # Residuos: prefix wrong length, file at prefix level, subdir bajo prefix
+    # válido, fichero bajo prefix válido con nombre wrong length.
+    (objects_root / "xyz").mkdir()
+    (objects_root / "rogue.txt").write_bytes(b"x")
+    (valid_prefix / "nested").mkdir()
+    (valid_prefix / ("z" * 60)).write_bytes(b"x")
+
+    assert _list_blob_hashes(archive_root) == ["aa" + valid_blob_name]
+
+
+def test_compute_blobs_root_on_empty_archive_is_canonical(
+    archive_root: Path,
+) -> None:
+    # ``blobs_root`` de un CAOS inexistente debe ser hash de lista vacía.
+    # Esto fija la invariante que entra en ``EXPECTED_EMPTY_MANIFEST_HASH``.
+    assert _compute_blobs_root(archive_root) == _EMPTY_BLOBS_ROOT_HASH

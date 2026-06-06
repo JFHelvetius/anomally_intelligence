@@ -75,9 +75,14 @@ markers = [
 python_version = "3.11"
 strict = true
 files = ["src/aip", "tests"]
-# ``mypy_path = "src"`` permite que ``aip.*`` sea el namespace canónico.
-# ``explicit_package_bases`` + sin ``__init__.py`` en tests/ → mypy ve
-# ``tests.subdir.test_x`` y los overrides ``tests.*`` aplican.
+# ``mypy_path = "src"`` permite que ``aip.*`` sea el namespace canónico
+# importable bajo strict.
+# ``explicit_package_bases = true`` se requiere porque ``tests/`` no tiene
+# ``__init__.py`` (mantenemos namespace plano para pytest). Sin esta opción
+# mypy ve cada test como módulo top-level (``test_archive``, ``test_main``)
+# en lugar de ``tests.unit.test_archive`` — y el override ``[[overrides]]
+# module = ["tests.*"]`` que aparece más abajo no aplicaría, dejando los
+# tests bajo strict completo. Cambiar uno sin el otro rompe el contrato.
 mypy_path = "src"
 explicit_package_bases = true
 

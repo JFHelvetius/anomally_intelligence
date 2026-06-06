@@ -14,9 +14,10 @@ from aip import (
     EvidenceNotFoundError,
     InvalidSourceMetadataError,
 )
+from aip.archive import _infer_kind, _validate_source_consistency
 from aip.audit.log import count_entries, iter_entries
 from aip.core.evidence import EvidenceKind, EvidenceStatus
-from aip.core.source import AuthorityLevel, SourceKind
+from aip.core.source import AuthorityLevel, Source, SourceKind
 
 UTC = dt.UTC
 CANONICAL_TS = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=UTC)
@@ -272,3 +273,137 @@ def test_verify_quick_skips_blob_rehash(
     assert report.ok is True
     blobs_check = next(c for c in report.checks if c.name == "blobs")
     assert "skipped" in blobs_check.detail
+
+
+# ---------------------------------------------------------------- _infer_kind
+# Ramas no cubiertas por la ruta feliz de ingest (que siempre pasa
+# `evidence_kind=DOCUMENT_SCAN`). Estos tests blindan la inferencia por
+# extensión declarada en ADR-0006.
+
+
+def test_infer_kind_pdf_by_suffix(tmp_path: Path) -> None:
+    assert _infer_kind(tmp_path / "x.pdf", mime=None) == EvidenceKind.DOCUMENT_SCAN
+
+
+def test_infer_kind_text_document(tmp_path: Path) -> None:
+    assert _infer_kind(tmp_path / "notes.txt", mime=None) == EvidenceKind.DOCUMENT_TEXT
+    assert _infer_kind(tmp_path / "notes.md", mime=None) == EvidenceKind.DOCUMENT_TEXT
+
+
+def test_infer_kind_still_image(tmp_path: Path) -> None:
+    assert _infer_kind(tmp_path / "shot.png", mime=None) == EvidenceKind.STILL_IMAGE
+    assert _infer_kind(tmp_path / "shot.jpg", mime=None) == EvidenceKind.STILL_IMAGE
+    assert _infer_kind(tmp_path / "shot.tiff", mime=None) == EvidenceKind.STILL_IMAGE
+
+
+def test_infer_kind_moving_image(tmp_path: Path) -> None:
+    assert _infer_kind(tmp_path / "clip.mp4", mime=None) == EvidenceKind.MOVING_IMAGE
+    assert _infer_kind(tmp_path / "clip.mov", mime=None) == EvidenceKind.MOVING_IMAGE
+
+
+def test_infer_kind_audio(tmp_path: Path) -> None:
+    assert _infer_kind(tmp_path / "rec.wav", mime=None) == EvidenceKind.AUDIO_RECORDING
+    assert _infer_kind(tmp_path / "rec.mp3", mime=None) == EvidenceKind.AUDIO_RECORDING
+
+
+def test_infer_kind_default_conservative_is_document_scan(tmp_path: Path) -> None:
+    # Extensión desconocida → fallback documental conservador.
+    assert _infer_kind(tmp_path / "blob.xyz", mime=None) == EvidenceKind.DOCUMENT_SCAN
+
+
+def test_infer_kind_pdf_by_mime_overrides_suffix(tmp_path: Path) -> None:
+    # MIME explícito gana sobre extensión ausente o atípica.
+    assert (
+        _infer_kind(tmp_path / "no-extension", mime="application/pdf")
+        == EvidenceKind.DOCUMENT_SCAN
+    )
+
+
+# ---------------------------------------------------------------- _validate_source_consistency
+# La ruta feliz de ingest reusa Source existente exacto. Estos tests cubren
+# cada rama de contradicción (kind/authority/jurisdiction/license) que
+# ingest_evidence delega a este helper.
+
+
+def _existing_source() -> Source:
+    return Source(
+        id="blue-book-nara",
+        kind=SourceKind.GOVERNMENT_ARCHIVE,
+        name="Project Blue Book records",
+        authority=AuthorityLevel.SECONDARY,
+        jurisdiction="US",
+        license="public_domain",
+    )
+
+
+def test_validate_source_consistency_name_mismatch_raises() -> None:
+    with pytest.raises(InvalidSourceMetadataError, match="name"):
+        _validate_source_consistency(
+            _existing_source(),
+            provided_name="Otro nombre",
+            provided_kind=None,
+            provided_authority=None,
+            provided_jurisdiction=None,
+            provided_license=None,
+        )
+
+
+def test_validate_source_consistency_kind_mismatch_raises() -> None:
+    with pytest.raises(InvalidSourceMetadataError, match="kind"):
+        _validate_source_consistency(
+            _existing_source(),
+            provided_name=None,
+            provided_kind=SourceKind.NEWS_OUTLET,
+            provided_authority=None,
+            provided_jurisdiction=None,
+            provided_license=None,
+        )
+
+
+def test_validate_source_consistency_authority_mismatch_raises() -> None:
+    with pytest.raises(InvalidSourceMetadataError, match="authority"):
+        _validate_source_consistency(
+            _existing_source(),
+            provided_name=None,
+            provided_kind=None,
+            provided_authority=AuthorityLevel.PRIMARY,
+            provided_jurisdiction=None,
+            provided_license=None,
+        )
+
+
+def test_validate_source_consistency_jurisdiction_mismatch_raises() -> None:
+    with pytest.raises(InvalidSourceMetadataError, match="jurisdiction"):
+        _validate_source_consistency(
+            _existing_source(),
+            provided_name=None,
+            provided_kind=None,
+            provided_authority=None,
+            provided_jurisdiction="MX",
+            provided_license=None,
+        )
+
+
+def test_validate_source_consistency_license_mismatch_raises() -> None:
+    with pytest.raises(InvalidSourceMetadataError, match="license"):
+        _validate_source_consistency(
+            _existing_source(),
+            provided_name=None,
+            provided_kind=None,
+            provided_authority=None,
+            provided_jurisdiction=None,
+            provided_license="CC-BY-4.0",
+        )
+
+
+def test_validate_source_consistency_exact_match_is_noop() -> None:
+    # Reusar Source con todos los campos idénticos no debe lanzar.
+    src = _existing_source()
+    _validate_source_consistency(
+        src,
+        provided_name=src.name,
+        provided_kind=src.kind,
+        provided_authority=src.authority,
+        provided_jurisdiction=src.jurisdiction,
+        provided_license=src.license,
+    )

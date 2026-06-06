@@ -105,4 +105,20 @@ jobs:
         run: uv sync --frozen --all-extras --python 3.11
 
       - name: pytest (sin coverage, sin lint — solo invariantes)
-        run: uv run pytest -q
+        run: uv run pytest -q --junitxml=pytest-${{ matrix.os }}.xml
+
+      # Si pytest falla en macOS/Windows, queremos diagnóstico sin re-correr
+      # el job: junit XML + .pytest_cache son suficientes para reproducir el
+      # fallo offline. ADR-0024 §formato canónico vs. motor: divergencia
+      # entre plataformas en pinned hashes sería bug arquitectónico, no
+      # ruido tolerable.
+      - name: Upload pytest artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-${{ matrix.os }}-py3.11
+          path: |
+            pytest-${{ matrix.os }}.xml
+            .pytest_cache/
+          retention-days: 7
+          if-no-files-found: ignore
