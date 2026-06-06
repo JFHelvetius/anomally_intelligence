@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 from pathlib import Path
 from typing import IO
 
-from aip._version import __version__ as SOFTWARE_VERSION
 from aip.archive import Archive, EvidenceView
 from aip.core.evidence import Evidence, EvidenceKind
 from aip.core.source import AuthorityLevel, SourceKind
@@ -202,7 +202,7 @@ def _print_show_json(view: EvidenceView, *, stdout: IO[str]) -> None:
 
 
 def add_evidence_subparser(
-    subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]",
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
     *,
     parents: list[argparse.ArgumentParser] | None = None,
 ) -> None:
@@ -281,7 +281,5 @@ def add_evidence_subparser(
 # --------------------------------------------------------------------- helpers
 
 
-def _iso_utc(value) -> str:
-    import datetime as dt
-
-    return value.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+def _iso_utc(value: dt.datetime) -> str:
+    return value.astimezone(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

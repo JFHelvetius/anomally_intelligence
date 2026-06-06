@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -34,7 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 # --------------------------------------------------------------------- enums
 
 
-class SourceKind(str, Enum):
+class SourceKind(StrEnum):
     """Categoría intrínseca de la fuente (ADR-0005). Cerrada por ADR."""
 
     GOVERNMENT_ARCHIVE = "government_archive"
@@ -52,7 +52,7 @@ class SourceKind(str, Enum):
     UNKNOWN = "unknown"
 
 
-class AuthorityLevel(str, Enum):
+class AuthorityLevel(StrEnum):
     """Nivel de autoridad de la fuente (ADR-0005).
 
     No mide credibilidad: mide proximidad a la fuente reconstruible primaria.
@@ -64,7 +64,7 @@ class AuthorityLevel(str, Enum):
     UNATTRIBUTABLE = "unattributable"
 
 
-class ActorKind(str, Enum):
+class ActorKind(StrEnum):
     """Tipo de actor (ADR-0005). Forward-compatible para fases posteriores."""
 
     PERSON = "person"

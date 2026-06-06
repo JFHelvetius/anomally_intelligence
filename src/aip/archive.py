@@ -41,7 +41,7 @@ from aip.core.evidence import (
     EvidenceKind,
     EvidenceStatus,
 )
-from aip.core.hashing import sha256_hex_stream
+from aip.core.hashing import SHA256_HEX_LENGTH, sha256_hex_stream
 from aip.core.provenance import (
     GapDescription,
     Provenance,
@@ -73,7 +73,7 @@ declara al crear una nueva :class:`Provenance` mínima en V1."""
 def default_clock() -> dt.datetime:
     """Reloj UTC al segundo. Usado por :class:`Archive` cuando el caller no
     inyecta uno propio."""
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    return dt.datetime.now(dt.UTC).replace(microsecond=0)
 
 
 # --------------------------------------------------------------------- views
@@ -450,7 +450,7 @@ class Archive:
                 )
                 stored_hash = stored_manifest.manifest_hash()
                 manifest_ok = True
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 manifest_ok = False
                 stored_hash = None
                 checks.append(
@@ -518,7 +518,7 @@ def _resolve_hash(hash_or_uri: str) -> str:
         s = s[len("aip:evidence/sha256:") :]
     elif s.startswith("sha256:"):
         s = s[len("sha256:") :]
-    if len(s) != 64 or not all(c in "0123456789abcdef" for c in s):
+    if len(s) != SHA256_HEX_LENGTH or not all(c in "0123456789abcdef" for c in s):
         raise ValueError(
             f"invalid hash or URI: {hash_or_uri!r}; "
             "expected sha256 hex lowercase of length 64 or aip URI."

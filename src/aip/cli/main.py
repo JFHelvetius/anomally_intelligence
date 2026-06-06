@@ -18,7 +18,6 @@ from aip.cli.archive_commands import add_archive_subparser
 from aip.cli.evidence_commands import add_evidence_subparser
 from aip.errors import AIPError, UsageError
 
-
 DEFAULT_ARCHIVE_ROOT_ENV: str = "AIP_ARCHIVE_ROOT"
 DEFAULT_ARCHIVE_ROOT: Path = Path.home() / ".aip"
 

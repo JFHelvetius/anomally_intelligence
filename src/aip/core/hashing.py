@@ -34,15 +34,28 @@ es ambigua entre implementaciones.
 from __future__ import annotations
 
 import hashlib
-from typing import BinaryIO, Final, Union
+from collections.abc import Mapping, Sequence
+from typing import BinaryIO, Final
 
 CHUNK_SIZE: Final[int] = 64 * 1024
 """Tamaño de bloque para hashing en streaming. 64 KiB es el tradeoff estándar
 entre overhead de llamadas y memoria pico."""
 
+SHA256_HEX_LENGTH: Final[int] = 64
+"""Longitud canónica de un hash SHA-256 en hex lowercase (ADR-0016)."""
 
-JsonScalar = Union[str, int, bool, None]
-JsonValue = Union[JsonScalar, list["JsonValue"], dict[str, "JsonValue"]]
+CONTROL_CHAR_THRESHOLD: Final[int] = 0x20
+"""Code point a partir del cual los caracteres dejan de ser de control y no
+requieren escape JSON obligatorio (RFC 8259 §7, RFC 8785)."""
+
+
+# ``JsonValue`` admite ``Sequence``/``Mapping`` covariantes en el plano de
+# tipos para que ``list[str]`` y ``dict[str, str]`` (invariantes en sus
+# parámetros) sean aceptados sin cast. El runtime sigue siendo estricto: solo
+# se serializan ``list`` y ``dict`` reales (cualquier otro Sequence/Mapping
+# levanta ``TypeError`` en :func:`_serialize`).
+JsonScalar = str | int | bool | None
+JsonValue = JsonScalar | Sequence["JsonValue"] | Mapping[str, "JsonValue"]
 
 
 def sha256_hex(data: bytes) -> str:
@@ -83,7 +96,7 @@ def hash_object(obj: JsonValue) -> str:
 # --------------------------------------------------------------------------- helpers
 
 
-def _serialize(obj: JsonValue, parts: list[bytes]) -> None:
+def _serialize(obj: JsonValue, parts: list[bytes]) -> None:  # noqa: PLR0911, PLR0912
     # `is True` y `is False` interceptan los singletons booleanos antes de
     # caer en isinstance(obj, int). En Python `isinstance(True, int)` es True,
     # por lo que el orden importa.
@@ -163,7 +176,7 @@ def _emit_string(value: str, parts: list[bytes]) -> None:
             out.append('\\"')
         elif ch == "\\":
             out.append("\\\\")
-        elif cp < 0x20:
+        elif cp < CONTROL_CHAR_THRESHOLD:
             short = _SHORT_ESCAPES.get(ch)
             if short is not None:
                 out.append(short)

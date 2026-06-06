@@ -14,10 +14,11 @@ from aip import (
     EvidenceNotFoundError,
     InvalidSourceMetadataError,
 )
+from aip.audit.log import count_entries, iter_entries
 from aip.core.evidence import EvidenceKind, EvidenceStatus
 from aip.core.source import AuthorityLevel, SourceKind
 
-UTC = dt.timezone.utc
+UTC = dt.UTC
 CANONICAL_TS = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=UTC)
 
 
@@ -78,8 +79,6 @@ def test_ingest_creates_archive_layout_and_evidence(
     assert (archive_root / "manifest.json").is_file()
 
     # Audit log con bootstrap + ingest.
-    from aip.audit.log import iter_entries
-
     entries = list(iter_entries(archive_root))
     assert len(entries) == 2
     assert entries[0].action.value == "archive_bootstrap"
@@ -94,8 +93,6 @@ def test_ingest_is_idempotent(tmp_path: Path, archive_root: Path) -> None:
     assert first.hash == second.hash
 
     # No se duplican audit entries (1 bootstrap + 1 ingest = 2).
-    from aip.audit.log import count_entries
-
     assert count_entries(archive_root) == 2
 
 

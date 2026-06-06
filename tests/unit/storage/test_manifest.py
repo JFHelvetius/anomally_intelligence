@@ -18,7 +18,7 @@ from aip.storage.manifest import (
     write_manifest_atomic,
 )
 
-CANONICAL_GENERATED_AT = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.timezone.utc)
+CANONICAL_GENERATED_AT = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.UTC)
 EMPTY_LIST_HASH = "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
 
 
@@ -28,7 +28,7 @@ def _canonical_schemas() -> dict[str, bytes]:
     Se usan en lugar de los esquemas reales de Parquet (Paso 7) para que el
     manifest hash sea pinnable independientemente de pyarrow.
     """
-    return {name: f"schema:{name}".encode("utf-8") for name in layout.V1_TABLES}
+    return {name: f"schema:{name}".encode() for name in layout.V1_TABLES}
 
 
 # ---------------------------------------------------------------- TableManifest
@@ -109,7 +109,7 @@ def test_archive_manifest_rejects_subsecond_generated_at() -> None:
     with pytest.raises(ValidationError, match="microsecond"):
         _make_manifest(
             generated_at=dt.datetime(
-                2026, 6, 4, 0, 0, 0, 123456, tzinfo=dt.timezone.utc
+                2026, 6, 4, 0, 0, 0, 123456, tzinfo=dt.UTC
             )
         )
 
@@ -147,7 +147,7 @@ def test_two_identical_manifests_have_same_hash() -> None:
 def test_changing_generated_at_changes_hash() -> None:
     m1 = _make_manifest()
     m2 = _make_manifest(
-        generated_at=dt.datetime(2026, 6, 5, 0, 0, 0, tzinfo=dt.timezone.utc)
+        generated_at=dt.datetime(2026, 6, 5, 0, 0, 0, tzinfo=dt.UTC)
     )
     assert m1.manifest_hash() != m2.manifest_hash()
 

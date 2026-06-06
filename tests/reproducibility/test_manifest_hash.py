@@ -27,7 +27,7 @@ from aip.storage.manifest import compute_manifest
 pytestmark = pytest.mark.reproducibility
 
 
-CANONICAL_GENERATED_AT = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.timezone.utc)
+CANONICAL_GENERATED_AT = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.UTC)
 CANONICAL_SOFTWARE_VERSION = "0.0.1"
 CANONICAL_SCHEMA_VERSION = "0.1.0"
 
@@ -38,7 +38,7 @@ CANONICAL_SCHEMA_VERSION = "0.1.0"
 # Esquemas sintéticos por tabla V1. Forman parte del input canónico de los
 # pinned values; si cambian, el manifest_hash cambia.
 def _synthetic_schemas() -> dict[str, bytes]:
-    return {name: f"schema:{name}".encode("utf-8") for name in layout.V1_TABLES}
+    return {name: f"schema:{name}".encode() for name in layout.V1_TABLES}
 
 
 # Hashes de esquemas sintéticos. Pinned por tabla.
@@ -64,7 +64,7 @@ EXPECTED_EMPTY_MANIFEST_HASH = (
 def test_synthetic_schema_hashes_are_stable() -> None:
     """Cada esquema sintético hashea al valor pinned correspondiente."""
     for name, expected in EXPECTED_SCHEMA_HASHES.items():
-        actual = sha256_hex(f"schema:{name}".encode("utf-8"))
+        actual = sha256_hex(f"schema:{name}".encode())
         assert actual == expected, (
             f"schema hash drifted for table {name!r}: expected {expected}, got {actual}"
         )

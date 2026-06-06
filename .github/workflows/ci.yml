@@ -1,0 +1,62 @@
+name: CI
+
+# Quality gates declarados en ADR-0031:
+# - ruff: 0 errores en src + tests.
+# - mypy strict: 0 errores en src + tests.
+# - pytest: suite completa, 0 fallos. Skips esperados (requires_fixture)
+#   permitidos hasta que Pre-F1.C esté cerrada.
+# - Cobertura: ≥ 90% global, sin verificación per-capa estricta en CI por
+#   simplicidad (las capas se monitorizan localmente).
+#
+# Plataforma de referencia (ADR-0029 §M3): Ubuntu (Linux x86_64). macOS y
+# Windows son best-effort y no se ejercitan en CI hasta que aparezca demanda.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality-gates:
+    name: lint + types + tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+      - name: Install package + dev tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Ruff lint
+        run: ruff check src tests
+
+      - name: mypy strict
+        run: mypy
+
+      - name: pytest with coverage
+        run: pytest --cov=aip --cov-report=term --cov-fail-under=90 -q
+
+      - name: Show coverage summary
+        if: always()
+        run: pytest --cov=aip --cov-report=term-missing -q --no-header

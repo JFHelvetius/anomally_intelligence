@@ -58,7 +58,7 @@ ROW_ARROW_SCHEMA: Final[pa.Schema] = pa.schema(
 # para producir el ``schema_hash`` del :class:`TableManifest`. Son las mismas
 # que el manifest hash pinned del Paso 6 (test_manifest_hash.py).
 _SEMANTIC_SCHEMA_BYTES: Final[dict[str, bytes]] = {
-    name: f"schema:{name}".encode("utf-8") for name in V1_TABLES
+    name: f"schema:{name}".encode() for name in V1_TABLES
 }
 
 # Filenames seguros: solo ASCII alfanumérico + `_` `-` `.`. Validado al
@@ -173,7 +173,9 @@ def read_row(
     if pair is None:
         return None
     _, payload_bytes = pair
-    return json.loads(payload_bytes.decode("utf-8"))
+    # ``json.loads`` está tipado como ``Any``; sabemos por construcción
+    # (escritura via :func:`append_row`) que el payload es JsonValue.
+    return json.loads(payload_bytes.decode("utf-8"))  # type: ignore[no-any-return]
 
 
 def iter_rows(root: Path, table_name: str) -> Iterator[JsonValue]:

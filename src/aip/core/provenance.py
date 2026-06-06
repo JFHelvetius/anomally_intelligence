@@ -26,7 +26,7 @@ Reglas validadas en V1:
 from __future__ import annotations
 
 import datetime as dt
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -34,7 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 # --------------------------------------------------------------------- enums
 
 
-class StepKind(str, Enum):
+class StepKind(StrEnum):
     """Tipos de paso en una cadena de procedencia (ADR-0005). Cerrado por ADR."""
 
     ORIGINAL_CAPTURE = "original_capture"

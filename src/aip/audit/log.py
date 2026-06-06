@@ -28,13 +28,13 @@ from __future__ import annotations
 import datetime as dt
 import json
 from collections.abc import Callable, Iterator
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from aip.core.hashing import hash_object
+from aip.core.hashing import JsonValue, hash_object
 from aip.storage.layout import AUDIT_LOG_FILENAME
 
 # --------------------------------------------------------------------- constants
@@ -57,14 +57,14 @@ Sha256Hex = Annotated[
 # --------------------------------------------------------------------- enums
 
 
-class ActionKind(str, Enum):
+class ActionKind(StrEnum):
     """Acciones registrables en el audit log (subset V1)."""
 
     ARCHIVE_BOOTSTRAP = "archive_bootstrap"
     INGEST_EVIDENCE = "ingest_evidence"
 
 
-class ResultKind(str, Enum):
+class ResultKind(StrEnum):
     """Resultado de la acción auditada."""
 
     SUCCESS = "success"
@@ -106,7 +106,7 @@ class AuditEntry(BaseModel):
             )
         return value
 
-    def to_canonical_dict(self) -> dict[str, object]:
+    def to_canonical_dict(self) -> dict[str, JsonValue]:
         """Estructura JCS-compatible (con timestamp ISO Z) **incluyendo**
         ``entry_hash``. Útil para serializar a JSONL."""
         return {
@@ -129,7 +129,7 @@ class AuditEntry(BaseModel):
 
 
 def _format_utc_second(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return value.astimezone(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _base_canonical_dict(
@@ -143,7 +143,7 @@ def _base_canonical_dict(
     parameters: dict[str, str],
     result: ResultKind,
     schema_version: str,
-) -> dict[str, object]:
+) -> dict[str, JsonValue]:
     """Diccionario canónico SIN ``entry_hash`` (lo que se hashea)."""
     return {
         "seq": seq,
@@ -254,7 +254,7 @@ def append_entry(
     raw_timestamp = clock()
     if raw_timestamp.tzinfo is None:
         raise ValueError("clock() must return a timezone-aware datetime.")
-    timestamp = raw_timestamp.astimezone(dt.timezone.utc).replace(microsecond=0)
+    timestamp = raw_timestamp.astimezone(dt.UTC).replace(microsecond=0)
 
     entry_hash = compute_entry_hash(
         seq=seq,

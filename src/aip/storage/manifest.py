@@ -31,18 +31,24 @@ en un instante concreto. Para reproducibilidad en tests, el caller inyecta
 from __future__ import annotations
 
 import datetime as dt
+import json
 import os
 from pathlib import Path
 from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from aip.core.hashing import hash_object, sha256_hex
+from aip.core.hashing import SHA256_HEX_LENGTH, JsonValue, hash_object, sha256_hex
 from aip.storage.layout import (
     OBJECTS_DIRNAME,
     SHA256_ALGO_DIRNAME,
     V1_TABLES,
 )
+from aip.storage.tables import count_rows, list_row_hashes
+
+# CAOS layout (ADR-0015): hash de 64 chars se parte en prefijo de 2 + resto de 62.
+_CAOS_PREFIX_LENGTH: Final[int] = 2
+_CAOS_REST_LENGTH: Final[int] = SHA256_HEX_LENGTH - _CAOS_PREFIX_LENGTH
 
 _SHA256_HEX_PATTERN: Final[str] = r"^[a-f0-9]{64}$"
 
@@ -64,7 +70,7 @@ class TableManifest(BaseModel):
     row_count: int = Field(ge=0)
     schema_hash: Sha256Hex
 
-    def to_canonical_dict(self) -> dict[str, object]:
+    def to_canonical_dict(self) -> dict[str, JsonValue]:
         return {
             "partition_hashes": list(self.partition_hashes),
             "row_count": self.row_count,
@@ -100,7 +106,7 @@ class ArchiveManifest(BaseModel):
             )
         return value
 
-    def to_canonical_dict(self) -> dict[str, object]:
+    def to_canonical_dict(self) -> dict[str, JsonValue]:
         """Estructura JCS-compatible del manifest.
 
         ``generated_at`` se serializa como ``YYYY-MM-DDTHH:MM:SSZ``. Las
@@ -108,7 +114,7 @@ class ArchiveManifest(BaseModel):
         las reordenará, pero ordenarlas aquí simplifica la inspección).
         """
         generated_iso = (
-            self.generated_at.astimezone(dt.timezone.utc).strftime(
+            self.generated_at.astimezone(dt.UTC).strftime(
                 "%Y-%m-%dT%H:%M:%SZ"
             )
         )
@@ -142,12 +148,12 @@ def _list_blob_hashes(root: Path) -> list[str]:
     for prefix_entry in sorted(objects_root.iterdir(), key=lambda p: p.name):
         if not prefix_entry.is_dir():
             continue
-        if len(prefix_entry.name) != 2:
+        if len(prefix_entry.name) != _CAOS_PREFIX_LENGTH:
             continue
         for blob_entry in sorted(prefix_entry.iterdir(), key=lambda p: p.name):
             if not blob_entry.is_file():
                 continue
-            if len(blob_entry.name) != 62:
+            if len(blob_entry.name) != _CAOS_REST_LENGTH:
                 continue
             hashes.append(prefix_entry.name + blob_entry.name)
     return hashes
@@ -172,8 +178,6 @@ def _compute_table_manifest(
     # Hashes lógicos (sobre ``payload_jcs`` por fila), no bytes Parquet.
     # ADR-0024 §formato canónico vs. motor: el manifest describe contenido
     # lógico, estable entre versiones del writer Parquet.
-    from aip.storage.tables import list_row_hashes, count_rows
-
     partition_hashes = list_row_hashes(root, table_name)
     row_count = count_rows(root, table_name)
     schema_hash = sha256_hex(schema_bytes)
@@ -254,8 +258,6 @@ def write_manifest_atomic(
     # **no** usamos JCS literal en el fichero — usamos la forma indentada del
     # mismo contenido. El hash que importa es el de la forma canónica
     # devuelta por :meth:`manifest_hash`, no la del fichero en disco.
-    import json
-
     payload = manifest.to_canonical_dict()
     tmp.write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",

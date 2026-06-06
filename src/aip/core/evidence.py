@@ -29,7 +29,7 @@ Inmutabilidad (``frozen=True``) y rechazo de campos desconocidos
 from __future__ import annotations
 
 import datetime as dt
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -37,7 +37,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 # --------------------------------------------------------------------- enums
 
 
-class EvidenceKind(str, Enum):
+class EvidenceKind(StrEnum):
     """Tipos intrínsecos de evidencia (ADR-0006). Cerrado; ampliación por ADR."""
 
     DOCUMENT_TEXT = "document_text"
@@ -55,7 +55,7 @@ class EvidenceKind(str, Enum):
     COMPOSITE = "composite"
 
 
-class EvidenceStatus(str, Enum):
+class EvidenceStatus(StrEnum):
     """Salud operativa de la evidencia (ADR-0006). Ortogonal a la credibilidad."""
 
     ACTIVE = "active"
@@ -65,7 +65,7 @@ class EvidenceStatus(str, Enum):
     QUARANTINED = "quarantined"
 
 
-class AuthStatus(str, Enum):
+class AuthStatus(StrEnum):
     """Estado de autenticación (ADR-0006). Default operacional al ingestar:
     :attr:`UNVERIFIED`."""
 

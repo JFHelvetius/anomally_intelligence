@@ -12,10 +12,13 @@ con su SHA-256 pinned en ``docs/phase-1/demo-evidence-selection.md``.
 
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 
 import pytest
+
+from aip.cli import main as cli_main
 
 # ---------------------------------------------------------------- canonical inputs
 
@@ -72,10 +75,6 @@ def test_demo_pipeline_pdf_ingest_show_verify(tmp_path: Path) -> None:
     fixture canónico.
     """
     _skip_if_no_fixture()
-
-    import io
-
-    from aip.cli import main as cli_main
 
     fixture = _fixture_path()
     archive_root = tmp_path / "demo_archive"

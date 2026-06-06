@@ -24,7 +24,7 @@ from aip.audit import log, verify
 
 pytestmark = pytest.mark.reproducibility
 
-UTC = dt.timezone.utc
+UTC = dt.UTC
 
 CANONICAL_BOOTSTRAP_TS = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=UTC)
 CANONICAL_INGEST_TS = dt.datetime(2026, 6, 4, 0, 1, 0, tzinfo=UTC)

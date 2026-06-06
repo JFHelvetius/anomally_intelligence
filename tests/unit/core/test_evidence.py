@@ -17,7 +17,7 @@ from aip.core.evidence import (
 )
 
 # Constantes canónicas para construcción de fixtures sintéticos.
-CANONICAL_INGESTED_AT = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.timezone.utc)
+CANONICAL_INGESTED_AT = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.UTC)
 SAMPLE_HASH = "1f4a9c0a" + "0" * 56  # 64 chars, válido por forma
 SAMPLE_CONTENT_URI = f"objects/sha256/{SAMPLE_HASH[:2]}/{SAMPLE_HASH[2:]}"
 

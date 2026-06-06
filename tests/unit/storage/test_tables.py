@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from pathlib import Path
 
 import pytest
 
 from aip.core.hashing import hash_object, sha256_hex
 from aip.storage import layout, tables
+from aip.storage.manifest import compute_manifest
 
 SAMPLE_HASH = "1f4a9c0a" + "0" * 56
 
@@ -28,7 +30,7 @@ def test_get_schemas_returns_all_v1_tables() -> None:
 def test_get_schemas_canonical_bytes_per_table() -> None:
     schemas = tables.get_schemas()
     for name in layout.V1_TABLES:
-        assert schemas[name] == f"schema:{name}".encode("utf-8")
+        assert schemas[name] == f"schema:{name}".encode()
 
 
 def test_get_schemas_returns_copy() -> None:
@@ -224,12 +226,8 @@ def test_logical_blobs_root_independent_of_input_order() -> None:
 def test_manifest_hash_changes_when_row_appended(archive_root: Path) -> None:
     # Confirma que añadir una fila a una tabla altera el manifest hash
     # (validación end-to-end de Paso 6 + Paso 7).
-    import datetime as dt
-
-    from aip.storage.manifest import compute_manifest
-
     layout.ensure_archive_layout(archive_root)
-    generated_at = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.timezone.utc)
+    generated_at = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.UTC)
 
     m_empty = compute_manifest(
         archive_root,

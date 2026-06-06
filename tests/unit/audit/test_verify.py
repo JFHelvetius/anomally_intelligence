@@ -8,7 +8,7 @@ from pathlib import Path
 
 from aip.audit import log, verify
 
-UTC = dt.timezone.utc
+UTC = dt.UTC
 
 
 def _clock_factory(*timestamps: dt.datetime):

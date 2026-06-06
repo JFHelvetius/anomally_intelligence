@@ -15,7 +15,7 @@ from aip.core.provenance import (
     StepKind,
 )
 
-CANONICAL_ATTESTED_AT = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.timezone.utc)
+CANONICAL_ATTESTED_AT = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.UTC)
 SAMPLE_EVIDENCE_HASH = "1f4a9c0a" + "0" * 56
 SAMPLE_INPUT_HASH = "abcdef01" + "0" * 56
 SAMPLE_OUTPUT_HASH = "fedcba98" + "0" * 56

@@ -12,7 +12,7 @@ from pydantic import ValidationError
 
 from aip.audit import log
 
-UTC = dt.timezone.utc
+UTC = dt.UTC
 
 
 def _clock(*timestamps: dt.datetime) -> Iterator[dt.datetime]:
@@ -219,7 +219,10 @@ def test_append_entry_strips_microseconds(archive_root: Path) -> None:
 
 
 def test_append_entry_rejects_naive_clock(archive_root: Path) -> None:
-    naive_clock = lambda: dt.datetime(2026, 6, 4, 0, 0, 0)
+    def naive_clock() -> dt.datetime:
+        # Intencionalmente naive: el test verifica que el validador la rechaza.
+        return dt.datetime(2026, 6, 4, 0, 0, 0)
+
     with pytest.raises(ValueError, match="timezone-aware"):
         log.append_entry(
             archive_root,

@@ -46,6 +46,7 @@ from aip.errors import (
 )
 
 __all__ = [
+    "SCHEMA_VERSION",
     "AIPError",
     "Archive",
     "ArchiveNotFoundError",
@@ -56,7 +57,6 @@ __all__ = [
     "IntegrityError",
     "InvalidSourceMetadataError",
     "ManifestError",
-    "SCHEMA_VERSION",
     "UsageError",
     "VerificationReport",
     "__version__",

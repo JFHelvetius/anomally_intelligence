@@ -71,4 +71,28 @@ markers = [
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["src", "tests"]
+files = ["src/aip", "tests"]
+# ``mypy_path = "src"`` permite que ``aip.*`` sea el namespace canónico.
+# ``explicit_package_bases`` + sin ``__init__.py`` en tests/ → mypy ve
+# ``tests.subdir.test_x`` y los overrides ``tests.*`` aplican.
+mypy_path = "src"
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+# pyarrow no expone marker py.typed (ADR-0024 §6.1: lo tratamos como punto
+# único de falla declarado). Ignoramos el missing-imports localmente.
+module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Tests no exigen firmas estrictas en helpers internos (ADR-0031 §G3 aplica
+# a la API pública, no a fixtures locales). Además: los tests que verifican
+# rechazos de tipo pasan inputs malos a propósito, lo que produce errores
+# `arg-type`/`dict-item`/`index` legítimos del test pero no del código.
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+warn_unused_ignores = false
+warn_return_any = false
+disable_error_code = ["arg-type", "dict-item", "index", "call-overload"]

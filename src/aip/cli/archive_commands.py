@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 from typing import IO
 
 from aip.archive import Archive, VerificationReport
@@ -85,7 +84,7 @@ def _print_verify_json(
 
 
 def add_archive_subparser(
-    subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]",
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
     *,
     parents: list[argparse.ArgumentParser] | None = None,
 ) -> None:
