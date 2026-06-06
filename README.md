@@ -2,7 +2,7 @@
 
 > Plataforma open source para investigar, organizar y cuantificar la incertidumbre que rodea a los reportes de fenómenos anómalos aéreos, orbitales, marítimos, astronómicos y observacionales. Sin posturas. Sin sensacionalismo. Sin conclusiones predeterminadas.
 
-**Estado del proyecto:** fase de fundación (redacción de ADRs). Sin código ejecutable todavía.
+**Estado del proyecto:** **Fase 1 cerrada · release `v0.1.0` (2026-06-06).** V1 ejecutable con `aip evidence ingest|show` + `aip archive verify`. Ver [`PROJECT_STATUS.md`](PROJECT_STATUS.md) y [`docs/reviews/phase-1-review.md`](docs/reviews/phase-1-review.md).
 
 ## Sobre este repositorio
 
@@ -28,14 +28,33 @@ Esa reformulación es el ADN del proyecto. Cualquier diseño que la traicione qu
 
 El proyecto se desarrolla en fases, cada una funcional y demostrable:
 
-1. **Modelo de evidencia y fuentes** — esquemas formales, almacenamiento inmutable, trazabilidad bit a bit.
+1. **Modelo de evidencia y fuentes** — esquemas formales, almacenamiento inmutable, trazabilidad bit a bit. ✅ **Entregada en `v0.1.0` (2026-06-06).**
 2. **Catálogo de casos** — ingestión de archivos históricos y modernos sobre el modelo de evidencia.
 3. **Hipótesis y confianza** — sistema explícito de hipótesis competidoras y cuantificación de incertidumbre.
 4. **Motor temporal y geoespacial** — reconstrucción de líneas de tiempo y de superposiciones geográficas verificables.
 5. **Grafo de conocimiento** — relaciones entre personas, organizaciones, eventos, lugares, medios y documentos.
 6. **Workflows de investigación abierta** — herramientas para que un investigador externo pueda reproducir o contradecir cualquier conclusión.
 
+Las fases 2–6 están **diseñadas** en ADRs aceptados pero **no comprometidas a calendario**: ADR-0023 (Scope Reduction) congela el alcance en V1; cualquier ampliación requiere ADR explícito de levantamiento. Ver [`docs/reviews/phase-1-review.md`](docs/reviews/phase-1-review.md) para el cierre formal de Fase 1.
+
 El detalle vive en los ADRs.
+
+## V1 ejecutable
+
+Una vez instalado el paquete (`pip install -e .` en el clone), tres comandos cubren la totalidad del alcance V1:
+
+```sh
+aip evidence ingest <pdf> \
+    --source-id <id> --source-name "<name>" \
+    --source-kind <kind> --source-authority <level> \
+    --ingested-by <actor> [--json]
+
+aip evidence show <hash|sha256:hash|aip:evidence/sha256:hash> [--json]
+
+aip archive verify [--quick|--full] [--json]
+```
+
+La demo de cierre F1 — pipeline reproducible sobre el Twining Memo (1947) — vive en [`tests/integration/test_demo_pipeline.py`](tests/integration/test_demo_pipeline.py).
 
 ## Lo que el proyecto distingue rigurosamente
 

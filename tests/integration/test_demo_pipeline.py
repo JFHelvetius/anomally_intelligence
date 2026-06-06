@@ -24,10 +24,13 @@ from aip.cli import main as cli_main
 
 FIXTURE_NAME = "twining-memo-1947-09-23.pdf"
 
-# Una vez rellenado el paso operativo P1-P5 de Pre-F1.C, sustituir el valor
-# siguiente por el SHA-256 hex pinned (lowercase, len 64). Hasta entonces,
-# permanece como sentinela vacío y el test queda en skip.
-EXPECTED_PDF_SHA256: str = ""
+# Pinned por Pre-F1.C cerrada el 2026-06-06.
+# Fuente: archive.org/details/twinning-memo (slug con typo histórico del item).
+# Verificado en `tests/data/twining-memo-1947-09-23.pdf` (250 022 bytes).
+EXPECTED_PDF_SHA256: str = (
+    "65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1"
+)
+EXPECTED_PDF_SIZE_BYTES: int = 250022
 
 # Constantes canónicas de la demo (Pre-F1.D + demo-evidence-selection.md).
 DEMO_SOURCE_ID = "blue-book-nara"

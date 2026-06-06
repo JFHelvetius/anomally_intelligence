@@ -259,18 +259,34 @@ Si el fichero versionado en el repo no coincide con el valor pinned, hay corrupc
 
 ## Pinned values
 
-*(Esta sección se rellena cuando se ejecute el procedimiento P1–P3 contra una copia descargada concreta del documento. Mientras no se haya ejecutado, la sección queda explícitamente vacía. Sin pinned values, la implementación no puede empezar la fase F1 stricto sensu, porque los tests de reproducibilidad no tienen valor canónico contra el que comparar.)*
-
 ### Demo fixture (primary candidate)
 
 - **Document:** Twining Memo (AMC Opinion Concerning "Flying Discs"), 1947-09-23
-- **Source URL:** *(pendiente — se anotará al ejecutar P1)*
-- **Download date:** *(pendiente)*
-- **File size (bytes):** *(pendiente)*
-- **SHA-256 (hex, lowercase):** *(pendiente)*
+- **Source URL:** https://archive.org/download/twinning-memo/twinning%20memo.pdf
+- **Source page:** https://archive.org/details/twinning-memo
+- **Download date:** 2026-06-06
+- **File size (bytes):** 250022
+- **SHA-256 (hex, lowercase):** `65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1`
 - **MIME type:** application/pdf
-- **Selected by:** *(pendiente — `@jfhelvetius` cuando complete P1)*
-- **Selected at:** *(pendiente)*
+- **PDF version magic:** `%PDF-1.7` (verificado por inspección de los primeros bytes)
+- **Local fixture path:** [tests/data/twining-memo-1947-09-23.pdf](../../tests/data/twining-memo-1947-09-23.pdf)
+- **Selected by:** `@jfhelvetius`
+- **Selected at:** 2026-06-06
+- **Download tool:** [scripts/fetch_demo_fixture.py](../../scripts/fetch_demo_fixture.py)
+
+#### Nota sobre la URL canónica
+
+El item en Internet Archive contiene una errata ortográfica en su slug
+(`twinning-memo`, con doble `n`) que no aparece en el nombre histórico del
+documento (Twining, con una sola `n`). El fichero local conserva la
+ortografía correcta (`twining-memo-1947-09-23.pdf`); la URL fuente se
+acepta tal cual la sirve Internet Archive porque cambiar el slug requiere
+reupload por el mantenedor del item, fuera del control de AIP.
+
+Si en algún momento el item desaparece o el slug cambia, el fichero
+canónico es el que vive en `tests/data/`, y su SHA-256 es la identidad
+estable. Mirror documentados como fallback aceptable: cualquier copia
+pública que tras descarga produzca el mismo SHA-256.
 
 ---
 
@@ -281,6 +297,6 @@ Si el fichero versionado en el repo no coincide con el valor pinned, hay corrupc
 - **Candidatos secundarios identificados:** sí (tres fallbacks).
 - **Procedimiento de publicación del SHA-256 definido:** sí.
 - **Procedimiento de verificación independiente definido:** sí.
-- **Pinned values rellenados:** **no** (acción operativa pendiente del mantenedor antes de cerrar Pre-F1).
+- **Pinned values rellenados:** **sí** (2026-06-06, fixture en repo).
 
-**Bloqueante para inicio de implementación F1:** rellenar los pinned values siguiendo los pasos P1–P3 de este documento. Eso requiere acceso de red para descargar el PDF (acción puntual, no funcionalidad del proyecto).
+**Bloqueante para inicio de implementación F1:** ninguno. La acción operativa de Pre-F1.C está cerrada.

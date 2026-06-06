@@ -1,18 +1,18 @@
 # PROJECT_STATUS — Anomaly Intelligence Platform
 
-**Última actualización:** 2026-06-04 (cierre de Pre-F1)
-**Estado del proyecto:** **Pre-F1 cerrada · Listo para implementación de Fase 1** (pendiente acción operativa P1–P3 sobre Pre-F1.C)
-**Bus factor declarado:** 1 (ver ADR-0026)
+**Última actualización:** 2026-06-06 (cierre de Fase 1)
+**Estado del proyecto:** **Fase 1 cerrada · release `v0.1.0` publicado**
+**Bus factor declarado:** 1 (ver ADR-0026 · próxima revisión semestral 2026-12-04)
 
 ---
 
 ## Para el lector con prisa
 
-- **¿Qué es AIP hoy?** Un cuerpo de **32 ADRs aceptados**, un Red Team Review crítico cerrado, especificaciones operativas Pre-F1 completas y un `MAINTAINERS.md` vigente. **Cero código ejecutable.**
-- **¿Qué hará en V1?** Ingestar un PDF público, direccionarlo por hash, registrar procedencia, verificar integridad. **Nada más.**
-- **¿Cuándo?** Sin compromiso de calendario. Mantenedor único part-time.
-- **¿Por qué tan modesto?** Porque el Red Team Review identificó como modo de fallo dominante el "vaporware perpetuo" y el recorte deliberado de alcance (ADR-0023) es la defensa estructural.
-- **¿Qué falta para escribir código?** Una sola acción operativa puntual: descargar el PDF de demo y rellenar los pinned values en `docs/phase-1/demo-evidence-selection.md` (procedimiento P1–P3 de ese documento).
+- **¿Qué es AIP hoy?** Un cuerpo de **32 ADRs aceptados** y un V1 ejecutable que ingesta evidencia, la direcciona por hash, registra procedencia y verifica integridad bit a bit. Demo cerrada con el Twining Memo (1947).
+- **¿Qué hace V1?** `aip evidence ingest <pdf> --source-id … --ingested-by …` → `aip evidence show <hash>` → `aip archive verify` → cadena reproducible.
+- **¿Qué NO hace V1?** Claims, hipótesis, conclusiones, grafo, timeline, geospatial, OSINT, búsqueda, HTTP API, LLM, enclave. Todos diferidos por ADR-0023 (recorte deliberado de alcance).
+- **¿Quality gates?** ruff (0 errores) + mypy strict (0 errores) + 248 tests pasando + 93.57% cobertura global. CI Ubuntu × Python 3.11/3.12 en cada push.
+- **¿Próxima fase?** Ninguna comprometida. Mantenimiento de V1 con criterios D1/D2 del MAINTAINERS.md. Cualquier ampliación de alcance requiere ADR explícito de levantamiento de ADR-0023.
 
 ---
 
@@ -333,54 +333,48 @@ Los riesgos están documentados completos en `docs/reviews/red_team_response.md`
 
 ---
 
-## Próxima acción
+## Estado al cierre de Fase 1 (release v0.1.0, 2026-06-06)
 
-Pre-F1 queda cerrada documentalmente. La única acción operativa pendiente entre "documento listo" y "primer commit de código" es **rellenar los pinned values del fixture de demo** siguiendo P1–P3 de `docs/phase-1/demo-evidence-selection.md`. Esa acción:
-
-1. Es una sesión puntual (no es funcionalidad del proyecto): descargar el Twining Memo desde NARA, anotar URL/fecha/tamaño, computar SHA-256 con `sha256sum`, copiar el binario a `tests/data/`, registrar valores en la sección "Pinned values" del documento Pre-F1.C, y commit con motivo explícito.
-2. Requiere red **una sola vez** por parte del mantenedor (acción operativa, no parte del sistema).
-3. Desbloquea los tests de reproducibilidad (T3 del ADR-0031), que necesitan `EXPECTED_PDF_SHA256` como constante canónica antes de poder ejecutarse.
-
-Tras esa sesión puntual, la cadena de implementación F1 puede comenzar sin más bloqueos:
+Fase 1 cerrada. La cadena de cierre completa:
 
 ```
-Pinned values registrados
-    │
-    ▼
-Esqueleto del paquete (pyproject.toml, src/aip/, tests/)
-    │
-    ▼
-core/hashing.py + tests unitarios → ROJO → VERDE
-    │
-    ▼
-core/{evidence, source, provenance, authentication, actor}.py + unit tests
-    │
-    ▼
-storage/{layout, caos, manifest, tables}.py + unit tests
-    │
-    ▼
-audit/{log, verify}.py + unit tests
-    │
-    ▼
-cli/{main, evidence_commands, archive_commands}.py
-    │
-    ▼
-integration/demo_pipeline_test.py → ROJO → VERDE (cierre operativo de F1)
-    │
-    ▼
-reproducibility/{manifest_hash, audit_chain, jcs}_test.py → VERDE
-    │
-    ▼
-Auto-prueba en máquina limpia del mantenedor
-    │
-    ▼
-Invitación pública a externo
-    │
-    ▼
-Externo cierra demo sin asistencia → release v0.1.0 → F1 cerrada
+Pre-F1.A bloqueante         ✓ MAINTAINERS.md publicado
+Pre-F1.B ADRs operativos    ✓ ADR-0029/0030/0031
+Pre-F1.C fixture canónico   ✓ Twining Memo SHA-256 65539d95…
+Pre-F1.D contrato CLI       ✓ comando especificado y testeado
+Implementación V1           ✓ 12 pasos completados
+Quality gates               ✓ ruff + mypy strict + 93.57% cov
+GitHub Actions CI           ✓ matriz Py 3.11/3.12 sobre Ubuntu
+Demo F1                     ✓ PDF → ingest → show → verify
+Reproducibilidad bit a bit  ✓ manifest hash pinned 364b2397…
+Phase-1 review              ✓ docs/reviews/phase-1-review.md
 ```
 
-No se escribe código antes de fijar los pinned values. No se amplía alcance bajo ningún pretexto antes del release v0.1.0.
+**Bloqueante para iniciar Fase 2:** ADR explícito de levantamiento de ADR-0023 §recorte. **No comprometido.** Mantenimiento de V1 hasta entonces.
+
+### Lo que NO se hará sin ADR de levantamiento
+
+Cada subpaquete `aip.X` que aparece como import futuro en cualquier ADR pero no existe en `src/aip/` queda diferido:
+
+- `aip.claim` (ADR-0007)
+- `aip.hypothesis` (ADR-0008)
+- `aip.conclusion` (ADR-0009)
+- `aip.case` (ADR-0010)
+- `aip.graph` (ADR-0011)
+- `aip.temporal` (ADR-0012)
+- `aip.spatial` (ADR-0013)
+- `aip.osint` (ADR-0014)
+- `aip.http` (ADR-0017 HTTP API opcional)
+- `aip.search` (ADR-0018)
+- `aip.enclave` (ADR-0019 enclave de material sensible)
+- `aip.llm` (ADR-0021 asistencia LLM)
+
+### Próximas acciones del proyecto sin ampliación de alcance
+
+1. **Revisión semestral del bus factor** — 2026-12-04 (MAINTAINERS.md C2).
+2. **Revisión anual del ADR-0000** — 2027-06-03.
+3. **PRs externos:** se aceptan bajo criterios D1/D2 del MAINTAINERS.md.
+4. **Triggers de archivado** (ADR-0027): monitorización pasiva del commit activity (T3 — 12 meses sin commit dispara archivado digno).
 
 ---
 

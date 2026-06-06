@@ -20,9 +20,15 @@ from pathlib import Path
 
 import pytest
 
-from aip.core.hashing import sha256_hex
+from aip import Archive
+from aip._version import SCHEMA_VERSION
+from aip._version import __version__ as SOFTWARE_VERSION
+from aip.core.evidence import EvidenceKind
+from aip.core.hashing import sha256_hex, sha256_hex_stream
+from aip.core.source import AuthorityLevel, SourceKind
 from aip.storage import layout
 from aip.storage.manifest import compute_manifest
+from aip.storage.tables import get_schemas
 
 pytestmark = pytest.mark.reproducibility
 
@@ -111,18 +117,87 @@ def test_empty_archive_manifest_recomputation_is_stable(archive_root: Path) -> N
     assert m1.manifest_hash() == m2.manifest_hash()
 
 
+EXPECTED_DEMO_PDF_SHA256 = (
+    "65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1"
+)
+"""SHA-256 del Twining Memo (fixture de Pre-F1.C). Anclado al fichero
+``tests/data/twining-memo-1947-09-23.pdf``."""
+
+EXPECTED_DEMO_MANIFEST_HASH = (
+    "364b23977466ad44c6f7a544a2b99987dc8ed9cabc82d227fc8a670942fda7bc"
+)
+"""``manifest_hash`` canónico tras ingestar el fixture con los siguientes
+inputs deterministas:
+
+- ``software_version = "0.0.1"``.
+- ``schema_version = "0.1.0"``.
+- ``generated_at = 2026-06-04T00:00:00Z`` (= clock inyectado en ingest).
+- ``source_id = "blue-book-nara"``, kind/authority/jurisdiction/license
+  según Pre-F1.D.
+- ``ingested_by = "@jfhelvetius"``.
+
+Si este valor cambia, ha cambiado:
+
+- la canonicalización del manifest,
+- el conjunto de tablas V1 o su orden,
+- el orden de filas en los manifests de tabla,
+- el algoritmo de hash, o
+- el contenido del fichero fixture (sha256 distinto de
+  ``EXPECTED_DEMO_PDF_SHA256``).
+
+Cualquiera es bug arquitectónico crítico que requiere PR explícito."""
+
+
 @pytest.mark.requires_fixture
-def test_archive_with_demo_pdf_manifest_hash_is_canonical_pinned() -> None:
-    """Manifest hash sobre archive con el PDF de demo de Pre-F1.C.
+def test_archive_with_demo_pdf_manifest_hash_is_canonical_pinned(
+    tmp_path: Path,
+) -> None:
+    """Manifest hash sobre archive con el PDF de demo de Pre-F1.C ingestado.
 
-    Skip hasta que ``tests/data/twining-memo-1947-09-23.pdf`` exista y los
-    pinned values estén en ``docs/phase-1/demo-evidence-selection.md``.
-    Cuando se desbloquee, este test:
+    Tres garantías de reproducibilidad bit a bit:
 
-    1. Ingesta el PDF (Paso 11) en un archive temporal con clock fijo.
-    2. Computa el manifest con ``generated_at`` canónico.
-    3. Verifica contra el valor pinned (pendiente).
+    1. El SHA-256 del fixture coincide con el pinned (cadena de procedencia OK).
+    2. ``Evidence.hash`` post-ingest coincide con SHA-256 del fixture (CAOS OK).
+    3. ``manifest_hash`` con clock canónico coincide con el pinned (manifest OK).
     """
-    pytest.skip(
-        "awaiting Pre-F1.C pinned values; see docs/phase-1/demo-evidence-selection.md"
+    fixture = (
+        Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
     )
+    if not fixture.is_file():
+        pytest.skip(f"fixture missing: {fixture}")
+
+    # 1. SHA-256 del fixture coincide con el pinned.
+    with fixture.open("rb") as fh:
+        fixture_hash = sha256_hex_stream(fh)
+    assert fixture_hash == EXPECTED_DEMO_PDF_SHA256, (
+        "Fixture binary drifted from Pre-F1.C pinned SHA-256. Either someone "
+        "replaced the file or the source URL is serving a different version."
+    )
+
+    # 2. Ingesta con clock canónico produce Evidence.hash == fixture SHA-256.
+    archive_root = tmp_path / "demo_archive"
+    archive = Archive.open(archive_root)
+    evidence = archive.ingest_evidence(
+        fixture,
+        source_id="blue-book-nara",
+        source_name="Project Blue Book records",
+        source_kind=SourceKind.GOVERNMENT_ARCHIVE,
+        source_authority=AuthorityLevel.SECONDARY,
+        source_jurisdiction="US",
+        source_license="public_domain",
+        evidence_kind=EvidenceKind.DOCUMENT_SCAN,
+        mime_type="application/pdf",
+        ingested_by="@jfhelvetius",
+        clock=lambda: CANONICAL_GENERATED_AT,
+    )
+    assert evidence.hash == EXPECTED_DEMO_PDF_SHA256
+
+    # 3. Manifest hash con clock canónico coincide con el pinned.
+    manifest = compute_manifest(
+        archive_root,
+        schemas=get_schemas(),
+        generated_at=CANONICAL_GENERATED_AT,
+        software_version=SOFTWARE_VERSION,
+        schema_version=SCHEMA_VERSION,
+    )
+    assert manifest.manifest_hash() == EXPECTED_DEMO_MANIFEST_HASH
