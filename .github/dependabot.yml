@@ -1,0 +1,46 @@
+version: 2
+
+# Política Dependabot: SOLO actualizaciones de seguridad.
+#
+# Las directivas `ignore` debajo descartan todos los bumps de versión
+# (mayor, menor y parche). Las security advisories de GitHub se procesan
+# aparte y NO son bloqueadas por `ignore`, así que dependabot sigue
+# abriendo PRs cuando aparezca un CVE en una dependencia. Coherente con:
+#
+# - ADR-0023 §recorte de alcance: nada de version churn cosmético.
+# - ADR-0029 §M2 disciplina de dependencias: solo updates necesarias.
+# - MAINTAINERS.md C5: política de no-SLA y mantenedor único, así que el
+#   ruido de PRs irrelevantes es coste real.
+
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"

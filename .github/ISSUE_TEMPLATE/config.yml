@@ -1,0 +1,9 @@
+blank_issues_enabled: true
+
+contact_links:
+  - name: "Preguntas y discusión"
+    url: "https://github.com/JFHelvetius/anomally_intelligence/discussions"
+    about: "Para preguntas, propuestas de fase 2+, o cualquier conversación que no sea bug ni concern de procedencia."
+  - name: "Política de mantenimiento"
+    url: "https://github.com/JFHelvetius/anomally_intelligence/blob/main/MAINTAINERS.md"
+    about: "Bus factor declarado, política de no-SLA, criterios D1/D2 antes de abrir issue."

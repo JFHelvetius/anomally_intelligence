@@ -212,6 +212,51 @@ Las promesas son seis. Las no-promesas son siete. Esa proporción es deliberada 
 
 ---
 
+## Quality gates declarados y CI
+
+Quality gates declarados en ADR-0031, ejecutados por `.github/workflows/ci.yml` en cada push y PR a `main`:
+
+| Gate | Comando | Plataforma | Estado en `main` |
+|---|---|---|---|
+| ruff lint | `ruff check src tests` | Ubuntu × Python 3.11, 3.12 | bloqueante |
+| mypy strict | `mypy` | Ubuntu × Python 3.11, 3.12 | bloqueante |
+| pytest + cobertura | `pytest --cov=aip --cov-fail-under=90` | Ubuntu × Python 3.11, 3.12 | bloqueante |
+| pytest (sin lint/cov) | `pytest -q` | macOS-latest (arm64), Windows-latest (x86_64) | best-effort (`continue-on-error: true`) |
+
+La distinción Ubuntu / best-effort sigue ADR-0029 §M3: el mantenedor único no opera cotidianamente en macOS ni Windows; bloquear merge por una rotura ahí sería política de equipo grande, no la realidad operativa de este proyecto. **Pero**: cualquier divergencia de pinned hashes entre Ubuntu y los runners best-effort se trata como bug arquitectónico crítico (ADR-0024 §formato canónico vs. motor), no como degradación aceptable.
+
+### Herramientas explícitamente NO añadidas al CI
+
+- **CodeQL.** Evaluado y rechazado para V1. Justificación: AIP V1 no expone HTTP, no recibe input no-sanitizado de red, no ejecuta SQL parametrizado, no procesa datos de usuario por LLM, no llama subprocess con entradas externas. Las clases de hallazgo que CodeQL detecta en Python (deserialización insegura, inyección de comandos, path traversal, SQL injection) no tienen superficie real en V1. El coste de revisar falsos positivos bajo bus factor = 1 supera el beneficio de signal. Esta decisión se revisa **automáticamente** cuando se aprueben los ADRs de levantamiento de `aip.http`, `aip.osint`, `aip.llm` o `aip.search`.
+- **Mutation testing en CI.** Útil pero caro de mantener bajo bus factor = 1. Puede ejecutarse localmente cuando el mantenedor lo elija; no es gate.
+- **Bandit / safety / pip-audit.** Solapan con `dependabot security-only` (`.github/dependabot.yml`). Sin valor incremental para este alcance.
+
+## Branch protection (intent)
+
+**Estado actual:** sin branch protection enforced sobre `main`. Justificación: bus factor = 1 hace que reglas como "required PR review from non-author" bloqueen al único mantenedor activo, lo cual transforma el mecanismo de protección en mecanismo de obstrucción.
+
+**Cuando se active (bus factor ≥ 2 declarado en este documento)**, la configuración intencionada es:
+
+| Regla | Valor intencionado | Razón |
+|---|---|---|
+| Required status checks | `gates (Ubuntu / py3.11)`, `gates (Ubuntu / py3.12)` | Los tres gates de quality. macOS/Windows quedan informativos. |
+| Require branches to be up to date | Sí | Evita merges sobre base antigua. |
+| Require pull request reviews | 1 reviewer, no author | Mínimo razonable bajo bus factor = 2. |
+| Dismiss stale reviews on new commits | Sí | Cualquier cambio post-review re-dispara aprobación. |
+| Require linear history | Sí | No merge commits; rebase only. |
+| Allow force pushes | No | Sin excepciones. |
+| Allow deletions | No | El historial es trazabilidad (ADR-0024 L2). |
+| Restrict who can push to matching branches | Maintainers activos | Sin excepciones. |
+
+Estas reglas **no se aplican hoy**. Se documentan aquí para que la transición sea inmediata cuando bus factor suba.
+
+### Excepciones permitidas incluso con branch protection activa
+
+- Bumps de `dependabot` security-only pueden auto-mergearse si pasan los gates obligatorios. Será decisión explícita del primer co-maintainer.
+- Documentación que no toca código (`docs/**/*.md`) puede mergearse por el autor del PR si los gates pasan, sin segunda aprobación. Decisión a confirmar cuando aplique.
+
+---
+
 ## Alineación con ADR-0026
 
 Este documento **opera** los cinco compromisos de ADR-0026:
@@ -234,6 +279,7 @@ Si este documento entra en contradicción operativa con ADR-0026, prevalece el A
 |---|---|---|
 | 2026-06-03 | Fundación del proyecto. `@jfhelvetius` incorporado como `founder` único. | 1 |
 | 2026-06-04 | Publicación inicial de este `MAINTAINERS.md` conforme a ADR-0026. Sin cambios en la lista. | 1 |
+| 2026-06-06 | Hardening de CI. Añadidas secciones "Quality gates declarados y CI" y "Branch protection (intent)". Decisión razonada de no añadir CodeQL/Bandit/safety. Sin cambios en la lista. | 1 |
 
 ---
 
