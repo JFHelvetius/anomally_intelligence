@@ -35,6 +35,9 @@ dev = [
     "pytest-cov >=5",
     "ruff >=0.4",
     "mypy >=1.10",
+    # Property-based testing sobre invariantes de hashing y audit chain
+    # (ADR-0031 §opcional; sin cambio de semántica del código de producción).
+    "hypothesis >=6.100,<7",
 ]
 
 [project.scripts]
