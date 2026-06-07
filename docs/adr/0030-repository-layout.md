@@ -407,3 +407,33 @@ src/aip/
 **Tabla actualizada del §"Por qué cuatro subpaquetes":** ahora son **cinco**. Cuando ADR-0032 cubre el subpaquete entero, la celda "deja de ser cuatro" del ADR original se reinterpreta como "deja de ser N", donde N = 4 + cantidad de capas derivadas autorizadas por ADRs posteriores. ADR-0023 §congelación V1 sigue activa: cualquier futura capa derivada (e.g., `analysis/temporal_review/`) requerirá su propio ADR de levantamiento puntual.
 
 **E7 no muta bytes hasheados:** `EXPECTED_DEMO_MANIFEST_HASH`, `EXPECTED_EMPTY_MANIFEST_HASH`, los 5 `schema_hashes` y los pares JCS canónicos siguen idénticos. El árbol de `src/` no entra en ninguna canonicalización.
+
+### Enmienda al pie — 2026-06-07 (E8, post-ADR-0033)
+
+ADR-0033 (Evidence Graph V1) introdujo un **sexto subpaquete** bajo `src/aip/`: `graph/`. La estructura actual es:
+
+```
+src/aip/
+├── analysis/   ← ADR-0032 (capa derivada de assessments)
+├── audit/
+├── cli/
+├── core/
+├── graph/      ← nuevo (ADR-0033): grafo de procedencia derivado
+└── storage/
+```
+
+**Por qué `graph/` es subpaquete propio y no parte de `analysis/`:** `analysis/` aloja productores de artefactos derivados (cada `AuthenticationAssessment` es un artefacto que el operador decide producir corriendo `aip assess-authentication`). `graph/` aloja **lectura estructural** del archive: el grafo no es un artefacto que se "decide producir"; es una vista del estado actual que se reconstruye en cada llamada. Mezclar ambos en un mismo subpaquete confundiría dos tipos de operación: "derivar y persistir" vs. "leer y proyectar".
+
+**Coherencia con S1–S6 y propuesta S7:**
+
+- `graph/` puede depender de `core/`, `storage/` y `analysis/`. Lee tipos de las tres capas para construir nodos y aristas.
+- `graph/` **no** depende de `audit/` ni de `cli/`. Esa dirección no tiene sentido lógico (el grafo no se audita; el grafo es proyección).
+- `core/`, `storage/`, `audit/` y `analysis/` siguen sin depender de `graph/`. Mantiene la propiedad ya declarada en S1, S2, S5, S6: ninguna capa core o derivada productora depende de la capa de proyección.
+
+**S7 (propuesto y vigente desde 2026-06-07):** `graph/` puede depender de `core/`, `storage/` y `analysis/`. Ninguna otra capa depende de `graph/`. Borrar `graph/` no rompe el resto del paquete — materialización física de la garantía G2 de ADR-0033 (removibilidad).
+
+**Por qué no usar `aip.knowledge_graph` o similar:** ADR-0011 reserva el dominio "knowledge graph" completo (personas, organizaciones, eventos, etc.) y sigue diferido por ADR-0023. Usar ese nombre invitaría a confusión sobre alcance. `graph/` con ADR-0033 cubre **estrictamente** procedencia entre Evidence/Source/Assessment; el grafo de conocimiento real seguirá requiriendo levantamiento explícito de ADR-0011.
+
+**Tabla actualizada del §"Por qué cuatro subpaquetes":** ahora son **seis**. Cualquier futura capa de proyección o derivación seguirá la misma regla: subpaquete propio, ADR de levantamiento puntual, S-rule específica que documente direcciones de dependencia.
+
+**E8 no muta bytes hasheados:** los hashes pinned (5 schema_hashes, empty manifest, demo manifest, demo+assessment manifest, audit chain, JCS pairs) siguen idénticos. El árbol de `src/` no entra en ninguna canonicalización.

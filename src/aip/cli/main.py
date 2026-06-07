@@ -20,6 +20,7 @@ from aip.cli.assessment_commands import (
     add_list_assessments_subparser,
 )
 from aip.cli.evidence_commands import add_evidence_subparser
+from aip.cli.graph_commands import add_graph_subparser
 from aip.errors import AIPError, UsageError
 
 DEFAULT_ARCHIVE_ROOT_ENV: str = "AIP_ARCHIVE_ROOT"
@@ -95,6 +96,9 @@ def build_parser() -> argparse.ArgumentParser:
     # ``list-assessments`` es la simetría de lectura: enumera assessments
     # persistidos sin modificar el archive. Mismo estilo flat.
     add_list_assessments_subparser(subparsers)
+    # ``graph`` es subgrupo (ADR-0033 §CLI): tres subcomandos comparten
+    # dominio "grafo de procedencia derivado". Read-only por contrato.
+    add_graph_subparser(subparsers)
 
     return parser
 
