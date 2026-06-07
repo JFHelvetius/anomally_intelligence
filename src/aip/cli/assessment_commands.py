@@ -1,11 +1,15 @@
-"""Subcomando ``aip assess-authentication`` (ADR-0032 §5).
+"""Subcomandos top-level relacionados con assessments derivados (ADR-0032).
 
-Ortogonal a ``evidence`` y ``archive``: vive como subcomando top-level porque
-es un artefacto derivado distinto del ciclo de vida de la evidencia. Argumentos
-mínimos por contrato (ADR-0032 §5): ``--archive PATH`` + ``--evidence-id ID``.
-Salida JSON canónica; sin formato humano por contrato (el assessment se piensa
-para ser consumido por herramientas externas o como entrada de la siguiente
-fase, no para ser leído al vuelo).
+- ``aip assess-authentication`` — produce un nuevo assessment para una
+  Evidence (contrato ADR-0032 §5).
+- ``aip list-assessments`` — enumera assessments persistidos, opcionalmente
+  filtrados por ``--evidence-id``. UX adicional sobre la API
+  :meth:`aip.archive.Archive.list_all_authentication_assessments`; sin
+  cambio de modelo ni de tabla.
+
+Ambos viven como subcomandos top-level porque son artefactos derivados
+distintos del ciclo de vida de la evidencia y emiten siempre JSON
+canónico (sin formato humano).
 """
 
 from __future__ import annotations
@@ -16,7 +20,7 @@ import json
 from pathlib import Path
 from typing import IO
 
-from aip.analysis.authentication import AssessmentMethod
+from aip.analysis.authentication import AssessmentMethod, AuthenticationAssessment
 from aip.archive import Archive
 
 
@@ -97,6 +101,91 @@ def add_assessment_subparser(
         ),
     )
     cmd.set_defaults(_cmd=assess_authentication_command)
+
+
+# --------------------------------------------------------------------- list
+
+
+def list_assessments_command(
+    args: argparse.Namespace, *, stdout: IO[str]
+) -> int:
+    """Implementa ``aip list-assessments`` (lectura read-only).
+
+    Lee la tabla ``authentication_assessments``, opcionalmente filtra por
+    ``--evidence-id``, y emite la lista entera en JSON. Sin tocar el
+    archive: no escribe filas, no actualiza el manifest, no añade audit
+    entries. Es la simetría de lectura del comando de escritura
+    ``assess-authentication``.
+    """
+    archive = Archive.open(args.archive)
+    if args.evidence_id is not None:
+        items: tuple[AuthenticationAssessment, ...] = (
+            archive.list_authentication_assessments(args.evidence_id)
+        )
+        filter_payload: dict[str, str] | None = {
+            "evidence_id": args.evidence_id,
+        }
+    else:
+        items = archive.list_all_authentication_assessments()
+        filter_payload = None
+
+    payload: dict[str, object] = {
+        "ok": True,
+        "action": "list_assessments",
+        "archive_root": str(archive.root),
+        "filter": filter_payload,
+        "count": len(items),
+        "assessments": [
+            {
+                "assessment_id": a.assessment_id,
+                "evidence_id": a.evidence_id,
+                "method": a.method.value,
+                "status": a.status.value,
+                "rationale": a.rationale,
+                "supporting_source_ids": list(a.supporting_source_ids),
+                "created_at": _iso_utc(a.created_at),
+                "schema_version": a.schema_version,
+            }
+            for a in items
+        ],
+    }
+    stdout.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+    return 0
+
+
+def add_list_assessments_subparser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    """Añade el subcomando ``list-assessments`` al dispatcher.
+
+    Mismo estilo flat que ``assess-authentication`` (sin ``common`` parent),
+    salida JSON por contrato. ``--evidence-id`` opcional: sin él, enumera
+    todo el corpus derivado.
+    """
+    cmd = subparsers.add_parser(
+        "list-assessments",
+        help=(
+            "List AuthenticationAssessments persisted in the archive. "
+            "Optional --evidence-id filters to a single Evidence. Read-only: "
+            "does not modify the archive nor write audit entries."
+        ),
+    )
+    cmd.add_argument(
+        "--archive",
+        required=True,
+        type=Path,
+        help="Path al archive AIP.",
+    )
+    cmd.add_argument(
+        "--evidence-id",
+        default=None,
+        help=(
+            "Opcional. SHA-256 hex (también acepta ``sha256:<hex>`` o "
+            "``aip:evidence/sha256:<hex>``). Si está presente, sólo "
+            "devuelve assessments de esa Evidence."
+        ),
+    )
+    cmd.set_defaults(_cmd=list_assessments_command)
 
 
 # --------------------------------------------------------------------- helpers

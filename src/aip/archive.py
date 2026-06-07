@@ -502,6 +502,25 @@ class Archive:
         out.sort(key=lambda a: a.assessment_id)
         return tuple(out)
 
+    def list_all_authentication_assessments(
+        self,
+    ) -> tuple[DerivedAuthenticationAssessment, ...]:
+        """Devuelve **todos** los assessments del archive (sin filtro).
+
+        Misma garantía de orden que :meth:`list_authentication_assessments`:
+        estable por ``assessment_id`` (que ya incluye ``evidence_id`` +
+        ``method`` por construcción de :func:`make_assessment_id`). Útil
+        para enumerar el corpus derivado completo desde ``aip
+        list-assessments`` sin pasar por ``show`` evidencia por evidencia.
+        """
+        if not self.root.is_dir() or not layout.is_archive(self.root):
+            raise ArchiveNotFoundError(f"archive not found at {self.root}.")
+        out: list[DerivedAuthenticationAssessment] = []
+        for raw in tables.iter_rows(self.root, ASSESSMENTS_TABLE):
+            out.append(DerivedAuthenticationAssessment.model_validate(raw))
+        out.sort(key=lambda a: a.assessment_id)
+        return tuple(out)
+
     # --- Verify --------------------------------------------------------
 
     def verify(self, *, full: bool = True) -> VerificationReport:

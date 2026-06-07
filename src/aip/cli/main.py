@@ -15,7 +15,10 @@ from typing import IO
 
 from aip._version import __version__ as SOFTWARE_VERSION
 from aip.cli.archive_commands import add_archive_subparser
-from aip.cli.assessment_commands import add_assessment_subparser
+from aip.cli.assessment_commands import (
+    add_assessment_subparser,
+    add_list_assessments_subparser,
+)
 from aip.cli.evidence_commands import add_evidence_subparser
 from aip.errors import AIPError, UsageError
 
@@ -89,6 +92,9 @@ def build_parser() -> argparse.ArgumentParser:
     # (ADR-0032 §5) lista exactamente ``--archive`` y ``--evidence-id`` y
     # emite siempre JSON. Sin ``--archive-root``, ``--quiet``, etc.
     add_assessment_subparser(subparsers)
+    # ``list-assessments`` es la simetría de lectura: enumera assessments
+    # persistidos sin modificar el archive. Mismo estilo flat.
+    add_list_assessments_subparser(subparsers)
 
     return parser
 
