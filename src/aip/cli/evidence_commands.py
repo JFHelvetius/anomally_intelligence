@@ -143,10 +143,25 @@ def _print_show_human(view: EvidenceView, *, stdout: IO[str]) -> None:
         stdout.write("\n")
 
     a = e.authentication
-    stdout.write("Authentication:\n")
+    stdout.write("Authentication (embedded slot):\n")
     stdout.write(f"  Status:    {a.status.value}\n")
     stdout.write(f"  Assessor:  {a.assessor or '—'}\n")
-    stdout.write(f"  Method:    {a.method or '—'}\n")
+    stdout.write(f"  Method:    {a.method or '—'}\n\n")
+
+    # Derived assessments (ADR-0032). Lista vacía = estado legítimo, no
+    # error; el operador no ha corrido `aip assess-authentication` aún.
+    stdout.write("Derived Assessments (ADR-0032):\n")
+    if not view.derived_assessments:
+        stdout.write(
+            "  (none) — run `aip assess-authentication "
+            f"--archive {{path}} --evidence-id {e.hash}` to produce one.\n"
+        )
+    else:
+        for d in view.derived_assessments:
+            stdout.write(
+                f"  - {d.method.value:>26s} → {d.status.value:>20s}  "
+                f"(created_at: {_iso_utc(d.created_at)})\n"
+            )
 
 
 def _print_show_json(view: EvidenceView, *, stdout: IO[str]) -> None:
@@ -195,6 +210,23 @@ def _print_show_json(view: EvidenceView, *, stdout: IO[str]) -> None:
             ],
             "gaps": [{"description": g.description} for g in p.gaps],
         }
+    # Derived assessments (ADR-0032). Lista siempre presente — vacía si
+    # nunca se corrió `aip assess-authentication`. La presencia explícita
+    # del campo evita que consumidores externos confundan "no había
+    # campo" con "no había assessments".
+    payload["derived_assessments"] = [
+        {
+            "assessment_id": d.assessment_id,
+            "evidence_id": d.evidence_id,
+            "method": d.method.value,
+            "status": d.status.value,
+            "rationale": d.rationale,
+            "supporting_source_ids": list(d.supporting_source_ids),
+            "created_at": _iso_utc(d.created_at),
+            "schema_version": d.schema_version,
+        }
+        for d in view.derived_assessments
+    ]
     stdout.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
 
 

@@ -95,12 +95,22 @@ def default_clock() -> dt.datetime:
 
 @dataclass(frozen=True)
 class EvidenceView:
-    """Composición devuelta por :meth:`Archive.show_evidence`."""
+    """Composición devuelta por :meth:`Archive.show_evidence`.
+
+    ``derived_assessments`` lista los artefactos derivados de ADR-0032
+    persistidos en la tabla ``authentication_assessments`` para esta
+    evidencia, ordenados por ``assessment_id``. Puede estar vacía: una
+    Evidence sin assessments derivados es estado **legítimo** (no se ha
+    corrido ``aip assess-authentication`` aún), no error. Distintos del
+    slot embebido :attr:`Evidence.authentication`, que es estructural y
+    nunca se puebla activamente en V1.
+    """
 
     evidence: Evidence
     source: Source
     provenance: Provenance | None
     provenance_steps: tuple[ProvenanceStep, ...]
+    derived_assessments: tuple[DerivedAuthenticationAssessment, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -362,11 +372,17 @@ class Archive:
         if provenance is not None:
             steps.extend(provenance.steps)
 
+        # Assessments derivados (ADR-0032). Lectura barata: una iteración
+        # sobre tablas/authentication_assessments/. Vacía si nunca se
+        # corrió `aip assess-authentication` sobre esta Evidence.
+        derived = self.list_authentication_assessments(blob_hash)
+
         return EvidenceView(
             evidence=evidence,
             source=source,
             provenance=provenance,
             provenance_steps=tuple(steps),
+            derived_assessments=derived,
         )
 
     # --- Assess (ADR-0032) --------------------------------------------
