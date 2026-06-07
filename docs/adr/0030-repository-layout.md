@@ -543,3 +543,25 @@ Verificado por tests AST inspect en cada subpaquete.
 **Persistencia:** los tres usan directorios periféricos bajo el archive root (`<archive>/timelines/`, `<archive>/snapshots/`) que **no entran** en `V1_TABLES` ni en `compute_manifest`. `archive_manifest_hash` es invariante ante operaciones de timeline/snapshot/diff.
 
 **E12 no muta bytes hasheados:** los hashes pinned siguen idénticos.
+
+### Enmienda al pie — 2026-06-07 (E13, post-ADR-0040)
+
+ADR-0040 (Investigation Justification Engine V1) introdujo un **décimo subpaquete** bajo `src/aip/`:
+
+```
+src/aip/
+├── ...
+├── workspace/
+├── timeline/
+├── snapshot/
+├── diff/
+└── justification/   ← nuevo (ADR-0040): cadena deductiva categorizada
+```
+
+**S14 (vigente desde 2026-06-07):** `justification/` puede depender de `core/`, `storage/`, `analysis/`, `graph/`, `workspace/` y `errors`. **No** depende de `impact/`, `context/`, `timeline/`, `snapshot/`, `diff/`. Tampoco depende de librerías ML/red. AST inspect lo verifica.
+
+**Persistencia:** `<archive>/justifications/<id>.json` — directorio periférico, no entra en `V1_TABLES` ni en `compute_manifest`. `archive_manifest_hash` invariante ante operaciones de justification.
+
+**Integración con ADR-0039 sin modificar su subpaquete:** el subcomando `aip diff justifications` se añade a `src/aip/cli/diff_commands.py` (capa CLI, no capa de modelo). El subpaquete `aip.diff` no se modifica — el CLI orquesta la composición.
+
+**E13 no muta bytes hasheados:** los hashes pinned siguen idénticos.

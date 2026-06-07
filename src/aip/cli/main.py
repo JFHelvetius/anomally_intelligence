@@ -24,6 +24,7 @@ from aip.cli.diff_commands import add_diff_subparser
 from aip.cli.evidence_commands import add_evidence_subparser
 from aip.cli.graph_commands import add_graph_subparser
 from aip.cli.impact_commands import add_impact_subparser
+from aip.cli.justification_commands import add_justification_subparser
 from aip.cli.snapshot_commands import add_snapshot_subparser
 from aip.cli.timeline_commands import add_timeline_subparser
 from aip.cli.workspace_commands import add_workspace_subparser
@@ -121,6 +122,9 @@ def build_parser() -> argparse.ArgumentParser:
     add_snapshot_subparser(subparsers)
     # ``diff`` es subgrupo (ADR-0039 §CLI): set-difference puro.
     add_diff_subparser(subparsers)
+    # ``justification`` es subgrupo (ADR-0040 §CLI): cadena deductiva
+    # categorizada por rol. Read-only — no ejecuta motores productores.
+    add_justification_subparser(subparsers)
 
     return parser
 
