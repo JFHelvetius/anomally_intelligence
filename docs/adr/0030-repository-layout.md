@@ -565,3 +565,33 @@ src/aip/
 **Integración con ADR-0039 sin modificar su subpaquete:** el subcomando `aip diff justifications` se añade a `src/aip/cli/diff_commands.py` (capa CLI, no capa de modelo). El subpaquete `aip.diff` no se modifica — el CLI orquesta la composición.
 
 **E13 no muta bytes hasheados:** los hashes pinned siguen idénticos.
+
+### Enmienda al pie — 2026-06-07 (E14, post-P2 hardening)
+
+Tras completar ADR-0040 y sus pins de reproducibility, se identificó un hueco operativo: los artefactos derivados persistidos bajo `<archive>/{workspaces,timelines,snapshots,justifications}/` no eran auditables como conjunto. Cada uno tenía `verify_*_hash` offline, pero no había forma de pedirle al archive: *"audita la integridad referencial cruzada de TODO lo derivado persistido"*. ADR-0040 cierra la cadena conceptual; este P2 cierra la cadena operativa.
+
+Cambios:
+
+**Nuevo undécimo subpaquete `src/aip/integrity/`:**
+
+```
+src/aip/
+├── ...
+├── workspace/
+├── timeline/
+├── snapshot/
+├── diff/
+├── justification/
+└── integrity/   ← P2 hardening: checker de integridad referencial cruzada
+```
+
+**Comportamiento:**
+
+- `aip archive verify` **sin** `--derived`: comportamiento idéntico al pre-P2. Default unchanged. Backward compat estricta.
+- `aip archive verify --derived`: añade una sección que enumera incidencias estructurales sobre los artefactos derivados persistidos (hash mismatch, manifest drift, workspace/timeline link broken, referencias rotas a tablas base, decode errors).
+
+**S15 (vigente desde 2026-06-07):** `integrity/` puede depender de `core/`, `storage/`, `analysis/` (lectura modelo), `workspace/`, `timeline/`, `snapshot/`, `justification/` y `errors`. Es la única capa que **lee** todos los artefactos derivados persistidos. No ejecuta motores productores (cero llamadas a `assess_authentication`, `build_graph`, `analyze_removal_impact`, `assemble_context`, `build_justification`, etc.). Sólo decode + verify + lookup en tablas base.
+
+**El módulo `aip.diff` queda explícitamente fuera de S15:** el integrity checker no compara artefactos entre sí; sólo audita cada uno contra el estado actual del archive.
+
+**E14 no muta bytes hasheados.** El comportamiento default de `archive verify` es idéntico. Los 16 pinned hashes siguen verdes. El comando `--derived` añade información sin alterar la existente.
