@@ -462,3 +462,27 @@ src/aip/
 **Tabla actualizada del §"Por qué cuatro subpaquetes":** ahora son **siete**. El patrón ya es claro: cada capa derivada con propósito específico vive en su subpaquete propio, con regla S-rule de dependencias documentada, y permanece removible bit a bit.
 
 **E9 no muta bytes hasheados:** los hashes pinned siguen idénticos. El árbol de `src/` no entra en ninguna canonicalización.
+
+### Enmienda al pie — 2026-06-07 (E10, post-ADR-0035)
+
+ADR-0035 (Context Assembly Layer V1) introdujo un **octavo subpaquete** bajo `src/aip/`: `context/`. La estructura actual es:
+
+```
+src/aip/
+├── analysis/   ← ADR-0032 (capa derivada de assessments)
+├── audit/
+├── cli/
+├── context/    ← nuevo (ADR-0035): capa de composición/agregación
+├── core/
+├── graph/      ← ADR-0033 (grafo de procedencia derivado)
+├── impact/     ← ADR-0034 (análisis de impacto downstream)
+└── storage/
+```
+
+**Por qué `context/` es subpaquete propio:** las capas derivadas anteriores (`analysis/`, `graph/`, `impact/`) son **productoras** de información derivada. `context/` es la primera capa **agregadora**: no produce información nueva, compone outputs canónicos de productores existentes. Mezclar agregación con producción borraría una distinción arquitectónica importante (ADR-0035 §G3).
+
+**S9 (propuesto y vigente desde 2026-06-07):** `context/` puede depender de `core/`, `analysis/`, `graph/`, `impact/`, `storage/` y de `aip._version`. Ninguna otra capa depende de `context/`. Borrar `context/` deja al resto del paquete funcional — materialización física de la garantía G2 de ADR-0035 (removibilidad).
+
+**Propiedad arquitectónica nueva expuesta por S9:** `context/` es la única capa que depende de **todas** las capas derivadas. Esta posición topológica refleja su rol declarado: agregación pura sobre productores existentes.
+
+**E10 no muta bytes hasheados:** los hashes pinned siguen idénticos. El árbol de `src/` no entra en ninguna canonicalización. El nuevo `EXPECTED_DEMO_CONTEXT_BUNDLE_HASH` pinned en `tests/reproducibility/test_manifest_hash.py` describe un artefacto derivado nuevo (el bundle), no muta ninguno preexistente.

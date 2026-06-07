@@ -24,9 +24,11 @@ from aip import Archive
 from aip._version import SCHEMA_VERSION
 from aip._version import __version__ as SOFTWARE_VERSION
 from aip.analysis.authentication import AssessmentMethod
+from aip.context import assemble_context, verify_bundle_hash
 from aip.core.evidence import EvidenceKind
 from aip.core.hashing import sha256_hex, sha256_hex_stream
 from aip.core.source import AuthorityLevel, SourceKind
+from aip.graph.models import GraphNode, NodeKind
 from aip.storage import layout
 from aip.storage.manifest import compute_manifest
 from aip.storage.tables import get_schemas
@@ -292,3 +294,85 @@ def test_archive_with_demo_pdf_and_assessment_manifest_hash_is_canonical_pinned(
         schema_version=SCHEMA_VERSION,
     )
     assert manifest.manifest_hash() == EXPECTED_DEMO_ASSESSMENT_MANIFEST_HASH
+
+
+# ----------------------------------------------------------------- ADR-0035
+
+EXPECTED_DEMO_CONTEXT_BUNDLE_HASH = (
+    "ea257f4019f34e37fdf2601f27a5a00a963f99c6867e64ab7f237aad09624adc"
+)
+"""``context_bundle_hash`` canónico del :class:`ContextBundle` ensamblado
+sobre el demo del Twining Memo con clock canónico y assessment derivado.
+
+Inputs canónicos:
+
+- Mismos clocks + inputs de ``EXPECTED_DEMO_ASSESSMENT_MANIFEST_HASH``
+  (ingest + assess con clock 2026-06-04T00:00:00Z, método
+  ``provenance_review``).
+- Anchor del bundle: ``GraphNode(EVIDENCE, evidence.hash)``.
+
+Si este valor cambia, ha cambiado uno de:
+
+- Layout o campos del :class:`ContextBundle` / :class:`ContextNode` /
+  :class:`GraphNeighborhood`.
+- Forma del payload serializado por ``Evidence/Source/Provenance/
+  AuthenticationAssessment.model_dump(mode="json")``.
+- Output de ``analyze_removal_impact`` (ADR-0034).
+- Forma de la canonicalización JCS / normalización de tuplas.
+- ``ASSEMBLY_ENGINE_VERSION`` o ``ASSEMBLY_METHOD_NAME``.
+
+Cualquiera es bug arquitectónico crítico que requiere PR + (posiblemente)
+ADR de enmienda explícito.
+"""
+
+
+@pytest.mark.requires_fixture
+def test_demo_context_bundle_hash_is_canonical_pinned(tmp_path: Path) -> None:
+    """ContextBundle sobre demo + assess + anchor=evidence con clocks
+    canónicos coincide con el pinned (ADR-0035 §reproducibilidad).
+
+    Verifica además dos invariantes cross-ADR:
+
+    1. ``bundle.source_manifest_hash`` coincide con
+       ``EXPECTED_DEMO_ASSESSMENT_MANIFEST_HASH`` (ADR-0032/0035).
+    2. ``verify_bundle_hash(bundle)`` es ``True`` (self-consistencia
+       del hash declarado vs. recomputo).
+    """
+    fixture = (
+        Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
+    )
+    if not fixture.is_file():
+        pytest.skip(f"fixture missing: {fixture}")
+
+    archive_root = tmp_path / "demo_archive_assembled"
+    archive = Archive.open(archive_root)
+    evidence = archive.ingest_evidence(
+        fixture,
+        source_id="blue-book-nara",
+        source_name="Project Blue Book records",
+        source_kind=SourceKind.GOVERNMENT_ARCHIVE,
+        source_authority=AuthorityLevel.SECONDARY,
+        source_jurisdiction="US",
+        source_license="public_domain",
+        evidence_kind=EvidenceKind.DOCUMENT_SCAN,
+        mime_type="application/pdf",
+        ingested_by="@jfhelvetius",
+        clock=lambda: CANONICAL_GENERATED_AT,
+    )
+    assert evidence.hash == EXPECTED_DEMO_PDF_SHA256
+    archive.assess_authentication(
+        evidence_id=evidence.hash,
+        method=AssessmentMethod.PROVENANCE_REVIEW,
+        clock=lambda: CANONICAL_GENERATED_AT,
+    )
+
+    bundle = assemble_context(
+        archive_root,
+        GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash),
+    )
+    # Invariante cross-ADR-0032/0035.
+    assert bundle.source_manifest_hash == EXPECTED_DEMO_ASSESSMENT_MANIFEST_HASH
+    # Self-consistencia del hash declarado.
+    assert verify_bundle_hash(bundle) is True
+    # Pin canónico.
+    assert bundle.context_bundle_hash == EXPECTED_DEMO_CONTEXT_BUNDLE_HASH

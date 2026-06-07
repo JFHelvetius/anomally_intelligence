@@ -19,6 +19,7 @@ from aip.cli.assessment_commands import (
     add_assessment_subparser,
     add_list_assessments_subparser,
 )
+from aip.cli.context_commands import add_context_subparser
 from aip.cli.evidence_commands import add_evidence_subparser
 from aip.cli.graph_commands import add_graph_subparser
 from aip.cli.impact_commands import add_impact_subparser
@@ -104,6 +105,9 @@ def build_parser() -> argparse.ArgumentParser:
     # reverse-dependency reachability. Read-only por contrato. Sin
     # scoring, sin severidad, sin probabilidad.
     add_impact_subparser(subparsers)
+    # ``context`` es subgrupo (ADR-0035 §CLI): agregación pura de
+    # ADR-0032/0033/0034 en un único bundle determinista. Read-only.
+    add_context_subparser(subparsers)
 
     return parser
 
