@@ -598,52 +598,10 @@ class Archive:
                 )
             )
 
-        # 4. Manifest.
-        manifest_path = self.root / layout.MANIFEST_FILENAME
+        # 4. Manifest — content-aware (post-P4 hardening).
         recomputed = self._compute_manifest(generated_at=default_clock())
         recomputed_hash = recomputed.manifest_hash()
-        stored_hash: str | None = None
-        manifest_ok = False
-        if manifest_path.is_file():
-            try:
-                stored = json.loads(manifest_path.read_text(encoding="utf-8"))
-                # Recomputamos sobre el contenido almacenado (sin generated_at
-                # nuevo): hash del contenido stored debe coincidir con su
-                # propio manifest_hash si está bien formado.
-                # Aquí solo comparamos estructura básica V1.
-                stored_manifest = ArchiveManifest.model_validate(
-                    _stored_to_model(stored)
-                )
-                stored_hash = stored_manifest.manifest_hash()
-                manifest_ok = True
-            except Exception as exc:
-                manifest_ok = False
-                stored_hash = None
-                checks.append(
-                    CheckResult(
-                        name="manifest",
-                        ok=False,
-                        detail=f"manifest parse error: {exc}",
-                    )
-                )
-            else:
-                checks.append(
-                    CheckResult(
-                        name="manifest",
-                        ok=manifest_ok,
-                        detail=(
-                            f"manifest readable, stored_hash={stored_hash[:8]}…"
-                        ),
-                    )
-                )
-        else:
-            checks.append(
-                CheckResult(
-                    name="manifest",
-                    ok=False,
-                    detail="manifest.json missing",
-                )
-            )
+        checks.append(self._check_manifest_content(recomputed))
 
         ok = all(c.ok for c in checks)
         counts = {
@@ -668,6 +626,55 @@ class Archive:
             generated_at=generated_at,
             software_version=SOFTWARE_VERSION,
             schema_version=SCHEMA_VERSION,
+        )
+
+    def _check_manifest_content(
+        self, recomputed: ArchiveManifest
+    ) -> CheckResult:
+        """Verifica que ``manifest.json`` en disco coincide con el manifest
+        que ``compute_manifest`` produciría ahora.
+
+        Hasta P4 esta check era sólo parse — si parseaba, ``ok=True``.
+        Eso dejaba un vector de tampering silencioso: editar
+        ``manifest.json`` (cambiar ``row_count``, falsificar un
+        ``schema_hash``, reordenar ``tables.{}``) no se detectaba. P4
+        cierra el hueco comparando campo a campo, excluyendo
+        ``generated_at`` (siempre difiere) y ``software_version``
+        (puede cambiar legítimamente).
+        """
+        manifest_path = self.root / layout.MANIFEST_FILENAME
+        if not manifest_path.is_file():
+            return CheckResult(
+                name="manifest", ok=False, detail="manifest.json missing"
+            )
+        try:
+            stored = json.loads(manifest_path.read_text(encoding="utf-8"))
+            stored_manifest = ArchiveManifest.model_validate(
+                _stored_to_model(stored)
+            )
+        except Exception as exc:
+            return CheckResult(
+                name="manifest",
+                ok=False,
+                detail=f"manifest parse error: {exc}",
+            )
+        divergences = _diff_manifest_content(stored_manifest, recomputed)
+        if not divergences:
+            return CheckResult(
+                name="manifest",
+                ok=True,
+                detail=(
+                    "stored content matches recomputed; "
+                    f"stored_hash={stored_manifest.manifest_hash()[:8]}…"
+                ),
+            )
+        return CheckResult(
+            name="manifest",
+            ok=False,
+            detail=(
+                "stored manifest content DIVERGES from recomputed: "
+                + "; ".join(divergences)
+            ),
         )
 
 
@@ -769,3 +776,87 @@ def _stored_to_model(stored: dict[str, object]) -> dict[str, object]:
     out = dict(stored)
     # ``ArchiveManifest`` acepta strings ISO 8601 → tz-aware datetime al validar.
     return out
+
+
+def _diff_manifest_content(
+    stored: ArchiveManifest,
+    recomputed: ArchiveManifest,
+) -> list[str]:
+    """Compara el contenido de dos manifests excluyendo ``generated_at`` y
+    ``software_version``.
+
+    Devuelve lista de strings describiendo cada divergencia. Lista vacía
+    significa contenido idéntico — el manifest stored refleja
+    fielmente el estado actual del archive.
+
+    Campos comparados:
+
+    - ``schema_version`` (pin del esquema lógico de datos)
+    - ``tables.keys()`` (debe ser exactamente ``V1_TABLES``)
+    - Por tabla: ``partition_hashes``, ``row_count``, ``schema_hash``
+    - ``blobs_root``
+    - ``notes``
+
+    Excluidos:
+
+    - ``generated_at`` — siempre difiere entre stored y recomputed por
+      construcción (recomputed usa ``default_clock``).
+    - ``software_version`` — puede diferir legítimamente entre versiones
+      del paquete sin que el archive esté manipulado.
+    """
+    divergences: list[str] = []
+
+    if stored.schema_version != recomputed.schema_version:
+        divergences.append(
+            f"schema_version: stored={stored.schema_version!r} "
+            f"vs recomputed={recomputed.schema_version!r}"
+        )
+
+    stored_tables = set(stored.tables.keys())
+    recomputed_tables = set(recomputed.tables.keys())
+    if stored_tables != recomputed_tables:
+        missing = recomputed_tables - stored_tables
+        extra = stored_tables - recomputed_tables
+        parts: list[str] = []
+        if missing:
+            parts.append(f"missing={sorted(missing)}")
+        if extra:
+            parts.append(f"extra={sorted(extra)}")
+        divergences.append(
+            "tables.keys mismatch: " + ", ".join(parts)
+        )
+
+    # Compare per-table fields for tables present in both.
+    for name in sorted(stored_tables & recomputed_tables):
+        s_table = stored.tables[name]
+        r_table = recomputed.tables[name]
+        if s_table.row_count != r_table.row_count:
+            divergences.append(
+                f"tables[{name!r}].row_count: stored="
+                f"{s_table.row_count} vs recomputed={r_table.row_count}"
+            )
+        if s_table.schema_hash != r_table.schema_hash:
+            divergences.append(
+                f"tables[{name!r}].schema_hash: stored="
+                f"{s_table.schema_hash[:8]}… vs recomputed="
+                f"{r_table.schema_hash[:8]}…"
+            )
+        if list(s_table.partition_hashes) != list(r_table.partition_hashes):
+            divergences.append(
+                f"tables[{name!r}].partition_hashes mismatch "
+                f"(stored has {len(s_table.partition_hashes)} hashes, "
+                f"recomputed has {len(r_table.partition_hashes)})"
+            )
+
+    if stored.blobs_root != recomputed.blobs_root:
+        divergences.append(
+            f"blobs_root: stored={stored.blobs_root[:8]}… "
+            f"vs recomputed={recomputed.blobs_root[:8]}…"
+        )
+
+    if stored.notes != recomputed.notes:
+        divergences.append(
+            f"notes: stored={stored.notes!r} vs recomputed={recomputed.notes!r}"
+        )
+
+    return divergences

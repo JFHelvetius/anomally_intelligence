@@ -27,6 +27,7 @@ from aip.cli.impact_commands import add_impact_subparser
 from aip.cli.justification_commands import add_justification_subparser
 from aip.cli.snapshot_commands import add_snapshot_subparser
 from aip.cli.timeline_commands import add_timeline_subparser
+from aip.cli.verify_commands import add_verify_subparser
 from aip.cli.workspace_commands import add_workspace_subparser
 from aip.errors import AIPError, UsageError
 
@@ -125,6 +126,10 @@ def build_parser() -> argparse.ArgumentParser:
     # ``justification`` es subgrupo (ADR-0040 §CLI): cadena deductiva
     # categorizada por rol. Read-only — no ejecuta motores productores.
     add_justification_subparser(subparsers)
+    # ``verify`` (P5 hardening): universal artifact verifier que
+    # auto-detecta el tipo y ejecuta verificación offline. Distinto de
+    # ``archive verify`` (audita el archive) — éste audita artefactos.
+    add_verify_subparser(subparsers)
 
     return parser
 
