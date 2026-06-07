@@ -20,9 +20,12 @@ from aip.cli.assessment_commands import (
     add_list_assessments_subparser,
 )
 from aip.cli.context_commands import add_context_subparser
+from aip.cli.diff_commands import add_diff_subparser
 from aip.cli.evidence_commands import add_evidence_subparser
 from aip.cli.graph_commands import add_graph_subparser
 from aip.cli.impact_commands import add_impact_subparser
+from aip.cli.snapshot_commands import add_snapshot_subparser
+from aip.cli.timeline_commands import add_timeline_subparser
 from aip.cli.workspace_commands import add_workspace_subparser
 from aip.errors import AIPError, UsageError
 
@@ -112,6 +115,12 @@ def build_parser() -> argparse.ArgumentParser:
     # ``workspace`` es subgrupo (ADR-0036 §CLI): índice reproducible de
     # referencias a artefactos derivados. No ejecuta motores analíticos.
     add_workspace_subparser(subparsers)
+    # ``timeline`` es subgrupo (ADR-0037 §CLI): vista cronológica ordenada.
+    add_timeline_subparser(subparsers)
+    # ``snapshot`` es subgrupo (ADR-0038 §CLI): congelación reference-only.
+    add_snapshot_subparser(subparsers)
+    # ``diff`` es subgrupo (ADR-0039 §CLI): set-difference puro.
+    add_diff_subparser(subparsers)
 
     return parser
 

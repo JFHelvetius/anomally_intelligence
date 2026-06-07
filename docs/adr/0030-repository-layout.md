@@ -513,3 +513,33 @@ src/aip/
 **Persistencia de workspaces:** los archivos JSON de workspace se persisten en `<archive>/workspaces/<id>.json` — un directorio nuevo bajo la raíz del archive. **No entra en `V1_TABLES`, ni en `compute_manifest`, ni en `is_archive`**. Por construcción, `archive_manifest_hash` es invariante ante operaciones de workspace. Test `test_workspace_persistence_does_not_modify_archive_manifest` lo confirma bit a bit.
 
 **E11 no muta bytes hasheados:** los hashes pinned (incluido `EXPECTED_DEMO_CONTEXT_BUNDLE_HASH`) siguen idénticos. El árbol de `src/` no entra en ninguna canonicalización. El directorio `<archive>/workspaces/` no entra en la canonicalización del manifest.
+
+### Enmienda al pie — 2026-06-07 (E12, post-ADR-0037/0038/0039)
+
+ADR-0037/0038/0039 introdujeron tres subpaquetes simultáneamente bajo `src/aip/`:
+
+```
+src/aip/
+├── ...
+├── workspace/   ← ADR-0036
+├── timeline/    ← ADR-0037 (vista cronológica)
+├── snapshot/    ← ADR-0038 (congelación reference-only)
+└── diff/        ← ADR-0039 (set-difference puro)
+```
+
+**S11 (vigente desde 2026-06-07):** `timeline/` puede depender de `core/`, `storage/`, `analysis/`, `workspace/` y `errors`. **No** depende de `graph/`, `impact/`, `context/`, `snapshot/`, `diff/`.
+
+**S12 (vigente desde 2026-06-07):** `snapshot/` puede depender de `core/`, `workspace/`, `timeline/` y `errors`. **No** depende de `graph/`, `impact/`, `context/`, `diff/`.
+
+**S13 (vigente desde 2026-06-07):** `diff/` puede depender de `core/`, `snapshot/` y `errors`. **No** depende de `graph/`, `impact/`, `context/`, `analysis/`, `timeline/` (depende sólo del snapshot final, no del timeline subyacente).
+
+**Cadena de dependencias topológica (estricta, nunca al revés):**
+`timeline → workspace → ...`
+`snapshot → timeline → workspace → ...`
+`diff → snapshot → timeline → workspace → ...`
+
+Verificado por tests AST inspect en cada subpaquete.
+
+**Persistencia:** los tres usan directorios periféricos bajo el archive root (`<archive>/timelines/`, `<archive>/snapshots/`) que **no entran** en `V1_TABLES` ni en `compute_manifest`. `archive_manifest_hash` es invariante ante operaciones de timeline/snapshot/diff.
+
+**E12 no muta bytes hasheados:** los hashes pinned siguen idénticos.
