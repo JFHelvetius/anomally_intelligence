@@ -29,6 +29,7 @@ from aip.core.evidence import EvidenceKind
 from aip.core.hashing import sha256_hex, sha256_hex_stream
 from aip.core.source import AuthorityLevel, SourceKind
 from aip.graph.models import GraphNode, NodeKind
+from aip.justification import build_justification, verify_justification_hash
 from aip.storage import layout
 from aip.storage.manifest import compute_manifest
 from aip.storage.tables import get_schemas
@@ -376,3 +377,95 @@ def test_demo_context_bundle_hash_is_canonical_pinned(tmp_path: Path) -> None:
     assert verify_bundle_hash(bundle) is True
     # Pin canónico.
     assert bundle.context_bundle_hash == EXPECTED_DEMO_CONTEXT_BUNDLE_HASH
+
+
+# ----------------------------------------------------------------- ADR-0040
+
+EXPECTED_DEMO_JUSTIFICATION_HASH = (
+    "2bf4136832b9735e9d14cbe9d97cca525d854f437994bb3640ff52c29990962d"
+)
+"""``justification_hash`` canónico de la ``InvestigationJustification``
+construida sobre la demo del Twining Memo + assessment derivado con
+clocks canónicos. Anchor: ``assessment``, anchor_id =
+``EXPECTED_PDF_SHA256 + "__provenance_review"``.
+
+Inputs deterministas (idénticos a ``EXPECTED_DEMO_CONTEXT_BUNDLE_HASH``
+en el assessment subyacente):
+
+- ``ingest_evidence`` con clock 2026-06-04T00:00:00Z.
+- ``assess_authentication`` con ``method=PROVENANCE_REVIEW`` y mismo clock.
+- ``build_justification`` con ``conclusion_anchor_type="assessment"``,
+  ``conclusion_anchor_id=<demo_assessment_id>``,
+  ``justification_id="demo-justification"``, sin workspace_id.
+
+Si este valor cambia, ha cambiado uno de:
+
+- El layout o campos del :class:`InvestigationJustification`.
+- La serialización canónica JCS del modelo.
+- El cuerpo de ``compute_chain_entry_hash`` o ``compute_justification_hash``.
+- La regla determinista de
+  :func:`aip.justification.build_justification` (orden canónico de las
+  cinco categorías, dedupe, qué entries entran).
+- ``JUSTIFICATION_ENGINE_VERSION``, ``JUSTIFICATION_METHOD_NAME`` o
+  ``JUSTIFICATION_SCHEMA_VERSION``.
+- Los outputs de ``build_graph`` / ``get_dependency_chain`` que
+  ``build_justification`` consume.
+
+Cualquiera es bug arquitectónico crítico que requiere PR explícito +
+(potencialmente) ADR de enmienda.
+"""
+
+
+@pytest.mark.requires_fixture
+def test_demo_justification_hash_is_canonical_pinned(tmp_path: Path) -> None:
+    """``build_justification`` sobre la demo + assessment con clock
+    canónico produce el pinned ``justification_hash``.
+
+    Cierre del ciclo end-to-end de reproducibility para ADR-0040.
+    Verifica además dos invariantes cross-ADR:
+
+    1. ``j.source_manifest_hash == EXPECTED_DEMO_ASSESSMENT_MANIFEST_HASH``
+       — la justificación está anclada al mismo manifest pinned por
+       ADR-0032/0035.
+    2. ``verify_justification_hash(j) is True`` — self-consistencia del
+       hash declarado vs. recomputo offline.
+    """
+    fixture = (
+        Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
+    )
+    if not fixture.is_file():
+        pytest.skip(f"fixture missing: {fixture}")
+
+    archive_root = tmp_path / "demo_archive_justified"
+    archive = Archive.open(archive_root)
+    evidence = archive.ingest_evidence(
+        fixture,
+        source_id="blue-book-nara",
+        source_name="Project Blue Book records",
+        source_kind=SourceKind.GOVERNMENT_ARCHIVE,
+        source_authority=AuthorityLevel.SECONDARY,
+        source_jurisdiction="US",
+        source_license="public_domain",
+        evidence_kind=EvidenceKind.DOCUMENT_SCAN,
+        mime_type="application/pdf",
+        ingested_by="@jfhelvetius",
+        clock=lambda: CANONICAL_GENERATED_AT,
+    )
+    assert evidence.hash == EXPECTED_DEMO_PDF_SHA256
+    assessment = archive.assess_authentication(
+        evidence_id=evidence.hash,
+        method=AssessmentMethod.PROVENANCE_REVIEW,
+        clock=lambda: CANONICAL_GENERATED_AT,
+    )
+    j = build_justification(
+        archive_root=archive_root,
+        conclusion_anchor_type="assessment",
+        conclusion_anchor_id=assessment.assessment_id,
+        justification_id="demo-justification",
+    )
+    # Invariante cross-ADR-0032/0040.
+    assert j.source_manifest_hash == EXPECTED_DEMO_ASSESSMENT_MANIFEST_HASH
+    # Self-consistencia.
+    assert verify_justification_hash(j) is True
+    # Pin canónico.
+    assert j.justification_hash == EXPECTED_DEMO_JUSTIFICATION_HASH
