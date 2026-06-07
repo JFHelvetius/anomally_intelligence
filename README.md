@@ -2,11 +2,11 @@
 
 > Plataforma open source para investigar, organizar y cuantificar la incertidumbre que rodea a los reportes de fenómenos anómalos aéreos, orbitales, marítimos, astronómicos y observacionales. Sin posturas. Sin sensacionalismo. Sin conclusiones predeterminadas.
 
-**Estado del proyecto:** **Fase 1 cerrada · release `v0.1.0` (2026-06-06).** V1 ejecutable con `aip evidence ingest|show` + `aip archive verify`. Ver [`PROJECT_STATUS.md`](PROJECT_STATUS.md) y [`docs/reviews/phase-1-review.md`](docs/reviews/phase-1-review.md).
+**Estado del proyecto:** **Fase 1 cerrada · release `v0.1.0` (2026-06-06) · motor derivado de autenticidad incorporado (ADR-0032).** V1 ejecutable con `aip evidence ingest|show`, `aip archive verify` y `aip assess-authentication`. Ver [`PROJECT_STATUS.md`](PROJECT_STATUS.md) y [`docs/reviews/phase-1-review.md`](docs/reviews/phase-1-review.md).
 
 ## Sobre este repositorio
 
-AIP es un proyecto de horizonte largo (5+ años). Su construcción siguió un proceso ADR-first: antes de escribir la primera línea de código se redactaron 31 decisiones arquitectónicas explícitas (`docs/adr/`) que delimitan el alcance, las propiedades irrenunciables, y las condiciones de archivo digno. Con `v0.1.0` esa fundación arquitectónica produjo un primer artefacto ejecutable —el modelo de evidencia y procedencia, reproducible bit a bit— sin abandonar la disciplina documental original.
+AIP es un proyecto de horizonte largo (5+ años). Su construcción siguió un proceso ADR-first: antes de escribir la primera línea de código se redactaron 31 decisiones arquitectónicas explícitas (`docs/adr/`) que delimitan el alcance, las propiedades irrenunciables, y las condiciones de archivo digno. Con `v0.1.0` esa fundación arquitectónica produjo un primer artefacto ejecutable —el modelo de evidencia y procedencia, reproducible bit a bit— sin abandonar la disciplina documental original. ADR-0032 levanta puntualmente la congelación V1 para introducir el motor de evaluación de autenticidad como capa **derivada** sobre el archive: cinco status booleanos, sin ML, sin scoring probabilístico, removible sin tocar la evidencia.
 
 Toda la conversación arquitectónica vive en [docs/adr/](docs/adr/). Si quieres entender el proyecto, ese es el único lugar donde empezar. El ADR-0000 es la brújula; todos los demás se alinean con él. ADR-0023 (Scope Reduction) congela el alcance V1; cualquier ampliación requiere ADR explícito de levantamiento.
 
@@ -48,9 +48,10 @@ Instalación canónica conforme a [ADR-0029](docs/adr/0029-runtime-language-deci
 uv sync --frozen --all-extras
 ```
 
-`uv sync --frozen` instala exactamente las versiones declaradas en `uv.lock` (sin re-resolver). Tras la instalación, tres comandos cubren la totalidad del alcance V1:
+`uv sync --frozen` instala exactamente las versiones declaradas en `uv.lock` (sin re-resolver). Tras la instalación, los comandos del alcance V1 + ADR-0032 son:
 
 ```sh
+# Núcleo V1 (ADR-0023)
 aip evidence ingest <pdf> \
     --source-id <id> --source-name "<name>" \
     --source-kind <kind> --source-authority <level> \
@@ -59,9 +60,13 @@ aip evidence ingest <pdf> \
 aip evidence show <hash|sha256:hash|aip:evidence/sha256:hash> [--json]
 
 aip archive verify [--quick|--full] [--json]
+
+# Capa derivada (ADR-0032)
+aip assess-authentication --archive <path> --evidence-id <hash> \
+    [--method manual_research|provenance_review|chain_of_custody_review]
 ```
 
-La demo de cierre F1 — pipeline reproducible sobre el Twining Memo (1947) — vive en [`tests/integration/test_demo_pipeline.py`](tests/integration/test_demo_pipeline.py).
+La demo de cierre F1 — pipeline reproducible sobre el Twining Memo (1947) — vive en [`tests/integration/test_demo_pipeline.py`](tests/integration/test_demo_pipeline.py). El pin de reproducibilidad del motor de autenticidad sobre la misma demo vive en [`tests/reproducibility/test_manifest_hash.py`](tests/reproducibility/test_manifest_hash.py).
 
 ## Lo que el proyecto distingue rigurosamente
 

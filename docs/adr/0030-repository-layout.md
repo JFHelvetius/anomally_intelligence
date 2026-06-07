@@ -379,3 +379,31 @@ El directorio existe (heredado del árbol original) pero V1 no genera modelos UM
 **Alineación P5 / P8:** ninguna de E1–E6 mueve bytes hasheados (los `EXPECTED_*_HASH` pinned se mantienen idénticos). E1–E5 son verificables leyendo `src/aip/` y `tests/`. E6 es un no-op observable como directorio vacío.
 
 **No requiere ADR de enmienda formal porque:** ninguna divergencia introduce dependencias nuevas, viola S1–S5, ni amplía el alcance V1 más allá de lo comprometido por ADR-0023. Son simplificaciones efectuadas durante implementación y consignadas aquí para que cualquier lector del ADR encuentre el árbol real sin trabajar con un mapa obsoleto.
+
+### Enmienda al pie — 2026-06-06 (E7, post-ADR-0032)
+
+ADR-0032 (Authentication Assessment Engine v1) introdujo un **quinto subpaquete** bajo `src/aip/`: `analysis/`. La estructura original de este ADR-0030 declaraba cuatro subpaquetes (`cli/`, `core/`, `storage/`, `audit/`); la realidad actual es:
+
+```
+src/aip/
+├── analysis/   ← nuevo (ADR-0032): capa derivada e inmutable
+├── audit/
+├── cli/
+├── core/
+└── storage/
+```
+
+**Por qué `analysis/` es una capa propia y no parte de `core/`:** `core/` contiene el modelo de **verdad observada** (Evidence, Source, Provenance). Confundir verdad con interpretación derivada es exactamente lo que ADR-0000 prohíbe arquitectónicamente. Un subpaquete propio materializa esa separación: un lector del código sabe inmediatamente que un módulo en `analysis/` es derivado y removible, no fuente.
+
+**Coherencia con S1–S5 (separación de dependencias):**
+- `analysis/` puede depender de `core/` (para validar tipos) y de `storage/` (para leer tablas). Idéntico patrón al de `audit/` (S3). Ver S6 propuesto a continuación.
+- `analysis/` **no** depende de `cli/` ni de `audit/`. Esa dirección no tiene sentido lógico ni práctico.
+- `core/` y `storage/` siguen sin depender de `analysis/`. Mantiene S1, S2, S5.
+
+**S6 (propuesto y vigente desde 2026-06-06):** `analysis/` puede depender de `core/` y `storage/`. Ninguna otra capa depende de `analysis/`. Borrar `analysis/` no rompe el resto del paquete — es la materialización física de la garantía G4 de ADR-0032 (removibilidad).
+
+**Por qué `analysis/` no se mete en `cli/assessment_commands.py`:** la regla determinista `classify()` y el modelo `AuthenticationAssessment` son lógica de dominio derivado, no UX. La CLI los usa pero no los define. Esta separación permite que la regla evolucione (por ADR de enmienda al motor) sin tocar el CLI, y permite que la API Python exponga el motor sin obligar al caller a entrar por argparse.
+
+**Tabla actualizada del §"Por qué cuatro subpaquetes":** ahora son **cinco**. Cuando ADR-0032 cubre el subpaquete entero, la celda "deja de ser cuatro" del ADR original se reinterpreta como "deja de ser N", donde N = 4 + cantidad de capas derivadas autorizadas por ADRs posteriores. ADR-0023 §congelación V1 sigue activa: cualquier futura capa derivada (e.g., `analysis/temporal_review/`) requerirá su propio ADR de levantamiento puntual.
+
+**E7 no muta bytes hasheados:** `EXPECTED_DEMO_MANIFEST_HASH`, `EXPECTED_EMPTY_MANIFEST_HASH`, los 5 `schema_hashes` y los pares JCS canónicos siguen idénticos. El árbol de `src/` no entra en ninguna canonicalización.

@@ -1,18 +1,18 @@
 # PROJECT_STATUS — Anomaly Intelligence Platform
 
-**Última actualización:** 2026-06-06 (cierre de Fase 1 + tracks de mantenimiento C/B/A + auditoría post-release)
-**Estado del proyecto:** **Fase 1 cerrada · release `v0.1.0` publicado · drift documental post-audit cerrado**
+**Última actualización:** 2026-06-06 (cierre de Fase 1 + tracks de mantenimiento C/B/A + auditoría post-release + ADR-0032 aceptado y entregado)
+**Estado del proyecto:** **Fase 1 cerrada · release `v0.1.0` publicado · drift documental post-audit cerrado · motor derivado de autenticidad (ADR-0032) operativo**
 **Bus factor declarado:** 1 (ver ADR-0026 · próxima revisión semestral 2026-12-04)
 
 ---
 
 ## Para el lector con prisa
 
-- **¿Qué es AIP hoy?** Un cuerpo de **32 ADRs aceptados** y un V1 ejecutable que ingesta evidencia, la direcciona por hash, registra procedencia y verifica integridad bit a bit. Demo cerrada con el Twining Memo (1947).
-- **¿Qué hace V1?** `aip evidence ingest <pdf> --source-id … --ingested-by …` → `aip evidence show <hash>` → `aip archive verify` → cadena reproducible.
-- **¿Qué NO hace V1?** Claims, hipótesis, conclusiones, grafo, timeline, geospatial, OSINT, búsqueda, HTTP API, LLM, enclave. Todos diferidos por ADR-0023 (recorte deliberado de alcance).
-- **¿Quality gates?** ruff (0 errores) + mypy strict (0 errores) + 264 tests pasando (incluye 16 property-based de Hypothesis sobre JCS y audit chain + 13 reproducibility con valores canónicos pinned) + 93.57% cobertura global. CI Ubuntu × Python 3.11/3.12 (bloqueante) + macOS-latest + Windows-latest (best-effort) con `uv sync --frozen` desde `uv.lock`.
-- **¿Próxima fase?** Ninguna comprometida. Mantenimiento de V1 con criterios D1/D2 del MAINTAINERS.md. Cualquier ampliación de alcance requiere ADR explícito de levantamiento de ADR-0023.
+- **¿Qué es AIP hoy?** Un cuerpo de **33 ADRs aceptados** y un V1 ejecutable que ingesta evidencia, la direcciona por hash, registra procedencia, verifica integridad bit a bit, y deriva evaluaciones de autenticidad sin ML ni scoring probabilístico. Demo cerrada con el Twining Memo (1947).
+- **¿Qué hace V1?** `aip evidence ingest <pdf> --source-id … --ingested-by …` → `aip evidence show <hash>` → `aip archive verify` → cadena reproducible. Más, post-v0.1.0: `aip assess-authentication --archive … --evidence-id …` produce un artefacto derivado clasificando la evidencia en {UNVERIFIED, PARTIALLY_SUPPORTED, SUPPORTED, CONTRADICTED} según reglas booleanas explícitas.
+- **¿Qué NO hace V1?** Claims, hipótesis, conclusiones, grafo, timeline, geospatial, OSINT, búsqueda, HTTP API, LLM, enclave. Todos diferidos por ADR-0023 (recorte deliberado de alcance). ADR-0032 es el primer levantamiento puntual: sólo para `authentication_assessments`, sin abrir nuevos dominios.
+- **¿Quality gates?** ruff (0 errores) + mypy strict (0 errores) + **342 tests** pasando (incluye 16 property-based de Hypothesis sobre JCS y audit chain + **14 reproducibility con valores canónicos pinned, ahora incluyendo el manifest post-assessment**) + **96.25% cobertura global**. CI Ubuntu × Python 3.11/3.12 (bloqueante) + macOS-latest + Windows-latest (best-effort) con `uv sync --frozen` desde `uv.lock`.
+- **¿Próxima fase?** Ninguna comprometida. Mantenimiento de V1 con criterios D1/D2 del MAINTAINERS.md. Cualquier ampliación de alcance requiere ADR explícito de levantamiento de ADR-0023; el motor de autenticidad ya es ese precedente, acotado a una sola tabla.
 
 ---
 
@@ -36,10 +36,11 @@ anomaly-intelligence-platform/
 │   ├── pull_request_template.md                    (checklist de las 4 garantías)
 │   └── ISSUE_TEMPLATE/                             (bug, provenance-concern, config)
 ├── docs/
-│   ├── adr/                                        (32 ADRs + README + template)
+│   ├── adr/                                        (33 ADRs + README + template)
 │   │   ├── 0000–0022                               (23 fundacionales)
 │   │   ├── 0023–0028                               (6 enmiendas post-Red Team)
-│   │   └── 0029–0031                               (3 operativos Pre-F1)
+│   │   ├── 0029–0031                               (3 operativos Pre-F1)
+│   │   └── 0032                                    (Authentication Assessment Engine v1)
 │   ├── phase-1/
 │   │   ├── demo-evidence-selection.md              (Pre-F1.C con pinned values)
 │   │   └── command-specification.md                (Pre-F1.D contrato CLI)
@@ -54,8 +55,9 @@ anomaly-intelligence-platform/
 │       └── phase-1-review.md                       (cierre formal de F1)
 ├── src/aip/                                        (paquete distribuible)
 │   ├── __init__.py __main__.py _version.py archive.py errors.py py.typed
+│   ├── analysis/   (authentication — capa derivada ADR-0032)
 │   ├── audit/      (log, verify)
-│   ├── cli/        (main, evidence_commands, archive_commands)
+│   ├── cli/        (main, evidence_commands, archive_commands, assessment_commands)
 │   ├── core/       (hashing, evidence, source, provenance)
 │   └── storage/    (layout, manifest, tables)
 ├── tests/
@@ -64,25 +66,28 @@ anomaly-intelligence-platform/
 │   │   ├── README.md
 │   │   └── twining-memo-1947-09-23.pdf             (250 022 bytes, SHA-256 65539d95…)
 │   ├── integration/test_demo_pipeline.py
-│   ├── reproducibility/   (test_jcs, test_audit_chain, test_manifest_hash)
+│   ├── reproducibility/   (test_jcs, test_audit_chain, test_manifest_hash — 14 pinned)
 │   └── unit/
-│       ├── core/          (test_hashing, test_evidence, test_source, test_provenance)
-│       ├── storage/       (test_layout, test_manifest, test_tables, test_tables_corrupt)
+│       ├── analysis/      (test_authentication, test_assess_authentication_archive)
 │       ├── audit/         (test_log, test_verify)
-│       ├── cli/           (test_main)
+│       ├── cli/           (test_main, test_assessment_commands)
+│       ├── core/          (test_hashing, test_evidence, test_source, test_provenance)
 │       ├── properties/    (test_hashing_properties, test_audit_properties — Hypothesis)
+│       ├── storage/       (test_layout, test_manifest, test_tables, test_tables_corrupt)
 │       ├── test_archive.py
+│       ├── test_main_module.py
 │       └── test_paso_0_smoke.py
 └── scripts/                                        (utilidades auxiliares, no producción)
     ├── README.md
     └── fetch_demo_fixture.py                       (helper Pre-F1.C, stdlib-only)
 ```
 
-### Total ADRs aprobados: 32
+### Total ADRs aprobados: 33
 
 - **23 fundacionales** (0000–0022).
 - **6 enmiendas** (0023–0028) en respuesta al Red Team Review.
 - **3 operativos Pre-F1** (0029–0031).
+- **1 capa derivada post-v0.1.0** (0032 — Authentication Assessment Engine).
 
 ### Documentos referenciados por ADRs
 
@@ -378,7 +383,40 @@ Reproducibilidad bit a bit  ✓ manifest hash pinned 364b2397…
 Phase-1 review              ✓ docs/reviews/phase-1-review.md
 ```
 
-**Bloqueante para iniciar Fase 2:** ADR explícito de levantamiento de ADR-0023 §recorte. **No comprometido.** Mantenimiento de V1 hasta entonces.
+**Bloqueante para iniciar Fase 2:** ADR explícito de levantamiento de ADR-0023 §recorte. **No comprometido.** Mantenimiento de V1 hasta entonces. ADR-0032 estableció el precedente: levantamientos puntuales por tabla son posibles si la nueva capacidad cumple las cuatro garantías del ADR (derivada, no probabilística, no sustituye humanos, removible).
+
+---
+
+## Post-v0.1.0: motor de autenticidad (ADR-0032, 2026-06-06)
+
+Levantamiento puntual de ADR-0023 §recorte para poblar la tabla `authentication_assessments` previamente reservada vacía. **Nada más**: ningún otro dominio diferido se abre.
+
+### Qué entrega
+
+- **`src/aip/analysis/authentication.py`** — modelo Pydantic frozen `AuthenticationAssessment` + enums cerrados `AssessmentStatus` (5) y `AssessmentMethod` (3) + regla `classify()` booleana pura + builder `build_authentication_assessment()` funcionalmente puro.
+- **`src/aip/cli/assessment_commands.py`** — subcomando top-level `aip assess-authentication --archive PATH --evidence-id ID [--method ...]`. Salida JSON canónica siempre.
+- **`Archive.assess_authentication()`** + **`Archive.list_authentication_assessments()`** en la API Python.
+- **`EXPECTED_DEMO_ASSESSMENT_MANIFEST_HASH`** pinned en reproducibility tests: `33530b04c25c3766fb3fc7aa496bd22dffa2848d4bdc71d204ddb4b1141ee9ea` (Twining Memo + assess con clock canónico).
+
+### Qué NO entrega
+
+- Sin ML, sin IA, sin scoring probabilístico, sin red, sin OCR, sin NLP, sin embeddings.
+- Sin nuevas tablas, sin nuevo `schema_version`, sin migración.
+- Sin nuevas entradas en el audit log: el assessment es derivado y removible sin huella.
+- Sin modificación de `Evidence`, `Source`, `Provenance`, ni del audit chain.
+
+### Garantías testeadas
+
+| # | Garantía | Test |
+|---|---|---|
+| G1 | No es verdad sustantiva | `test_classify_*` — status discreto + rationale fijo |
+| G2 | No es inferencia probabilística | regla booleana cubierta por 8 combinaciones de input |
+| G3 | No sustituye investigación humana | `--method` documenta intención; cuerpo de la regla auditable |
+| G4 | Es derivado y removible | `test_deleting_assessment_does_not_affect_evidence` bit a bit |
+
+### Pinned hashes intactos tras ADR-0032
+
+`EXPECTED_PDF_SHA256`, `EXPECTED_DEMO_MANIFEST_HASH`, `EXPECTED_EMPTY_MANIFEST_HASH`, 5 `EXPECTED_SCHEMA_HASHES`, `EXPECTED_BOOTSTRAP_HASH`, `EXPECTED_INGEST_HASH`, 6 pares JCS canónicos — todos verdes sin cambio.
 
 ### Lo que NO se hará sin ADR de levantamiento
 
