@@ -21,6 +21,7 @@ from aip.cli.assessment_commands import (
 )
 from aip.cli.evidence_commands import add_evidence_subparser
 from aip.cli.graph_commands import add_graph_subparser
+from aip.cli.impact_commands import add_impact_subparser
 from aip.errors import AIPError, UsageError
 
 DEFAULT_ARCHIVE_ROOT_ENV: str = "AIP_ARCHIVE_ROOT"
@@ -99,6 +100,10 @@ def build_parser() -> argparse.ArgumentParser:
     # ``graph`` es subgrupo (ADR-0033 §CLI): tres subcomandos comparten
     # dominio "grafo de procedencia derivado". Read-only por contrato.
     add_graph_subparser(subparsers)
+    # ``impact`` es subgrupo (ADR-0034 §CLI): dos subcomandos reportan
+    # reverse-dependency reachability. Read-only por contrato. Sin
+    # scoring, sin severidad, sin probabilidad.
+    add_impact_subparser(subparsers)
 
     return parser
 

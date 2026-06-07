@@ -437,3 +437,28 @@ src/aip/
 **Tabla actualizada del §"Por qué cuatro subpaquetes":** ahora son **seis**. Cualquier futura capa de proyección o derivación seguirá la misma regla: subpaquete propio, ADR de levantamiento puntual, S-rule específica que documente direcciones de dependencia.
 
 **E8 no muta bytes hasheados:** los hashes pinned (5 schema_hashes, empty manifest, demo manifest, demo+assessment manifest, audit chain, JCS pairs) siguen idénticos. El árbol de `src/` no entra en ninguna canonicalización.
+
+### Enmienda al pie — 2026-06-07 (E9, post-ADR-0034)
+
+ADR-0034 (Impact Analysis Engine V1) introdujo un **séptimo subpaquete** bajo `src/aip/`: `impact/`. La estructura actual es:
+
+```
+src/aip/
+├── analysis/   ← ADR-0032 (capa derivada de assessments)
+├── audit/
+├── cli/
+├── core/
+├── graph/      ← ADR-0033 (grafo de procedencia derivado)
+├── impact/     ← nuevo (ADR-0034): análisis de impacto downstream
+└── storage/
+```
+
+**Por qué `impact/` es subpaquete propio y no parte de `graph/`:** `graph/` provee la primitiva estructural (`EvidenceGraph`, queries genéricas). `impact/` consume esa primitiva con una intención específica: responder una sola pregunta operativa ("¿qué se queda sin respaldo si esto desaparece?"). Mezclar primitiva y aplicación borraría el contrato declarativo del grafo y mezclaría dos niveles de abstracción.
+
+**S8 (propuesto y vigente desde 2026-06-07):** `impact/` puede depender de `core/`, `graph/` y de `aip._version`. Ninguna otra capa depende de `impact/`. Borrar `impact/` deja al resto del paquete funcional, incluido `graph/` — materialización física de la garantía G3 de ADR-0034 (removibilidad).
+
+**Por qué no `impact_analysis/` o nombre largo:** ADR-0034 ya documenta el alcance (análisis de impacto downstream sin scoring). El nombre corto deja el ADR como referencia.
+
+**Tabla actualizada del §"Por qué cuatro subpaquetes":** ahora son **siete**. El patrón ya es claro: cada capa derivada con propósito específico vive en su subpaquete propio, con regla S-rule de dependencias documentada, y permanece removible bit a bit.
+
+**E9 no muta bytes hasheados:** los hashes pinned siguen idénticos. El árbol de `src/` no entra en ninguna canonicalización.
