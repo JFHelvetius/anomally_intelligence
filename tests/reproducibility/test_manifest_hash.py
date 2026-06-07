@@ -23,6 +23,7 @@ import pytest
 from aip import Archive
 from aip._version import SCHEMA_VERSION
 from aip._version import __version__ as SOFTWARE_VERSION
+from aip.analysis.authentication import AssessmentMethod
 from aip.core.evidence import EvidenceKind
 from aip.core.hashing import sha256_hex, sha256_hex_stream
 from aip.core.source import AuthorityLevel, SourceKind
@@ -201,3 +202,93 @@ def test_archive_with_demo_pdf_manifest_hash_is_canonical_pinned(
         schema_version=SCHEMA_VERSION,
     )
     assert manifest.manifest_hash() == EXPECTED_DEMO_MANIFEST_HASH
+
+
+# ----------------------------------------------------------------- ADR-0032
+
+EXPECTED_DEMO_ASSESSMENT_MANIFEST_HASH = (
+    "33530b04c25c3766fb3fc7aa496bd22dffa2848d4bdc71d204ddb4b1141ee9ea"
+)
+"""``manifest_hash`` canónico tras ingestar el fixture de demo **y** correr
+``Archive.assess_authentication`` con clock canónico y método por defecto
+(``PROVENANCE_REVIEW``).
+
+Inputs deterministas (idénticos a EXPECTED_DEMO_MANIFEST_HASH **más**):
+
+- ``method = AssessmentMethod.PROVENANCE_REVIEW``.
+- ``created_at = generated_at = 2026-06-04T00:00:00Z`` (mismo clock inyectado).
+- ``rationale`` canónico para ``status=SUPPORTED``.
+- ``supporting_source_ids = ["blue-book-nara"]``.
+- ``assessment_id = "{evidence.hash}__provenance_review"``.
+
+Si este valor cambia, ha cambiado uno de:
+
+- la canonicalización del manifest (mismas causas que en
+  ``EXPECTED_DEMO_MANIFEST_HASH``),
+- la regla determinista de ``aip.analysis.authentication.classify``,
+- el texto de ``RATIONALES[SUPPORTED]``,
+- la forma de ``AuthenticationAssessment.model_dump(mode="json")``,
+- el algoritmo de ``make_assessment_id``.
+
+Cualquiera es bug arquitectónico crítico que requiere PR explícito + ADR
+de enmienda al motor (ADR-0032). El valor se pinea aquí para que cualquier
+drift se detecte en CI sin necesidad de re-ejecutar la demo a mano."""
+
+
+@pytest.mark.requires_fixture
+def test_archive_with_demo_pdf_and_assessment_manifest_hash_is_canonical_pinned(
+    tmp_path: Path,
+) -> None:
+    """Manifest hash sobre archive ingest + assess con clocks canónicos.
+
+    Una garantía adicional: la regla determinista del motor de autenticidad
+    (ADR-0032) no degrada la reproducibilidad bit a bit del archive. Mismo
+    fixture + mismo clock + mismo método ⇒ mismo manifest hash, sesión tras
+    sesión, máquina tras máquina.
+    """
+    fixture = (
+        Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
+    )
+    if not fixture.is_file():
+        pytest.skip(f"fixture missing: {fixture}")
+
+    archive_root = tmp_path / "demo_archive_assessed"
+    archive = Archive.open(archive_root)
+
+    # 1. Ingest canónico (mismo contrato que el test anterior).
+    evidence = archive.ingest_evidence(
+        fixture,
+        source_id="blue-book-nara",
+        source_name="Project Blue Book records",
+        source_kind=SourceKind.GOVERNMENT_ARCHIVE,
+        source_authority=AuthorityLevel.SECONDARY,
+        source_jurisdiction="US",
+        source_license="public_domain",
+        evidence_kind=EvidenceKind.DOCUMENT_SCAN,
+        mime_type="application/pdf",
+        ingested_by="@jfhelvetius",
+        clock=lambda: CANONICAL_GENERATED_AT,
+    )
+    assert evidence.hash == EXPECTED_DEMO_PDF_SHA256
+
+    # 2. Assess con clock canónico y método por defecto.
+    assessment = archive.assess_authentication(
+        evidence_id=evidence.hash,
+        method=AssessmentMethod.PROVENANCE_REVIEW,
+        clock=lambda: CANONICAL_GENERATED_AT,
+    )
+    # La regla emite SUPPORTED por construcción (post-ingest tiene Source +
+    # Provenance con un paso y referencias intactas). Pinear el status
+    # protege contra cambios silenciosos en classify().
+    assert assessment.status.value == "supported"
+    assert assessment.supporting_source_ids == ["blue-book-nara"]
+
+    # 3. Manifest hash post-assessment coincide con el pinned.
+    manifest = compute_manifest(
+        archive_root,
+        schemas=get_schemas(),
+        generated_at=CANONICAL_GENERATED_AT,
+        software_version=SOFTWARE_VERSION,
+        schema_version=SCHEMA_VERSION,
+    )
+    assert manifest.manifest_hash() == EXPECTED_DEMO_ASSESSMENT_MANIFEST_HASH
