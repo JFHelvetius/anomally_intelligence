@@ -23,6 +23,7 @@ from aip.cli.context_commands import add_context_subparser
 from aip.cli.evidence_commands import add_evidence_subparser
 from aip.cli.graph_commands import add_graph_subparser
 from aip.cli.impact_commands import add_impact_subparser
+from aip.cli.workspace_commands import add_workspace_subparser
 from aip.errors import AIPError, UsageError
 
 DEFAULT_ARCHIVE_ROOT_ENV: str = "AIP_ARCHIVE_ROOT"
@@ -108,6 +109,9 @@ def build_parser() -> argparse.ArgumentParser:
     # ``context`` es subgrupo (ADR-0035 §CLI): agregación pura de
     # ADR-0032/0033/0034 en un único bundle determinista. Read-only.
     add_context_subparser(subparsers)
+    # ``workspace`` es subgrupo (ADR-0036 §CLI): índice reproducible de
+    # referencias a artefactos derivados. No ejecuta motores analíticos.
+    add_workspace_subparser(subparsers)
 
     return parser
 

@@ -486,3 +486,30 @@ src/aip/
 **Propiedad arquitectónica nueva expuesta por S9:** `context/` es la única capa que depende de **todas** las capas derivadas. Esta posición topológica refleja su rol declarado: agregación pura sobre productores existentes.
 
 **E10 no muta bytes hasheados:** los hashes pinned siguen idénticos. El árbol de `src/` no entra en ninguna canonicalización. El nuevo `EXPECTED_DEMO_CONTEXT_BUNDLE_HASH` pinned en `tests/reproducibility/test_manifest_hash.py` describe un artefacto derivado nuevo (el bundle), no muta ninguno preexistente.
+
+### Enmienda al pie — 2026-06-07 (E11, post-ADR-0036)
+
+ADR-0036 (Investigation Workspace V1) introdujo un **noveno subpaquete** bajo `src/aip/`: `workspace/`. La estructura actual es:
+
+```
+src/aip/
+├── analysis/   ← ADR-0032 (capa derivada de assessments)
+├── audit/
+├── cli/
+├── context/    ← ADR-0035 (capa de composición/agregación)
+├── core/
+├── graph/      ← ADR-0033 (grafo de procedencia derivado)
+├── impact/     ← ADR-0034 (análisis de impacto downstream)
+├── storage/
+└── workspace/  ← nuevo (ADR-0036): índice reproducible de investigación
+```
+
+**Por qué `workspace/` es subpaquete propio:** las capas derivadas anteriores (`analysis/`, `graph/`, `impact/`, `context/`) producen o componen información derivada del archive. `workspace/` representa **metadatos de investigación**: una colección de referencias a artefactos derivados, sin ejecutar nuevos análisis. Mezclar metadatos investigativos con productores/agregadores difumina una distinción importante.
+
+**S10 (propuesto y vigente desde 2026-06-07):** `workspace/` puede depender de `core/` (para `hashing`), `storage/` (para `layout` + `ArchiveManifest`) y `errors`. **No depende** de `analysis/`, `graph/`, `impact/`, ni `context/` — éste es el sello arquitectónico de G3 (no ejecuta motores). El test `test_workspace_imports_no_engines` verifica vía AST que ningún módulo de `workspace/` importa de las capas derivadas analíticas.
+
+**Topología nueva:** `workspace/` es la primera capa derivada de **metadatos** (no de información). Su lugar en el árbol refleja esta diferencia: a la misma profundidad que las capas productoras, pero con dependencias mucho más acotadas.
+
+**Persistencia de workspaces:** los archivos JSON de workspace se persisten en `<archive>/workspaces/<id>.json` — un directorio nuevo bajo la raíz del archive. **No entra en `V1_TABLES`, ni en `compute_manifest`, ni en `is_archive`**. Por construcción, `archive_manifest_hash` es invariante ante operaciones de workspace. Test `test_workspace_persistence_does_not_modify_archive_manifest` lo confirma bit a bit.
+
+**E11 no muta bytes hasheados:** los hashes pinned (incluido `EXPECTED_DEMO_CONTEXT_BUNDLE_HASH`) siguen idénticos. El árbol de `src/` no entra en ninguna canonicalización. El directorio `<archive>/workspaces/` no entra en la canonicalización del manifest.
