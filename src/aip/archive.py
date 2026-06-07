@@ -33,6 +33,13 @@ from typing import Final
 
 from aip._version import SCHEMA_VERSION
 from aip._version import __version__ as SOFTWARE_VERSION
+from aip.analysis.authentication import (
+    AssessmentMethod,
+    build_authentication_assessment,
+)
+from aip.analysis.authentication import (
+    AuthenticationAssessment as DerivedAuthenticationAssessment,
+)
 from aip.audit import log as audit_log
 from aip.audit import verify as audit_verify
 from aip.core.evidence import (
@@ -62,6 +69,13 @@ from aip.errors import (
 )
 from aip.storage import layout, tables
 from aip.storage.manifest import ArchiveManifest, compute_manifest, write_manifest_atomic
+
+ASSESSMENTS_TABLE: Final[str] = "authentication_assessments"
+"""Tabla canónica donde se persisten los assessments derivados (ADR-0032 §4).
+Reutiliza la entrada de :data:`aip.storage.layout.V1_TABLES`; no se introduce
+layout nuevo. El ``schema_hash`` de esta tabla es opaco (bytes
+``b"schema:authentication_assessments"``) y no cambia al poblar la tabla
+— ver ``test_synthetic_schema_hashes_are_stable``."""
 
 DEFAULT_INGEST_GAP: Final[str] = (
     "ingestión inicial sin reconstrucción de cadena previa al artefacto"
@@ -354,6 +368,123 @@ class Archive:
             provenance=provenance,
             provenance_steps=tuple(steps),
         )
+
+    # --- Assess (ADR-0032) --------------------------------------------
+
+    def assess_authentication(
+        self,
+        *,
+        evidence_id: str,
+        method: AssessmentMethod = AssessmentMethod.PROVENANCE_REVIEW,
+        clock: Callable[[], dt.datetime] | None = None,
+    ) -> DerivedAuthenticationAssessment:
+        """Construye y persiste un assessment derivado para ``evidence_id``.
+
+        Reglas (ADR-0032 §2):
+
+        - sin Source ⇒ ``UNVERIFIED``
+        - Source presente, sin pasos ⇒ ``PARTIALLY_SUPPORTED``
+        - Source presente + ≥1 paso + referencias intactas ⇒ ``SUPPORTED``
+        - referencia rota (Source o ``origin_source_id`` inexistente) ⇒
+          ``CONTRADICTED``
+
+        Determinismo: dado un mismo estado del archive, mismo
+        ``evidence_id`` y mismo ``method``, el ``status``, ``rationale``,
+        ``supporting_source_ids`` y ``assessment_id`` son idénticos bit a
+        bit. ``created_at`` depende del ``clock`` inyectado (mismo clock ⇒
+        mismo created_at; sin clock, se usa :func:`default_clock`).
+
+        El método **no** modifica Evidence ni Source ni Provenance ni
+        audit log: la única escritura es una fila nueva en la tabla
+        ``authentication_assessments`` + recomputo del manifest. Eliminar
+        el row.parquet revierte el archive a su estado previo sin pérdida
+        de información sustantiva (ADR-0032 §principio).
+        """
+        if clock is None:
+            clock = default_clock
+
+        if not self.root.is_dir() or not layout.is_archive(self.root):
+            raise ArchiveNotFoundError(f"archive not found at {self.root}.")
+
+        # 1. Validación de identidad y existencia de la Evidence.
+        normalized_id = _resolve_hash(evidence_id)
+        evidence_row = tables.read_row(self.root, "evidence", normalized_id)
+        if evidence_row is None:
+            raise EvidenceNotFoundError(
+                f"no evidence with hash sha256:{normalized_id} in this archive."
+            )
+        evidence = Evidence.model_validate(evidence_row)
+
+        # 2. Lectura del estado: Source + Provenance.
+        source_row = tables.read_row(self.root, "sources", evidence.source_id)
+        source_exists = source_row is not None
+
+        provenance_row = tables.read_row(self.root, "provenance", normalized_id)
+        provenance: Provenance | None = (
+            Provenance.model_validate(provenance_row) if provenance_row else None
+        )
+        has_provenance_steps = provenance is not None and len(provenance.steps) > 0
+
+        # 3. Integridad de referencias internas (ADR-0032 §2 — caso CONTRADICTED).
+        if provenance is None:
+            # Sin Provenance no hay referencia adicional que verificar; la
+            # única referencia activa es Evidence.source_id.
+            provenance_reference_intact = True
+        else:
+            origin_row = tables.read_row(
+                self.root, "sources", provenance.origin_source_id
+            )
+            provenance_reference_intact = origin_row is not None
+
+        # 4. Construir lista canónica de Source IDs que respaldan.
+        supporting: list[str] = (
+            [evidence.source_id] if source_exists else []
+        )
+
+        # 5. Aplicar regla determinista (funcionalmente pura).
+        assessment = build_authentication_assessment(
+            evidence_id=normalized_id,
+            source_exists=source_exists,
+            has_provenance_steps=has_provenance_steps,
+            provenance_reference_intact=provenance_reference_intact,
+            supporting_source_ids=supporting,
+            method=method,
+            created_at=clock(),
+        )
+
+        # 6. Persistir fila en la tabla reservada por ADR-0015. El
+        # ``row_id`` es el ``assessment_id`` (ASCII safe por construcción).
+        tables.append_row(
+            self.root,
+            ASSESSMENTS_TABLE,
+            assessment.assessment_id,
+            assessment.model_dump(mode="json"),
+        )
+
+        # 7. Recomputar y reescribir manifest para reflejar el nuevo row.
+        manifest = self._compute_manifest(generated_at=clock())
+        write_manifest_atomic(self.root / layout.MANIFEST_FILENAME, manifest)
+
+        return assessment
+
+    def list_authentication_assessments(
+        self, evidence_id: str
+    ) -> tuple[DerivedAuthenticationAssessment, ...]:
+        """Devuelve todos los assessments persistidos para ``evidence_id``.
+
+        Orden estable: por ``assessment_id`` (que incluye el método). Útil
+        para auditoría externa: el lector verifica que el archive declara
+        N assessments y los presenta ordenadamente sin reordenamientos
+        dependientes del filesystem.
+        """
+        normalized = _resolve_hash(evidence_id)
+        out: list[DerivedAuthenticationAssessment] = []
+        for raw in tables.iter_rows(self.root, ASSESSMENTS_TABLE):
+            assessment = DerivedAuthenticationAssessment.model_validate(raw)
+            if assessment.evidence_id == normalized:
+                out.append(assessment)
+        out.sort(key=lambda a: a.assessment_id)
+        return tuple(out)
 
     # --- Verify --------------------------------------------------------
 

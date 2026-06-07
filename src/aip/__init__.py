@@ -28,6 +28,13 @@ Componentes diseñados pero **NO** implementados en V1 (diferidos por ADR-0023):
 from __future__ import annotations
 
 from aip._version import SCHEMA_VERSION, __version__
+from aip.analysis.authentication import (
+    AssessmentMethod,
+    AssessmentStatus,
+)
+from aip.analysis.authentication import (
+    AuthenticationAssessment as DerivedAuthenticationAssessment,
+)
 from aip.archive import (
     Archive,
     CheckResult,
@@ -50,8 +57,11 @@ __all__ = [
     "AIPError",
     "Archive",
     "ArchiveNotFoundError",
+    "AssessmentMethod",
+    "AssessmentStatus",
     "AuditChainError",
     "CheckResult",
+    "DerivedAuthenticationAssessment",
     "EvidenceNotFoundError",
     "EvidenceView",
     "IntegrityError",

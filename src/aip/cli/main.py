@@ -15,6 +15,7 @@ from typing import IO
 
 from aip._version import __version__ as SOFTWARE_VERSION
 from aip.cli.archive_commands import add_archive_subparser
+from aip.cli.assessment_commands import add_assessment_subparser
 from aip.cli.evidence_commands import add_evidence_subparser
 from aip.errors import AIPError, UsageError
 
@@ -84,6 +85,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     add_evidence_subparser(subparsers, parents=[common])
     add_archive_subparser(subparsers, parents=[common])
+    # ``assess-authentication`` no comparte el padre común: su contrato
+    # (ADR-0032 §5) lista exactamente ``--archive`` y ``--evidence-id`` y
+    # emite siempre JSON. Sin ``--archive-root``, ``--quiet``, etc.
+    add_assessment_subparser(subparsers)
 
     return parser
 
@@ -113,12 +118,14 @@ def main(
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    # Reglas de globals: --json + --quiet son contradictorios.
-    if args.json and args.quiet:
+    # Reglas de globals: --json + --quiet son contradictorios. Solo aplican
+    # a subcomandos que las exponen (assess-authentication no las tiene).
+    if getattr(args, "json", False) and getattr(args, "quiet", False):
         stderr.write("aip: --json and --quiet are mutually exclusive.\n")
         return UsageError.cli_exit_code
 
-    args.archive_root = _resolve_archive_root(args.archive_root)
+    if hasattr(args, "archive_root"):
+        args.archive_root = _resolve_archive_root(args.archive_root)
 
     cmd = getattr(args, "_cmd", None)
     if cmd is None:
