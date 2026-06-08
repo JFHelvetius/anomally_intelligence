@@ -26,6 +26,7 @@ from aip.audit import log as audit_log
 from aip.core.hashing import JsonValue, jcs_canonicalize, sha256_hex
 from aip.errors import AIPError
 from aip.storage import layout
+from aip.storage.atomic_io import atomic_write_text
 from aip.storage.manifest import ArchiveManifest
 from aip.workspace.models import (
     ALLOWED_REFERENCE_TYPES,
@@ -203,12 +204,10 @@ def persist_workspace(
     forma válida de tener un audit chain auditable.
     """
     archive_target = workspace_path(archive_root, workspace.workspace_id)
-    archive_target.parent.mkdir(parents=True, exist_ok=True)
     payload = encode_workspace(workspace)
-    archive_target.write_text(payload, encoding="utf-8")
+    atomic_write_text(archive_target, payload)
     if extra_output is not None:
-        extra_output.parent.mkdir(parents=True, exist_ok=True)
-        extra_output.write_text(payload, encoding="utf-8")
+        atomic_write_text(extra_output, payload)
     audit_log.record_derived_artifact(
         archive_root,
         action=audit_log.ActionKind.BUILD_WORKSPACE,

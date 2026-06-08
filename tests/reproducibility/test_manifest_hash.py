@@ -24,6 +24,7 @@ from aip import Archive
 from aip._version import SCHEMA_VERSION
 from aip._version import __version__ as SOFTWARE_VERSION
 from aip.analysis.authentication import AssessmentMethod
+from aip.audit import compute_archive_snapshot, verify_archive_snapshot_hash
 from aip.context import assemble_context, verify_bundle_hash
 from aip.core.evidence import EvidenceKind
 from aip.core.hashing import sha256_hex, sha256_hex_stream
@@ -458,3 +459,82 @@ def test_demo_justification_hash_is_canonical_pinned(tmp_path: Path) -> None:
     assert verify_justification_hash(j) is True
     # Pin canónico.
     assert j.justification_hash == EXPECTED_DEMO_JUSTIFICATION_HASH
+
+
+# ----------------------------------------------------------------- ADR-0042
+
+EXPECTED_DEMO_ARCHIVE_SNAPSHOT_HASH = (
+    "98b7babfa82aa5edd9268bfa7cc88dee5072e382cc82aa708a50dfba79edc27e"
+)
+"""``snapshot_hash`` canónico del ``ArchiveSnapshot`` calculado sobre el
+demo archive (sólo ingesta del Twining Memo) a ``CANONICAL_GENERATED_AT``.
+
+Inputs deterministas:
+
+- ``ingest_evidence`` del fixture canónico con clock 2026-06-04T00:00:00Z
+  e ``ingested_by="@jfhelvetius"`` (auto-bootstrap + 1 entry de
+  ``INGEST_EVIDENCE`` ⇒ 2 entries totales en el audit log).
+- ``compute_archive_snapshot`` con ``generated_at=CANONICAL_GENERATED_AT``.
+
+Si este valor cambia, ha cambiado uno de:
+
+- El layout o campos del :class:`ArchiveSnapshot`.
+- La serialización canónica JCS del modelo (``_snapshot_to_canonical_dict``).
+- ``compute_snapshot_hash`` (orden de campos, exclude-self).
+- ``ARCHIVE_SNAPSHOT_SCHEMA_VERSION``.
+- El ``manifest_hash`` que se incluye en el snapshot
+  (cambiaría también ``EXPECTED_DEMO_MANIFEST_HASH``).
+- El ``audit_log_head_hash`` del último entry del log canónico
+  (cambiaría también ``EXPECTED_INGEST_HASH`` en ``test_audit_chain``).
+
+Cualquiera es bug arquitectónico crítico que requiere PR explícito +
+(potencialmente) ADR de enmienda.
+"""
+
+
+@pytest.mark.requires_fixture
+def test_demo_archive_snapshot_hash_is_canonical_pinned(tmp_path: Path) -> None:
+    """``compute_archive_snapshot`` sobre el demo archive (ingest only) con
+    clock canónico produce el pinned ``snapshot_hash``.
+
+    Cierre del ciclo end-to-end de reproducibility para ADR-0042. Verifica
+    además dos invariantes cross-ADR:
+
+    1. ``snap.manifest_hash == EXPECTED_DEMO_MANIFEST_HASH`` — el snapshot
+       está anclado al mismo manifest pinned por ADR-0016.
+    2. ``verify_archive_snapshot_hash(snap) is True`` — self-consistencia
+       del snapshot_hash declarado vs. recomputo offline.
+    """
+    fixture = Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
+    if not fixture.is_file():
+        pytest.skip(f"fixture missing: {fixture}")
+
+    archive_root = tmp_path / "demo_archive_snap"
+    archive = Archive.open(archive_root)
+    evidence = archive.ingest_evidence(
+        fixture,
+        source_id="blue-book-nara",
+        source_name="Project Blue Book records",
+        source_kind=SourceKind.GOVERNMENT_ARCHIVE,
+        source_authority=AuthorityLevel.SECONDARY,
+        source_jurisdiction="US",
+        source_license="public_domain",
+        evidence_kind=EvidenceKind.DOCUMENT_SCAN,
+        mime_type="application/pdf",
+        ingested_by="@jfhelvetius",
+        clock=lambda: CANONICAL_GENERATED_AT,
+    )
+    assert evidence.hash == EXPECTED_DEMO_PDF_SHA256
+
+    snap = compute_archive_snapshot(
+        archive_root, generated_at=CANONICAL_GENERATED_AT
+    )
+
+    # Invariante cross-ADR-0016/0042.
+    assert snap.manifest_hash == EXPECTED_DEMO_MANIFEST_HASH
+    # Cardinalidad: bootstrap + 1 ingest = 2 entries en el log canónico.
+    assert snap.audit_log_total_entries == 2
+    # Self-consistencia.
+    assert verify_archive_snapshot_hash(snap) is True
+    # Pin canónico.
+    assert snap.snapshot_hash == EXPECTED_DEMO_ARCHIVE_SNAPSHOT_HASH

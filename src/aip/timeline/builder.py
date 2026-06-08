@@ -18,6 +18,7 @@ from aip.core.evidence import Evidence
 from aip.core.hashing import JsonValue, jcs_canonicalize, sha256_hex
 from aip.errors import AIPError
 from aip.storage import layout, tables
+from aip.storage.atomic_io import atomic_write_text
 from aip.timeline.models import (
     InvestigationTimeline,
     TimelineEvent,
@@ -181,12 +182,10 @@ def persist_timeline(
     (ADR-0019 §enmienda E1).
     """
     target = timeline_path(archive_root, timeline.timeline_id)
-    target.parent.mkdir(parents=True, exist_ok=True)
     payload = encode_timeline(timeline)
-    target.write_text(payload, encoding="utf-8")
+    atomic_write_text(target, payload)
     if extra_output is not None:
-        extra_output.parent.mkdir(parents=True, exist_ok=True)
-        extra_output.write_text(payload, encoding="utf-8")
+        atomic_write_text(extra_output, payload)
     audit_log.record_derived_artifact(
         archive_root,
         action=audit_log.ActionKind.BUILD_TIMELINE,

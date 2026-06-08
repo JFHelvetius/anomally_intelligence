@@ -30,6 +30,7 @@ from aip.attestation.models import (
 from aip.audit import log as audit_log
 from aip.core.hashing import JsonValue, jcs_canonicalize, sha256_hex
 from aip.errors import AIPError
+from aip.storage.atomic_io import atomic_write_text
 from aip.storage.manifest import ArchiveManifest
 
 ATTESTATIONS_DIRNAME: str = "attestations"
@@ -332,12 +333,10 @@ def persist_attestation(
     de la atestación firmada permanecen en el JSON canónico del artefacto.
     """
     target = _attestation_path(archive_root, attestation_id)
-    target.parent.mkdir(parents=True, exist_ok=True)
     payload = encode_attestation(att)
-    target.write_text(payload, encoding="utf-8")
+    atomic_write_text(target, payload)
     if extra_output is not None:
-        extra_output.parent.mkdir(parents=True, exist_ok=True)
-        extra_output.write_text(payload, encoding="utf-8")
+        atomic_write_text(extra_output, payload)
     audit_log.record_derived_artifact(
         archive_root,
         action=audit_log.ActionKind.SIGN_ATTESTATION,

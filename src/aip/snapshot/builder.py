@@ -17,6 +17,7 @@ from aip.snapshot.models import (
     InvestigationSnapshot,
     SnapshotReference,
 )
+from aip.storage.atomic_io import atomic_write_text
 from aip.timeline.models import InvestigationTimeline
 from aip.workspace.models import InvestigationWorkspace
 
@@ -119,12 +120,10 @@ def persist_snapshot(
     """Persiste el snapshot y emite ``BUILD_SNAPSHOT`` al audit log
     (ADR-0019 §enmienda E1)."""
     target = snapshot_path(archive_root, snapshot.snapshot_id)
-    target.parent.mkdir(parents=True, exist_ok=True)
     payload = encode_snapshot(snapshot)
-    target.write_text(payload, encoding="utf-8")
+    atomic_write_text(target, payload)
     if extra_output is not None:
-        extra_output.parent.mkdir(parents=True, exist_ok=True)
-        extra_output.write_text(payload, encoding="utf-8")
+        atomic_write_text(extra_output, payload)
     audit_log.record_derived_artifact(
         archive_root,
         action=audit_log.ActionKind.BUILD_SNAPSHOT,

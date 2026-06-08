@@ -38,6 +38,7 @@ from aip.justification.models import (
     InvestigationJustification,
 )
 from aip.storage import layout, tables
+from aip.storage.atomic_io import atomic_write_text
 from aip.storage.manifest import ArchiveManifest
 from aip.workspace import load_workspace
 
@@ -262,12 +263,10 @@ def persist_justification(
     extra_output: Path | None = None,
 ) -> Path:
     target = justification_path(archive_root, j.justification_id)
-    target.parent.mkdir(parents=True, exist_ok=True)
     payload = encode_justification(j)
-    target.write_text(payload, encoding="utf-8")
+    atomic_write_text(target, payload)
     if extra_output is not None:
-        extra_output.parent.mkdir(parents=True, exist_ok=True)
-        extra_output.write_text(payload, encoding="utf-8")
+        atomic_write_text(extra_output, payload)
     audit_log.record_derived_artifact(
         archive_root,
         action=audit_log.ActionKind.BUILD_JUSTIFICATION,
