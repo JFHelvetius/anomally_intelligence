@@ -52,6 +52,26 @@ class IntegrityIssueKind(StrEnum):
     correspondiente (corrupción, manipulación, schema_version
     incompatible)."""
 
+    # --- ADR-0030 §enmienda E16 (post-ADR-0041 + ADR-0019 E1) -----------
+    ATTESTATION_HASH_MISMATCH = "attestation_hash_mismatch"
+    """El ``attestation_hash`` recomputado no coincide con el declarado en
+    la atestación persistida bajo ``<archive>/attestations/``."""
+
+    MISSING_AUDIT_ENTRY = "missing_audit_entry"
+    """Existe un artefacto derivado persistido en disco sin entry de
+    audit log apuntando a su URI canónico. Indica persistencia que
+    saltó la API auditada (manual placement o downgrade pre-E1)."""
+
+    MISSING_PERSISTED_ARTIFACT = "missing_persisted_artifact"
+    """Existe una entry de audit log para un artefacto derivado cuyo
+    archivo de persistencia ya no está presente. Indica borrado fuera
+    de la cadena auditada."""
+
+    AUDIT_LOG_HASH_MISMATCH = "audit_log_hash_mismatch"
+    """El ``self_hash`` declarado en la entry más reciente del audit log
+    para un target dado no coincide con el self-hash actual del artefacto
+    persistido. Indica sustitución del artefacto sin re-emitir entry."""
+
 
 @dataclass(frozen=True, order=True)
 class DerivedIntegrityIssue:
@@ -75,6 +95,8 @@ class DerivedIntegrityReport:
     timelines_checked: int
     snapshots_checked: int
     justifications_checked: int
+    attestations_checked: int
+    assessments_checked: int
     issues: tuple[DerivedIntegrityIssue, ...]
     integrity_engine_version: str
     integrity_method_name: str
@@ -90,4 +112,6 @@ class DerivedIntegrityReport:
             + self.timelines_checked
             + self.snapshots_checked
             + self.justifications_checked
+            + self.attestations_checked
+            + self.assessments_checked
         )

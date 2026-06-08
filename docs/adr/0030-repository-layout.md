@@ -623,3 +623,79 @@ src/aip/
 **Nueva dependencia de runtime:** `cryptography>=42,<46`. La justificación completa vive en ADR-0029 §enmienda E1. Resumen: rolling-our-own ed25519 es anti-patrón de seguridad; `cryptography` es el estándar de facto Python audit-friendly; rango cubre 12+ meses de estabilidad; `uv.lock` pinea bit a bit.
 
 **E15 no muta bytes hasheados.** Los 16 pinned hashes siguen verdes. El sub-comando `aip verify` extendido sólo añade un kind detectable; los 5 kinds previos producen output idéntico. `archive_manifest_hash` invariante porque `<archive>/attestations/` es periférico.
+
+### Enmienda al pie — 2026-06-07 (E16, post-ADR-0041 + ADR-0019 §E1)
+
+**Motivación.** ADR-0041 introdujo `attestation/` y persistencia bajo `<archive>/attestations/`. ADR-0019 §enmienda E1 hizo que el audit log cubra los 6 dominios canónicos. Pero el verifier `integrity/` (regla S15 de E14) fue redactado antes de ambos y nunca se actualizó. Quedaban tres huecos estructurales:
+
+1. `integrity/verify_derived_integrity` **no enumeraba** `<archive>/attestations/`, así que una atestación con `attestation_hash` adulterado pasaba inadvertida.
+2. **Nada cruzaba** los artefactos persistidos en disco con las entries del audit log: un workspace puesto a mano (saltándose la API auditada) era invisible; un workspace borrado tras emitir `BUILD_WORKSPACE` también lo era; un workspace sustituido en disco sin re-emitir entry pasaba self-hash check.
+3. El reporte no contabilizaba ni atestaciones ni assessments — las cuentas no cuadraban con la cobertura de E1.
+
+E16 cierra los tres huecos extendiendo `integrity/verify.py` (sin nuevo subpaquete, sin nueva dependencia, sin nuevo ADR mayor).
+
+**Cambios estructurales.**
+
+`IntegrityIssueKind` crece de 9 a **13 valores** (taxonomía cerrada pinned por `test_issue_kind_taxonomy_closed`):
+
+| Nuevo valor | Cuándo se emite |
+|---|---|
+| `attestation_hash_mismatch` | Recomputo de `attestation_hash` ≠ declarado en el archivo. |
+| `missing_audit_entry` | Artefacto en disco bajo localización canónica sin entry derivada en `audit.log`. |
+| `missing_persisted_artifact` | Entry derivada en `audit.log` cuyo target apunta a artefacto ausente del disco. |
+| `audit_log_hash_mismatch` | `self_hash` de la última entry para el target ≠ self-hash actual del archivo. |
+
+`DerivedIntegrityReport` gana **dos contadores**: `attestations_checked` y `assessments_checked`. `total_checked` los incluye.
+
+**Regla S15 actualizada (refinada por E16):**
+
+`integrity/` puede depender de:
+
+- `core/`, `storage/`, `analysis/` (sólo lectura del modelo) — ya antes.
+- `workspace/`, `timeline/`, `snapshot/`, `justification/` — ya antes.
+- `errors` — ya antes.
+- **`attestation/`** — añadido por E16: cargar `OperatorAttestation`, recomputar `attestation_hash`. NO ejecuta `verify_attestation` con clave pública (verificación criptográfica completa sigue siendo competencia de `aip attestation verify --public-key`).
+- **`audit/log`** — añadido por E16: iterar entries vía `iter_entries`, filtrar por las 6 ActionKinds derivadas, construir el índice por target URI para la reconciliación.
+
+Ni la importación de `attestation/` ni la de `audit/` rompe S1–S5: `integrity/` sigue siendo lectura pura y no ejecuta motores productores (cero llamadas a `assess_authentication`, `build_*`, `sign_artifact`).
+
+**Reconciliación E16 — algoritmo.**
+
+```
+1. Construir persisted_index: dict[target_uri, (kind, id, self_hash)]
+   - workspaces + timelines + snapshots + justifications + attestations: enumerar archivos
+   - assessments: enumerar filas en authentication_assessments;
+     self_hash registrado por E1 = evidence_id
+2. Walk audit.log via iter_entries; filtrar action ∈ derived; mantener última entry por target
+3. Reconciliar:
+   - target en persisted_index pero no en log → MISSING_AUDIT_ENTRY
+   - target en persisted_index con entry.parameters["self_hash"] ≠ índice → AUDIT_LOG_HASH_MISMATCH
+   - target en log pero no en persisted_index → MISSING_PERSISTED_ARTIFACT
+4. Si audit.log no existe (fixture parcial), no se emiten incidencias de reconciliación
+   (la cadena base lo cubre Archive.verify)
+```
+
+**Garantías estructurales (verificadas por `tests/unit/integrity/test_e16_reconciliation.py`, 10/10).**
+
+- **Atestaciones auditadas**: clean archive con attestation pasa. Tamper de `attestation_hash` → `ATTESTATION_HASH_MISMATCH`.
+- **G_E16_a — `MISSING_AUDIT_ENTRY`**: workspace puesto a mano (mismo self-hash coherente) detectado.
+- **G_E16_b — `MISSING_PERSISTED_ARTIFACT`**: borrar workspace.json o attestation.json deja la entry huérfana y se detecta.
+- **G_E16_c — `AUDIT_LOG_HASH_MISMATCH`**: sustituir el contenido de un workspace o atestación sin re-emitir entry se detecta — el caso central de tampering silencioso post-ADR-0041 queda cubierto.
+
+**Contrato refinado de removability.**
+
+Antes de E16: borrar `<archive>/workspaces/` era "removability segura" y `archive verify --derived` reportaba 0 issues. Tras E16: la removability sigue siendo segura al nivel **base** (tablas/blobs intactos, `archive verify` sin `--derived` sigue rc=0), pero `archive verify --derived` reporta `MISSING_PERSISTED_ARTIFACT` por cada artefacto cuyo audit entry existió. Eso es exactamente lo correcto: el audit log no olvida; la removability es operacionalmente válida, pero deja un rastro auditable.
+
+**E16 no muta bytes hasheados.**
+
+- 16/16 pins de reproducibility de manifest/JCS/context/justification — intactos.
+- 2/2 pins de audit chain base (`EXPECTED_BOOTSTRAP_HASH`, `EXPECTED_INGEST_HASH`) — intactos.
+- `archive_manifest_hash` invariante: la extensión sólo lee, nunca escribe.
+
+**Alineación ADR-0000.**
+
+- **P2 (trazabilidad):** la cadena hash-encadenada ya cubre 6/6 dominios (E1); ahora también cubre la **consistencia** entre disco y log. La promesa "demostrar que la información no fue alterada" deja de descansar en la disciplina del código de persistencia y descansa en una verificación auditable.
+- **P11 (inmutabilidad):** se preserva — `integrity/` sigue siendo lectura pura.
+- **P5 (reproducibilidad):** todos los pins se mantienen verdes.
+
+Sin esta enmienda, el contrato de E1 — "toda persistencia emite entry" — era una promesa del código de producción, no una verificación. Con E16, es una verificación que `aip archive verify --derived` ejecuta en una sola pasada.

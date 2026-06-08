@@ -1,15 +1,33 @@
-"""Comprobador de integridad referencial cruzada (post-ADR-0040 hardening).
+"""Comprobador de integridad referencial cruzada.
 
 Lectura pura del archive + cada artefacto derivado persistido. Reporta
 incidencias estructurales sin modificar nada. Cero ejecución de motores
 productores.
+
+Cobertura (ADR-0030 §S15 + §enmienda E16):
+
+1. **Integridad self-hash** de los seis dominios canónicos (workspace,
+   timeline, snapshot, justification, attestation, assessment).
+2. **Integridad referencial** entre artefactos (workspace_hash en
+   timelines/snapshots/justifications, evidence/source refs, etc.).
+3. **Reconciliación con el audit log** (post-ADR-0019 §enmienda E1):
+   cada artefacto persistido debe tener una entry de audit log y su
+   ``self_hash`` debe coincidir; cada entry debe apuntar a un artefacto
+   presente. Detecta inserciones y borrados que saltan la API auditada.
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from pathlib import Path
 
+from aip.attestation import (
+    OperatorAttestation,
+    compute_attestation_hash,
+    decode_attestation,
+)
+from aip.audit.log import ActionKind, AuditEntry, iter_entries
 from aip.integrity.models import (
     INTEGRITY_ENGINE_VERSION,
     INTEGRITY_METHOD_NAME,
@@ -39,6 +57,16 @@ from aip.workspace import (
     decode_workspace,
     verify_workspace_hash,
 )
+
+# Mapeo ActionKind derivada → prefijo del URI canónico del artefacto.
+_DERIVED_ACTION_TO_KIND: dict[ActionKind, str] = {
+    ActionKind.BUILD_WORKSPACE: "workspace",
+    ActionKind.BUILD_TIMELINE: "timeline",
+    ActionKind.BUILD_SNAPSHOT: "snapshot",
+    ActionKind.BUILD_JUSTIFICATION: "justification",
+    ActionKind.SIGN_ATTESTATION: "attestation",
+    ActionKind.ASSESS_AUTHENTICATION: "assessment",
+}
 
 
 def verify_derived_integrity(
@@ -77,10 +105,25 @@ def verify_derived_integrity(
     )
 
     # Justifications.
-    _, justification_issues = _collect_justifications(
+    justifications, justification_issues = _collect_justifications(
         archive_root,
         workspace_hashes=workspace_hashes,
         current_manifest_hash=current_manifest_hash,
+    )
+
+    # Attestations (ADR-0041 + §enmienda E16).
+    attestations, attestation_issues = _collect_attestations(archive_root)
+
+    # Reconciliación con audit log (ADR-0019 §enmienda E1).
+    persisted_index = _build_persisted_index(
+        workspaces=workspaces,
+        timelines=timelines,
+        justifications=justifications,
+        attestations=attestations,
+        archive_root=archive_root,
+    )
+    reconciliation_issues = _reconcile_with_audit_log(
+        archive_root, persisted_index=persisted_index
     )
 
     all_issues = (
@@ -88,6 +131,8 @@ def verify_derived_integrity(
         + timeline_issues
         + snapshot_issues
         + justification_issues
+        + attestation_issues
+        + reconciliation_issues
     )
     all_issues.sort()
 
@@ -98,6 +143,8 @@ def verify_derived_integrity(
         justifications_checked=_count_json(
             archive_root, "justifications"
         ),
+        attestations_checked=len(attestations),
+        assessments_checked=_count_assessments(archive_root),
         issues=tuple(all_issues),
         integrity_engine_version=INTEGRITY_ENGINE_VERSION,
         integrity_method_name=INTEGRITY_METHOD_NAME,
@@ -610,3 +657,241 @@ def _check_chain_entry(
                     ),
                 )
             )
+
+
+# --------------------------------------------------------------------- attestations (E16)
+
+
+def _collect_attestations(
+    archive_root: Path,
+) -> tuple[list[tuple[str, OperatorAttestation]], list[DerivedIntegrityIssue]]:
+    """Carga atestaciones persistidas + reporta incidencias estructurales.
+
+    Para cada ``<archive>/attestations/*.json``:
+
+    - Decode (``DECODE_ERROR`` si falla).
+    - Recomputo de ``attestation_hash`` y comparación con el declarado
+      (``ATTESTATION_HASH_MISMATCH`` si no coincide).
+
+    NO verifica la firma ed25519 (esa requiere clave pública del
+    firmante; verificación criptográfica completa vive en
+    ``aip attestation verify --public-key``).
+
+    Devuelve tuplas ``(attestation_id, attestation)`` donde
+    ``attestation_id`` es el nombre del archivo (sin extensión), porque
+    la atestación no lleva su id en el modelo (ADR-0041 §modelo).
+    """
+    out: list[tuple[str, OperatorAttestation]] = []
+    issues: list[DerivedIntegrityIssue] = []
+    dir_path = archive_root / "attestations"
+    if not dir_path.is_dir():
+        return out, issues
+    for path in sorted(dir_path.glob("*.json")):
+        attestation_id = path.stem
+        try:
+            att = decode_attestation(path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            issues.append(
+                DerivedIntegrityIssue(
+                    artifact_kind="attestation",
+                    artifact_id=attestation_id,
+                    issue_kind=IntegrityIssueKind.DECODE_ERROR.value,
+                    detail=f"decode failed: {type(exc).__name__}",
+                )
+            )
+            continue
+        if compute_attestation_hash(att) != att.attestation_hash:
+            issues.append(
+                DerivedIntegrityIssue(
+                    artifact_kind="attestation",
+                    artifact_id=attestation_id,
+                    issue_kind=(
+                        IntegrityIssueKind.ATTESTATION_HASH_MISMATCH.value
+                    ),
+                    detail="attestation_hash recompute mismatch",
+                )
+            )
+        out.append((attestation_id, att))
+    return out, issues
+
+
+def _count_assessments(archive_root: Path) -> int:
+    try:
+        return sum(
+            1
+            for _ in tables.iter_rows(
+                archive_root, "authentication_assessments"
+            )
+        )
+    except Exception:
+        return 0
+
+
+# --------------------------------------------------------------------- reconciliation (E16)
+
+
+def _build_persisted_index(
+    *,
+    workspaces: Iterable[InvestigationWorkspace],
+    timelines: Iterable[InvestigationTimeline],
+    justifications: Iterable[InvestigationJustification],
+    attestations: Iterable[tuple[str, OperatorAttestation]],
+    archive_root: Path,
+) -> dict[str, tuple[str, str, str]]:
+    """Construye el índice ``target_uri → (kind, id, self_hash)``.
+
+    Cobertura:
+
+    - workspace / timeline / snapshot / justification — desde colectores.
+    - attestation — desde ``_collect_attestations``.
+    - assessment — desde la tabla ``authentication_assessments``; el
+      ``self_hash`` registrado en el audit log para assessments es el
+      ``evidence_id`` (ancla; un assessment no tiene hash propio
+      independiente).
+
+    Snapshots se enumeran independientemente leyendo el directorio
+    porque su colector no se inserta como dependencia de este índice.
+    """
+    index: dict[str, tuple[str, str, str]] = {}
+    for w in workspaces:
+        index[f"aip:workspace/{w.workspace_id}"] = (
+            "workspace",
+            w.workspace_id,
+            w.workspace_hash,
+        )
+    for t in timelines:
+        index[f"aip:timeline/{t.timeline_id}"] = (
+            "timeline",
+            t.timeline_id,
+            t.timeline_hash,
+        )
+    snapshots_dir = archive_root / "snapshots"
+    if snapshots_dir.is_dir():
+        for path in sorted(snapshots_dir.glob("*.json")):
+            try:
+                s = decode_snapshot(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            index[f"aip:snapshot/{s.snapshot_id}"] = (
+                "snapshot",
+                s.snapshot_id,
+                s.snapshot_hash,
+            )
+    for j in justifications:
+        index[f"aip:justification/{j.justification_id}"] = (
+            "justification",
+            j.justification_id,
+            j.justification_hash,
+        )
+    for attestation_id, att in attestations:
+        index[f"aip:attestation/{attestation_id}"] = (
+            "attestation",
+            attestation_id,
+            att.attestation_hash,
+        )
+    try:
+        for raw in tables.iter_rows(
+            archive_root, "authentication_assessments"
+        ):
+            if not isinstance(raw, dict):
+                continue
+            assessment_id = str(raw.get("assessment_id", ""))
+            evidence_id = str(raw.get("evidence_id", ""))
+            if assessment_id and evidence_id:
+                index[f"aip:assessment/{assessment_id}"] = (
+                    "assessment",
+                    assessment_id,
+                    evidence_id,
+                )
+    except Exception:
+        pass
+    return index
+
+
+def _reconcile_with_audit_log(
+    archive_root: Path,
+    *,
+    persisted_index: dict[str, tuple[str, str, str]],
+) -> list[DerivedIntegrityIssue]:
+    """Cruza el audit log con el índice de artefactos persistidos.
+
+    Por cada target presente en ambos lados:
+
+    - Si la última entry declara un ``self_hash`` distinto del archivo
+      actual → ``AUDIT_LOG_HASH_MISMATCH``.
+
+    Por cada target en disco sin entries → ``MISSING_AUDIT_ENTRY``.
+    Por cada target con entries pero sin artefacto en disco →
+    ``MISSING_PERSISTED_ARTIFACT``.
+
+    Si ``audit.log`` no existe (archive incompleto / test fixture),
+    no se emiten incidencias de reconciliación.
+    """
+    log_path = archive_root / layout.AUDIT_LOG_FILENAME
+    if not log_path.is_file():
+        return []
+
+    latest_by_target: dict[str, AuditEntry] = {}
+    for entry in iter_entries(archive_root):
+        if entry.action not in _DERIVED_ACTION_TO_KIND:
+            continue
+        latest_by_target[entry.target] = entry
+
+    issues: list[DerivedIntegrityIssue] = []
+
+    for target, (artifact_kind, artifact_id, self_hash) in (
+        persisted_index.items()
+    ):
+        matched: AuditEntry | None = latest_by_target.get(target)
+        if matched is None:
+            issues.append(
+                DerivedIntegrityIssue(
+                    artifact_kind=artifact_kind,
+                    artifact_id=artifact_id,
+                    issue_kind=(
+                        IntegrityIssueKind.MISSING_AUDIT_ENTRY.value
+                    ),
+                    detail=(
+                        f"target {target!r} present on disk but no "
+                        "audit entry references it"
+                    ),
+                )
+            )
+            continue
+        declared = matched.parameters.get("self_hash", "")
+        if declared != self_hash:
+            issues.append(
+                DerivedIntegrityIssue(
+                    artifact_kind=artifact_kind,
+                    artifact_id=artifact_id,
+                    issue_kind=(
+                        IntegrityIssueKind.AUDIT_LOG_HASH_MISMATCH.value
+                    ),
+                    detail=(
+                        f"last entry declares self_hash "
+                        f"{declared[:8]}... but disk has "
+                        f"{self_hash[:8]}..."
+                    ),
+                )
+            )
+
+    for target, entry in latest_by_target.items():
+        if target in persisted_index:
+            continue
+        kind = _DERIVED_ACTION_TO_KIND[entry.action]
+        artifact_id = target.split("/", 1)[1] if "/" in target else target
+        issues.append(
+            DerivedIntegrityIssue(
+                artifact_kind=kind,
+                artifact_id=artifact_id,
+                issue_kind=(
+                    IntegrityIssueKind.MISSING_PERSISTED_ARTIFACT.value
+                ),
+                detail=(
+                    f"audit log references {target!r} but no persisted "
+                    "artifact found at canonical location"
+                ),
+            )
+        )
+
+    return issues

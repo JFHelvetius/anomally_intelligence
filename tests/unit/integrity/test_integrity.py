@@ -137,7 +137,14 @@ def test_method_name_pinned() -> None:
 
 
 def test_issue_kind_taxonomy_closed() -> None:
+    """Pinea la taxonomía cerrada de incidencias.
+
+    9 valores originales (ADR-0030 §S15) + 4 añadidos por la enmienda
+    E16 (post-ADR-0041 + ADR-0019 §E1): cobertura de attestations +
+    reconciliación con el audit log.
+    """
     assert {k.value for k in IntegrityIssueKind} == {
+        # Originales (S15).
         "hash_mismatch",
         "manifest_drift",
         "workspace_link_broken",
@@ -147,6 +154,11 @@ def test_issue_kind_taxonomy_closed() -> None:
         "assessment_reference_dangling",
         "provenance_step_dangling",
         "decode_error",
+        # E16 (post-ADR-0041 + E1).
+        "attestation_hash_mismatch",
+        "missing_audit_entry",
+        "missing_persisted_artifact",
+        "audit_log_hash_mismatch",
     }
 
 
@@ -175,7 +187,11 @@ def test_verify_clean_archive_no_issues(tmp_path: Path, archive_root: Path) -> N
     assert report.timelines_checked == 1
     assert report.snapshots_checked == 1
     assert report.justifications_checked == 1
-    assert report.total_checked == 4
+    # E16: el assessment producido por el pipeline (assess_authentication)
+    # entra en el reporte; sin atestaciones produce attestations_checked=0.
+    assert report.assessments_checked == 1
+    assert report.attestations_checked == 0
+    assert report.total_checked == 5
 
 
 def test_verify_no_derived_artifacts_returns_empty_report(
@@ -577,7 +593,16 @@ def test_removing_integrity_module_does_not_break_existing(
 
 
 def test_removability_after_full_pipeline(tmp_path: Path, archive_root: Path) -> None:
-    """Borrar todos los artefactos derivados no rompe archive verify base."""
+    """Borrar todos los artefactos derivados no rompe archive verify base.
+
+    Tras ADR-0030 §enmienda E16, el contrato se afina: ``archive verify``
+    base sigue OK (las tablas y blobs base están intactos); pero
+    ``archive verify --derived`` reporta ahora ``MISSING_PERSISTED_ARTIFACT``
+    para cada artefacto derivado que el audit log declaró creado pero
+    cuyo archivo ya no está. Eso es exactamente lo correcto: la
+    removabilidad sigue siendo segura, pero la cadena auditada NO se
+    olvida de que esos artefactos existieron.
+    """
     _bootstrap_full_pipeline(tmp_path, archive_root)
     for d in ("workspaces", "timelines", "snapshots", "justifications"):
         target = archive_root / d
@@ -585,7 +610,7 @@ def test_removability_after_full_pipeline(tmp_path: Path, archive_root: Path) ->
             shutil.rmtree(target)
     rc, _, _ = _run(["archive", "verify", "--archive-root", str(archive_root)])
     assert rc == 0
-    # También --derived (sin artefactos) debe pasar.
+    # --derived ahora detecta los borrados (reconciliación E16).
     rc, _, _ = _run(
         [
             "archive",
@@ -595,7 +620,17 @@ def test_removability_after_full_pipeline(tmp_path: Path, archive_root: Path) ->
             "--derived",
         ]
     )
-    assert rc == 0
+    assert rc != 0
+    report = verify_derived_integrity(archive_root)
+    assert not report.ok
+    missing_kinds = {
+        issue.artifact_kind
+        for issue in report.issues
+        if issue.issue_kind
+        == IntegrityIssueKind.MISSING_PERSISTED_ARTIFACT.value
+    }
+    # Workspace, timeline, snapshot y justification fueron borrados.
+    assert missing_kinds == {"workspace", "timeline", "snapshot", "justification"}
 
 
 # ---------------------------------------------------------------- report model
@@ -607,6 +642,8 @@ def test_report_model_immutable() -> None:
         timelines_checked=0,
         snapshots_checked=0,
         justifications_checked=0,
+        attestations_checked=0,
+        assessments_checked=0,
         issues=(),
         integrity_engine_version=INTEGRITY_ENGINE_VERSION,
         integrity_method_name=INTEGRITY_METHOD_NAME,
