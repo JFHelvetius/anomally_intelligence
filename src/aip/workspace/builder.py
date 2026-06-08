@@ -15,11 +15,14 @@ verifica estructuralmente vía AST.
 from __future__ import annotations
 
 import dataclasses
+import datetime as dt
 import json
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import cast
 
+from aip._version import SCHEMA_VERSION
+from aip.audit import log as audit_log
 from aip.core.hashing import JsonValue, jcs_canonicalize, sha256_hex
 from aip.errors import AIPError
 from aip.storage import layout
@@ -185,6 +188,8 @@ def persist_workspace(
     workspace: InvestigationWorkspace,
     *,
     archive_root: Path,
+    actor: str,
+    clock: Callable[[], dt.datetime],
     extra_output: Path | None = None,
 ) -> Path:
     """Persiste el workspace en su localización canónica + opcional copia.
@@ -192,6 +197,10 @@ def persist_workspace(
     Siempre escribe ``<archive>/workspaces/<workspace_id>.json``. Si
     ``extra_output`` se proporciona, también escribe ahí (idéntico
     contenido). Devuelve el path canónico.
+
+    Emite una entry ``BUILD_WORKSPACE`` en el audit log (ADR-0019
+    §enmienda E1). ``actor`` y ``clock`` son operator-supplied — la única
+    forma válida de tener un audit chain auditable.
     """
     archive_target = workspace_path(archive_root, workspace.workspace_id)
     archive_target.parent.mkdir(parents=True, exist_ok=True)
@@ -200,6 +209,16 @@ def persist_workspace(
     if extra_output is not None:
         extra_output.parent.mkdir(parents=True, exist_ok=True)
         extra_output.write_text(payload, encoding="utf-8")
+    audit_log.record_derived_artifact(
+        archive_root,
+        action=audit_log.ActionKind.BUILD_WORKSPACE,
+        artifact_kind="workspace",
+        artifact_id=workspace.workspace_id,
+        self_hash=workspace.workspace_hash,
+        actor=actor,
+        clock=clock,
+        schema_version=SCHEMA_VERSION,
+    )
     return archive_target
 
 

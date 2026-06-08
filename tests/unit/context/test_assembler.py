@@ -41,9 +41,7 @@ def _fixed_clock(ts: dt.datetime) -> Callable[[], dt.datetime]:
     return lambda: ts
 
 
-def _ingest(
-    archive_root: Path, blob: Path, *, source_id: str = "blue-book-nara"
-):
+def _ingest(archive_root: Path, blob: Path, *, source_id: str = "blue-book-nara"):
     archive = Archive.open(archive_root)
     return archive.ingest_evidence(
         blob,
@@ -66,6 +64,7 @@ def _assess(archive_root: Path, evidence_id: str, method=None):
         evidence_id=evidence_id,
         method=method or AssessmentMethod.PROVENANCE_REVIEW,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
 
 
@@ -90,25 +89,17 @@ def test_assemble_raises_when_archive_root_not_an_archive(
     archive_root: Path,
 ) -> None:
     with pytest.raises(ContextAssemblyError):
-        assemble_context(
-            archive_root, GraphNode(kind=NodeKind.EVIDENCE, id="a" * 64)
-        )
+        assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id="a" * 64))
 
 
-def test_assemble_raises_when_anchor_not_in_graph(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_assemble_raises_when_anchor_not_in_graph(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     with pytest.raises(ContextAnchorNotFoundError):
-        assemble_context(
-            archive_root, GraphNode(kind=NodeKind.EVIDENCE, id="f" * 64)
-        )
+        assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id="f" * 64))
 
 
-def test_assemble_raises_when_manifest_missing(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_assemble_raises_when_manifest_missing(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     # Borramos manifest pero dejamos audit + estructura para que
@@ -129,9 +120,7 @@ def test_evidence_anchor_populates_evidence_source_provenance(
 ) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
-    bundle = assemble_context(
-        archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    bundle = assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     assert bundle.anchor_node_kind == "evidence"
     assert bundle.anchor_node_id == evidence.hash
     assert bundle.evidence is not None
@@ -148,9 +137,7 @@ def test_evidence_anchor_includes_assessments_when_present(
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     _assess(archive_root, evidence.hash)
-    bundle = assemble_context(
-        archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    bundle = assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     assert len(bundle.derived_assessments) == 1
     assert bundle.derived_assessments[0]["evidence_id"] == evidence.hash
 
@@ -160,9 +147,7 @@ def test_evidence_anchor_graph_neighborhood_has_upstream_source(
 ) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
-    bundle = assemble_context(
-        archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    bundle = assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     types_upstream = {n.node_type for n in bundle.graph_neighborhood.upstream}
     assert "source" in types_upstream
 
@@ -173,37 +158,25 @@ def test_evidence_anchor_graph_neighborhood_has_downstream_assessments(
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     _assess(archive_root, evidence.hash)
-    bundle = assemble_context(
-        archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
-    types_downstream = {
-        n.node_type for n in bundle.graph_neighborhood.downstream
-    }
+    bundle = assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
+    types_downstream = {n.node_type for n in bundle.graph_neighborhood.downstream}
     assert "assessment" in types_downstream
 
 
-def test_evidence_anchor_impact_report_is_present(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_evidence_anchor_impact_report_is_present(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     _assess(archive_root, evidence.hash)
-    bundle = assemble_context(
-        archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    bundle = assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     # El reporte agrega lo que devuelve analyze_removal_impact.
     assert bundle.impact_report["total_affected_nodes"] == 1
-    assert bundle.impact_report["analysis_method_name"] == (
-        "dependency_reachability_v1"
-    )
+    assert bundle.impact_report["analysis_method_name"] == ("dependency_reachability_v1")
 
 
 # ---------------------------------------------------------------- assessment anchor
 
 
-def test_assessment_anchor_resolves_evidence_via_graph(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_assessment_anchor_resolves_evidence_via_graph(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     assessment = _assess(archive_root, evidence.hash)
@@ -217,15 +190,10 @@ def test_assessment_anchor_resolves_evidence_via_graph(
     assert bundle.source is not None
     # derived_assessments incluye sólo el anchor (un único assessment).
     assert len(bundle.derived_assessments) == 1
-    assert (
-        bundle.derived_assessments[0]["assessment_id"]
-        == assessment.assessment_id
-    )
+    assert bundle.derived_assessments[0]["assessment_id"] == assessment.assessment_id
 
 
-def test_assessment_anchor_downstream_is_empty(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_assessment_anchor_downstream_is_empty(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     assessment = _assess(archive_root, evidence.hash)
@@ -242,15 +210,11 @@ def test_assessment_anchor_downstream_is_empty(
 # ---------------------------------------------------------------- source anchor (API only)
 
 
-def test_source_anchor_populates_source_only(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_source_anchor_populates_source_only(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob, source_id="custom-src")
     _assess(archive_root, evidence.hash)
-    bundle = assemble_context(
-        archive_root, GraphNode(kind=NodeKind.SOURCE, id="custom-src")
-    )
+    bundle = assemble_context(archive_root, GraphNode(kind=NodeKind.SOURCE, id="custom-src"))
     assert bundle.anchor_node_kind == "source"
     assert bundle.evidence is None
     assert bundle.source is not None
@@ -263,9 +227,7 @@ def test_source_anchor_populates_source_only(
 # ---------------------------------------------------------------- determinism
 
 
-def test_assemble_is_deterministic_bit_for_bit(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_assemble_is_deterministic_bit_for_bit(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     _assess(archive_root, evidence.hash)
@@ -276,9 +238,7 @@ def test_assemble_is_deterministic_bit_for_bit(
     assert b1.context_bundle_hash == b2.context_bundle_hash
 
 
-def test_assemble_does_not_modify_archive(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_assemble_does_not_modify_archive(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     _assess(archive_root, evidence.hash)
@@ -299,9 +259,7 @@ def test_assemble_does_not_modify_archive(
         return snap
 
     before = snapshot()
-    assemble_context(
-        archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     after = snapshot()
     assert before == after
 
@@ -309,34 +267,22 @@ def test_assemble_does_not_modify_archive(
 # ---------------------------------------------------------------- hashes encadenados
 
 
-def test_source_manifest_hash_matches_stored_manifest(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_source_manifest_hash_matches_stored_manifest(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
-    bundle = assemble_context(
-        archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
-    stored = json.loads(
-        (archive_root / "manifest.json").read_text(encoding="utf-8")
-    )
+    bundle = assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
+    stored = json.loads((archive_root / "manifest.json").read_text(encoding="utf-8"))
     stored_manifest = ArchiveManifest.model_validate(stored)
     assert bundle.source_manifest_hash == stored_manifest.manifest_hash()
 
 
-def test_context_bundle_hash_self_verifies(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_context_bundle_hash_self_verifies(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
-    bundle = assemble_context(
-        archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    bundle = assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     assert verify_bundle_hash(bundle) is True
     # Recomputo manual coincide.
-    assert (
-        compute_context_bundle_hash(bundle) == bundle.context_bundle_hash
-    )
+    assert compute_context_bundle_hash(bundle) == bundle.context_bundle_hash
 
 
 def test_context_bundle_hash_differs_for_different_anchors(
@@ -346,18 +292,12 @@ def test_context_bundle_hash_differs_for_different_anchors(
     blob_b = _write_blob(tmp_path, "b.pdf", b"%PDF-1.4 b")
     ev_a = _ingest(archive_root, blob_a)
     ev_b = _ingest(archive_root, blob_b)
-    bundle_a = assemble_context(
-        archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=ev_a.hash)
-    )
-    bundle_b = assemble_context(
-        archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=ev_b.hash)
-    )
+    bundle_a = assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=ev_a.hash))
+    bundle_b = assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=ev_b.hash))
     assert bundle_a.context_bundle_hash != bundle_b.context_bundle_hash
 
 
-def test_context_bundle_hash_changes_when_state_changes(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_context_bundle_hash_changes_when_state_changes(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     anchor = GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
@@ -392,14 +332,10 @@ def test_verify_bundle_hash_returns_false_on_tampering() -> None:
 # ---------------------------------------------------------------- honesty
 
 
-def test_bundle_carries_honesty_fields(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_bundle_carries_honesty_fields(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
-    bundle = assemble_context(
-        archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    bundle = assemble_context(archive_root, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     assert bundle.assembly_engine_version == ASSEMBLY_ENGINE_VERSION
     assert bundle.assembly_method_name == ASSEMBLY_METHOD_NAME
     assert bundle.schema_version == SCHEMA_VERSION
@@ -440,9 +376,7 @@ def test_assembler_imports_only_existing_engines() -> None:
     )
 
 
-def test_assembler_uses_canonical_engine_functions(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_assembler_uses_canonical_engine_functions(tmp_path: Path, archive_root: Path) -> None:
     """G3 operativo: el reporte de impacto del bundle es bit-idéntico
     al que produce analyze_removal_impact directamente — el assembler
     no recalcula, agrega."""
@@ -451,7 +385,5 @@ def test_assembler_uses_canonical_engine_functions(
     _assess(archive_root, evidence.hash)
     anchor = GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
     bundle = assemble_context(archive_root, anchor)
-    direct_report = analyze_removal_impact(
-        build_graph(archive_root), anchor
-    )
+    direct_report = analyze_removal_impact(build_graph(archive_root), anchor)
     assert bundle.impact_report == dc.asdict(direct_report)

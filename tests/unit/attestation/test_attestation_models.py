@@ -38,16 +38,19 @@ def _valid(**overrides: object) -> OperatorAttestation:
 def test_constants_are_pinned() -> None:
     assert ATTESTATION_SCHEMA_VERSION == "1"
     assert SIGNATURE_ALGORITHM == "ed25519-v1"
-    assert frozenset(
-        {
-            "workspace",
-            "timeline",
-            "snapshot",
-            "justification",
-            "context_bundle",
-            "manifest",
-        }
-    ) == ALLOWED_ARTIFACT_KINDS
+    assert (
+        frozenset(
+            {
+                "workspace",
+                "timeline",
+                "snapshot",
+                "justification",
+                "context_bundle",
+                "manifest",
+            }
+        )
+        == ALLOWED_ARTIFACT_KINDS
+    )
 
 
 def test_happy_path_construction() -> None:

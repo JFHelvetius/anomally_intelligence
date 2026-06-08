@@ -45,14 +45,10 @@ def _write_blob(tmp_path: Path, name: str, content: bytes) -> Path:
 
 
 def _load_manifest(archive_root: Path) -> dict[str, object]:
-    return json.loads(
-        (archive_root / layout.MANIFEST_FILENAME).read_text(encoding="utf-8")
-    )
+    return json.loads((archive_root / layout.MANIFEST_FILENAME).read_text(encoding="utf-8"))
 
 
-def _save_manifest(
-    archive_root: Path, data: dict[str, object]
-) -> None:
+def _save_manifest(archive_root: Path, data: dict[str, object]) -> None:
     (archive_root / layout.MANIFEST_FILENAME).write_text(
         json.dumps(data, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -62,9 +58,7 @@ def _save_manifest(
 # ---------------------------------------------------------------- clean
 
 
-def test_clean_archive_passes_content_check(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_clean_archive_passes_content_check(tmp_path: Path, archive_root: Path) -> None:
     """Backward compat: archive limpio sigue pasando."""
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -79,9 +73,7 @@ def test_clean_archive_passes_content_check(
 # ---------------------------------------------------------------- tampering
 
 
-def test_detects_row_count_tampering(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_row_count_tampering(tmp_path: Path, archive_root: Path) -> None:
     """Cambiar row_count de una tabla sin tocar los parquet files."""
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -97,9 +89,7 @@ def test_detects_row_count_tampering(
     assert "DIVERGES" in manifest_check.detail
 
 
-def test_detects_schema_hash_tampering(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_schema_hash_tampering(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     data = _load_manifest(archive_root)
@@ -112,9 +102,7 @@ def test_detects_schema_hash_tampering(
     assert "schema_hash" in manifest_check.detail
 
 
-def test_detects_table_removed_from_manifest(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_table_removed_from_manifest(tmp_path: Path, archive_root: Path) -> None:
     """Quitar una entrada de tables.{} para ocultar tabla del manifest."""
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -132,9 +120,7 @@ def test_detects_table_removed_from_manifest(
     assert "missing" in manifest_check.detail
 
 
-def test_detects_blobs_root_tampering(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_blobs_root_tampering(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     data = _load_manifest(archive_root)
@@ -147,9 +133,7 @@ def test_detects_blobs_root_tampering(
     assert "blobs_root" in manifest_check.detail
 
 
-def test_detects_schema_version_tampering(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_schema_version_tampering(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     data = _load_manifest(archive_root)
@@ -162,9 +146,7 @@ def test_detects_schema_version_tampering(
     assert "schema_version" in manifest_check.detail
 
 
-def test_detects_notes_tampering(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_notes_tampering(tmp_path: Path, archive_root: Path) -> None:
     """Añadir notes arbitrarios al manifest persistido."""
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -178,9 +160,7 @@ def test_detects_notes_tampering(
     assert "notes" in manifest_check.detail
 
 
-def test_detects_partition_hashes_tampering(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_partition_hashes_tampering(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     data = _load_manifest(archive_root)
@@ -199,9 +179,7 @@ def test_detects_partition_hashes_tampering(
 # ---------------------------------------------------------------- ignored fields
 
 
-def test_generated_at_difference_does_not_trigger(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_generated_at_difference_does_not_trigger(tmp_path: Path, archive_root: Path) -> None:
     """generated_at SIEMPRE difiere entre stored y recomputed; no debe
     ser reportado como divergencia."""
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
@@ -217,9 +195,7 @@ def test_generated_at_difference_does_not_trigger(
 # ---------------------------------------------------------------- error paths
 
 
-def test_missing_manifest_still_reports_missing(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_missing_manifest_still_reports_missing(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     (archive_root / layout.MANIFEST_FILENAME).unlink()
@@ -231,14 +207,10 @@ def test_missing_manifest_still_reports_missing(
     assert "missing" in manifest_check.detail
 
 
-def test_unparseable_manifest_reports_parse_error(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_unparseable_manifest_reports_parse_error(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
-    (archive_root / layout.MANIFEST_FILENAME).write_text(
-        "not valid json {", encoding="utf-8"
-    )
+    (archive_root / layout.MANIFEST_FILENAME).write_text("not valid json {", encoding="utf-8")
     archive = Archive.open(archive_root)
     report = archive.verify(full=True)
     manifest_check = next(c for c in report.checks if c.name == "manifest")

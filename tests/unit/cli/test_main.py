@@ -23,9 +23,7 @@ def _run(argv: list[str]) -> tuple[int, str, str]:
     return rc, out.getvalue(), err.getvalue()
 
 
-def _ingest_args(
-    blob: Path, archive_root: Path, extra: list[str] | None = None
-) -> list[str]:
+def _ingest_args(blob: Path, archive_root: Path, extra: list[str] | None = None) -> list[str]:
     args = [
         "evidence",
         "ingest",
@@ -122,9 +120,7 @@ def test_ingest_dry_run_does_not_write_archive(tmp_path: Path) -> None:
 
 
 def test_ingest_missing_file_returns_exit_1(tmp_path: Path) -> None:
-    rc, _out, err = _run(
-        _ingest_args(tmp_path / "nope.pdf", tmp_path / "archive")
-    )
+    rc, _out, err = _run(_ingest_args(tmp_path / "nope.pdf", tmp_path / "archive"))
     assert rc == 1
     assert "file not found" in err.lower()
 
@@ -257,9 +253,7 @@ def test_verify_after_ingest_ok(tmp_path: Path) -> None:
     archive = tmp_path / "archive"
     _ingest_and_get_hash(blob, archive)
 
-    rc, out, _err = _run(
-        ["archive", "verify", "--archive-root", str(archive)]
-    )
+    rc, out, _err = _run(["archive", "verify", "--archive-root", str(archive)])
     assert rc == 0
     assert "Archive integrity verified" in out
 
@@ -389,6 +383,8 @@ def test_show_json_lists_assessments_after_assess(tmp_path: Path) -> None:
             str(archive),
             "--evidence-id",
             blob_hash,
+            "--actor",
+            "@test",
         ]
     )
     assert rc_a == 0, err_a
@@ -432,6 +428,8 @@ def test_show_json_lists_multiple_assessments_ordered(tmp_path: Path) -> None:
                 blob_hash,
                 "--method",
                 method,
+                "--actor",
+                "@test",
             ]
         )
         assert rc == 0
@@ -468,6 +466,8 @@ def test_show_human_lists_assessments_after_assess(tmp_path: Path) -> None:
             str(archive),
             "--evidence-id",
             blob_hash,
+            "--actor",
+            "@test",
         ]
     )
     assert rc == 0

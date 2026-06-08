@@ -58,9 +58,7 @@ def _ingest_basic(
 # ---------------------------------------------------------------- ingest
 
 
-def test_ingest_creates_archive_layout_and_evidence(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_ingest_creates_archive_layout_and_evidence(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest_basic(archive_root, blob, clock=_fixed_clock(CANONICAL_TS))
 
@@ -97,9 +95,7 @@ def test_ingest_is_idempotent(tmp_path: Path, archive_root: Path) -> None:
     assert count_entries(archive_root) == 2
 
 
-def test_ingest_dry_run_writes_nothing(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_ingest_dry_run_writes_nothing(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"hello")
     archive = Archive.open(archive_root)
     evidence = archive.ingest_evidence(
@@ -118,14 +114,14 @@ def test_ingest_dry_run_writes_nothing(
     # Nada escrito.
     assert not (archive_root / "manifest.json").exists()
     assert not (archive_root / "audit.log").exists()
-    assert not list((archive_root / "objects" / "sha256").iterdir()) if (
-        archive_root / "objects" / "sha256"
-    ).is_dir() else True
+    assert (
+        not list((archive_root / "objects" / "sha256").iterdir())
+        if (archive_root / "objects" / "sha256").is_dir()
+        else True
+    )
 
 
-def test_ingest_requires_source_metadata_when_new(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_ingest_requires_source_metadata_when_new(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"x")
     archive = Archive.open(archive_root)
     with pytest.raises(InvalidSourceMetadataError):
@@ -137,9 +133,7 @@ def test_ingest_requires_source_metadata_when_new(
         )
 
 
-def test_ingest_rejects_inconsistent_existing_source(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_ingest_rejects_inconsistent_existing_source(tmp_path: Path, archive_root: Path) -> None:
     blob1 = _write_blob(tmp_path, "a.pdf", b"AAA")
     blob2 = _write_blob(tmp_path, "b.pdf", b"BBB")
     _ingest_basic(archive_root, blob1, clock=_fixed_clock(CANONICAL_TS))
@@ -245,9 +239,7 @@ def test_verify_after_ingest_ok(tmp_path: Path, archive_root: Path) -> None:
     assert report.counts["audit_entries"] == 2
 
 
-def test_verify_detects_blob_tampering(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_detects_blob_tampering(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest_basic(archive_root, blob, clock=_fixed_clock(CANONICAL_TS))
 
@@ -262,9 +254,7 @@ def test_verify_detects_blob_tampering(
     assert blobs_check.ok is False
 
 
-def test_verify_quick_skips_blob_rehash(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_quick_skips_blob_rehash(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"hi")
     _ingest_basic(archive_root, blob, clock=_fixed_clock(CANONICAL_TS))
 
@@ -314,8 +304,7 @@ def test_infer_kind_default_conservative_is_document_scan(tmp_path: Path) -> Non
 def test_infer_kind_pdf_by_mime_overrides_suffix(tmp_path: Path) -> None:
     # MIME explícito gana sobre extensión ausente o atípica.
     assert (
-        _infer_kind(tmp_path / "no-extension", mime="application/pdf")
-        == EvidenceKind.DOCUMENT_SCAN
+        _infer_kind(tmp_path / "no-extension", mime="application/pdf") == EvidenceKind.DOCUMENT_SCAN
     )
 
 

@@ -178,14 +178,14 @@ def test_logical_partition_hashes_matches_list_row_hashes(archive_root: Path) ->
     _ensure(archive_root)
     tables.append_row(archive_root, "sources", "a", {"x": 1})
     tables.append_row(archive_root, "sources", "b", {"x": 2})
-    assert tables.logical_partition_hashes(
+    assert tables.logical_partition_hashes(archive_root, "sources") == tables.list_row_hashes(
         archive_root, "sources"
-    ) == tables.list_row_hashes(archive_root, "sources")
+    )
 
 
 def test_logical_row_count_matches_count_rows(archive_root: Path) -> None:
     _ensure(archive_root)
     tables.append_row(archive_root, "sources", "a", {"x": 1})
-    assert tables.logical_row_count(
+    assert tables.logical_row_count(archive_root, "sources") == tables.count_rows(
         archive_root, "sources"
-    ) == tables.count_rows(archive_root, "sources")
+    )

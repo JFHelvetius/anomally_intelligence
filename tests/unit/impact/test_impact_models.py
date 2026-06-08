@@ -209,7 +209,4 @@ def test_no_prohibited_tokens_in_impact_module() -> None:
         for token in _FORBIDDEN_TOKENS:
             if token in text:
                 offenders.append((path.name, token))
-    assert offenders == [], (
-        f"Forbidden tokens found (ADR-0034 §componentes excluidos): "
-        f"{offenders}"
-    )
+    assert offenders == [], f"Forbidden tokens found (ADR-0034 §componentes excluidos): {offenders}"

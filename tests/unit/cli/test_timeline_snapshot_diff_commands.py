@@ -46,9 +46,7 @@ def _run(argv: list[str]) -> tuple[int, str, str]:
     return rc, out.getvalue(), err.getvalue()
 
 
-def _bootstrap_workspace(
-    tmp_path: Path, archive_root: Path
-) -> tuple[str, str]:
+def _bootstrap_workspace(tmp_path: Path, archive_root: Path) -> tuple[str, str]:
     """Crea evidencia, ingesta, workspace y devuelve (workspace_id, evidence_hash)."""
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
@@ -65,6 +63,8 @@ def _bootstrap_workspace(
             ev_hash,
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     assert rc == 0
@@ -88,9 +88,7 @@ def test_subgroups_are_listed() -> None:
 # ---------------------------------------------------------------- timeline CLI
 
 
-def test_timeline_build_happy_path(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_timeline_build_happy_path(tmp_path: Path, archive_root: Path) -> None:
     w_id, _ = _bootstrap_workspace(tmp_path, archive_root)
     rc, out, err = _run(
         [
@@ -102,6 +100,8 @@ def test_timeline_build_happy_path(
             "tl-01",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     assert rc == 0, err
@@ -111,9 +111,7 @@ def test_timeline_build_happy_path(
     assert (archive_root / "timelines" / "tl-01.json").is_file()
 
 
-def test_timeline_show_returns_persisted(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_timeline_show_returns_persisted(tmp_path: Path, archive_root: Path) -> None:
     w_id, _ = _bootstrap_workspace(tmp_path, archive_root)
     _run(
         [
@@ -125,6 +123,8 @@ def test_timeline_show_returns_persisted(
             "tl",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     rc, out, _ = _run(
@@ -141,20 +141,14 @@ def test_timeline_show_returns_persisted(
     assert payload["timeline_id"] == "tl"
 
 
-def test_timeline_show_missing_returns_error(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_timeline_show_missing_returns_error(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap_workspace(tmp_path, archive_root)
-    rc, _, err = _run(
-        ["timeline", "show", "ghost", "--archive", str(archive_root)]
-    )
+    rc, _, err = _run(["timeline", "show", "ghost", "--archive", str(archive_root)])
     assert rc != 0
     assert "TimelineNotFoundError" in err
 
 
-def test_timeline_verify_valid(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_timeline_verify_valid(tmp_path: Path, archive_root: Path) -> None:
     w_id, _ = _bootstrap_workspace(tmp_path, archive_root)
     _run(
         [
@@ -166,6 +160,8 @@ def test_timeline_verify_valid(
             "tl",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     path = archive_root / "timelines" / "tl.json"
@@ -175,9 +171,7 @@ def test_timeline_verify_valid(
     assert payload["ok"] is True
 
 
-def test_timeline_verify_tampered(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_timeline_verify_tampered(tmp_path: Path, archive_root: Path) -> None:
     w_id, _ = _bootstrap_workspace(tmp_path, archive_root)
     _run(
         [
@@ -189,6 +183,8 @@ def test_timeline_verify_tampered(
             "tl",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     path = archive_root / "timelines" / "tl.json"
@@ -204,16 +200,12 @@ def test_timeline_verify_tampered(
 
 
 def test_timeline_verify_missing_file(tmp_path: Path) -> None:
-    rc, _, err = _run(
-        ["timeline", "verify", str(tmp_path / "ghost.json")]
-    )
+    rc, _, err = _run(["timeline", "verify", str(tmp_path / "ghost.json")])
     assert rc != 0
     assert "not found" in err.lower()
 
 
-def test_timeline_build_byte_identical_across_runs(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_timeline_build_byte_identical_across_runs(tmp_path: Path, archive_root: Path) -> None:
     w_id, _ = _bootstrap_workspace(tmp_path, archive_root)
     rc1, out1, _ = _run(
         [
@@ -225,6 +217,8 @@ def test_timeline_build_byte_identical_across_runs(
             "tl",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     rc2, out2, _ = _run(
@@ -237,6 +231,8 @@ def test_timeline_build_byte_identical_across_runs(
             "tl",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     assert rc1 == rc2 == 0
@@ -246,9 +242,7 @@ def test_timeline_build_byte_identical_across_runs(
 # ---------------------------------------------------------------- snapshot CLI
 
 
-def _bootstrap_snapshot(
-    tmp_path: Path, archive_root: Path
-) -> tuple[str, str, str]:
+def _bootstrap_snapshot(tmp_path: Path, archive_root: Path) -> tuple[str, str, str]:
     w_id, _ = _bootstrap_workspace(tmp_path, archive_root)
     _run(
         [
@@ -260,6 +254,8 @@ def _bootstrap_snapshot(
             "tl",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     rc, _, err = _run(
@@ -274,46 +270,36 @@ def _bootstrap_snapshot(
             "tl",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     assert rc == 0, err
     return "s-01", w_id, "tl"
 
 
-def test_snapshot_create_happy_path(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_snapshot_create_happy_path(tmp_path: Path, archive_root: Path) -> None:
     s_id, _, _ = _bootstrap_snapshot(tmp_path, archive_root)
     canonical = archive_root / "snapshots" / f"{s_id}.json"
     assert canonical.is_file()
 
 
-def test_snapshot_show_returns_persisted(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_snapshot_show_returns_persisted(tmp_path: Path, archive_root: Path) -> None:
     s_id, _, _ = _bootstrap_snapshot(tmp_path, archive_root)
-    rc, out, _ = _run(
-        ["snapshot", "show", s_id, "--archive", str(archive_root)]
-    )
+    rc, out, _ = _run(["snapshot", "show", s_id, "--archive", str(archive_root)])
     assert rc == 0
     payload = json.loads(out)
     assert payload["snapshot_id"] == s_id
 
 
-def test_snapshot_show_missing_returns_error(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_snapshot_show_missing_returns_error(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap_workspace(tmp_path, archive_root)
-    rc, _, err = _run(
-        ["snapshot", "show", "ghost", "--archive", str(archive_root)]
-    )
+    rc, _, err = _run(["snapshot", "show", "ghost", "--archive", str(archive_root)])
     assert rc != 0
     assert "SnapshotNotFoundError" in err
 
 
-def test_snapshot_verify_valid(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_snapshot_verify_valid(tmp_path: Path, archive_root: Path) -> None:
     s_id, _, _ = _bootstrap_snapshot(tmp_path, archive_root)
     path = archive_root / "snapshots" / f"{s_id}.json"
     rc, out, _ = _run(["snapshot", "verify", str(path)])
@@ -321,9 +307,7 @@ def test_snapshot_verify_valid(
     assert json.loads(out)["ok"] is True
 
 
-def test_snapshot_verify_tampered(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_snapshot_verify_tampered(tmp_path: Path, archive_root: Path) -> None:
     s_id, _, _ = _bootstrap_snapshot(tmp_path, archive_root)
     path = archive_root / "snapshots" / f"{s_id}.json"
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -338,9 +322,7 @@ def test_snapshot_verify_tampered(
 
 
 def test_snapshot_verify_missing_file(tmp_path: Path) -> None:
-    rc, _, err = _run(
-        ["snapshot", "verify", str(tmp_path / "ghost.json")]
-    )
+    rc, _, err = _run(["snapshot", "verify", str(tmp_path / "ghost.json")])
     assert rc != 0
     assert "not found" in err.lower()
 
@@ -348,9 +330,7 @@ def test_snapshot_verify_missing_file(tmp_path: Path) -> None:
 # ---------------------------------------------------------------- diff CLI
 
 
-def _bootstrap_two_snapshots(
-    tmp_path: Path, archive_root: Path
-) -> tuple[Path, Path]:
+def _bootstrap_two_snapshots(tmp_path: Path, archive_root: Path) -> tuple[Path, Path]:
     """Crea dos workspaces+timelines+snapshots distintos para comparar."""
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
@@ -369,6 +349,8 @@ def _bootstrap_two_snapshots(
             ev_hash,
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     _run(
@@ -381,6 +363,8 @@ def _bootstrap_two_snapshots(
             "tla",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     _run(
@@ -395,6 +379,8 @@ def _bootstrap_two_snapshots(
             "tla",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
 
@@ -413,6 +399,8 @@ def _bootstrap_two_snapshots(
             "I1",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     _run(
@@ -425,6 +413,8 @@ def _bootstrap_two_snapshots(
             "tlb",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     _run(
@@ -439,6 +429,8 @@ def _bootstrap_two_snapshots(
             "tlb",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
 
@@ -448,9 +440,7 @@ def _bootstrap_two_snapshots(
     )
 
 
-def test_diff_snapshots_reports_added(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_diff_snapshots_reports_added(tmp_path: Path, archive_root: Path) -> None:
     a, b = _bootstrap_two_snapshots(tmp_path, archive_root)
     rc, out, err = _run(["diff", "snapshots", str(a), str(b)])
     assert rc == 0, err
@@ -461,9 +451,7 @@ def test_diff_snapshots_reports_added(
     assert len(payload["unchanged_artifacts"]) == 1
 
 
-def test_diff_snapshots_reverse_reports_removed(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_diff_snapshots_reverse_reports_removed(tmp_path: Path, archive_root: Path) -> None:
     a, b = _bootstrap_two_snapshots(tmp_path, archive_root)
     rc, out, _ = _run(["diff", "snapshots", str(b), str(a)])
     assert rc == 0
@@ -472,9 +460,7 @@ def test_diff_snapshots_reverse_reports_removed(
     assert len(payload["removed_artifacts"]) == 1
 
 
-def test_diff_snapshots_identical_yields_only_unchanged(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_diff_snapshots_identical_yields_only_unchanged(tmp_path: Path, archive_root: Path) -> None:
     a, _ = _bootstrap_two_snapshots(tmp_path, archive_root)
     rc, out, _ = _run(["diff", "snapshots", str(a), str(a)])
     assert rc == 0
@@ -484,14 +470,10 @@ def test_diff_snapshots_identical_yields_only_unchanged(
     assert len(payload["unchanged_artifacts"]) >= 1
 
 
-def test_diff_snapshots_with_output_writes_file(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_diff_snapshots_with_output_writes_file(tmp_path: Path, archive_root: Path) -> None:
     a, b = _bootstrap_two_snapshots(tmp_path, archive_root)
     out_path = tmp_path / "diff.json"
-    rc, _, _ = _run(
-        ["diff", "snapshots", str(a), str(b), "--output", str(out_path)]
-    )
+    rc, _, _ = _run(["diff", "snapshots", str(a), str(b), "--output", str(out_path)])
     assert rc == 0
     assert out_path.is_file()
 
@@ -512,9 +494,7 @@ def test_diff_missing_files(tmp_path: Path) -> None:
 # ---------------------------------------------------------------- removability + compat
 
 
-def test_archive_verify_unchanged_after_full_pipeline(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_archive_verify_unchanged_after_full_pipeline(tmp_path: Path, archive_root: Path) -> None:
     """G5: archive_manifest_hash invariante tras workspace+timeline+snapshot."""
     _bootstrap_snapshot(tmp_path, archive_root)
     rc_pre, out_pre, _ = _run(
@@ -548,9 +528,7 @@ def test_archive_verify_unchanged_after_full_pipeline(
     assert pre_bytes == post_bytes
 
 
-def test_existing_commands_unaffected(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_existing_commands_unaffected(tmp_path: Path, archive_root: Path) -> None:
     _, ev_hash = _bootstrap_workspace(tmp_path, archive_root)
     for argv in (
         [

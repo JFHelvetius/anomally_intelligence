@@ -60,11 +60,7 @@ def test_event_rejects_naive_datetime() -> None:
 
 def test_event_rejects_microsecond() -> None:
     with pytest.raises(ValueError, match="microsecond"):
-        _evt(
-            observed_at=dt.datetime(
-                2026, 1, 1, 0, 0, 0, 123, tzinfo=UTC
-            )
-        )
+        _evt(observed_at=dt.datetime(2026, 1, 1, 0, 0, 0, 123, tzinfo=UTC))
 
 
 def test_event_rejects_empty_artifact_hash() -> None:
@@ -227,6 +223,5 @@ def test_no_prohibited_tokens_in_timeline_module() -> None:
             if token in text:
                 offenders.append((path.name, token))
     assert offenders == [], (
-        f"Forbidden tokens in timeline (ADR-0037 §componentes excluidos): "
-        f"{offenders}"
+        f"Forbidden tokens in timeline (ADR-0037 §componentes excluidos): {offenders}"
     )

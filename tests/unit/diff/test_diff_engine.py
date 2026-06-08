@@ -22,12 +22,8 @@ from aip.diff import (
 from aip.snapshot import InvestigationSnapshot, SnapshotReference
 
 
-def _ref(
-    type_: str = "evidence", identifier: str = "E1", h: str = "a" * 64
-) -> SnapshotReference:
-    return SnapshotReference(
-        reference_type=type_, identifier=identifier, artifact_hash=h
-    )
+def _ref(type_: str = "evidence", identifier: str = "E1", h: str = "a" * 64) -> SnapshotReference:
+    return SnapshotReference(reference_type=type_, identifier=identifier, artifact_hash=h)
 
 
 def _snap(
@@ -51,9 +47,7 @@ def test_schema_version_pinned() -> None:
 
 
 def test_diff_entry_constructs() -> None:
-    e = DiffEntry(
-        reference_type="evidence", identifier="E1", artifact_hash="a" * 64
-    )
+    e = DiffEntry(reference_type="evidence", identifier="E1", artifact_hash="a" * 64)
     assert e.reference_type == "evidence"
 
 
@@ -80,12 +74,8 @@ def test_diff_frozen() -> None:
 
 
 def test_diff_rejects_unsorted_groups() -> None:
-    e1 = DiffEntry(
-        reference_type="evidence", identifier="E1", artifact_hash="a" * 64
-    )
-    e2 = DiffEntry(
-        reference_type="assessment", identifier="A1", artifact_hash="b" * 64
-    )
+    e1 = DiffEntry(reference_type="evidence", identifier="E1", artifact_hash="a" * 64)
+    e2 = DiffEntry(reference_type="assessment", identifier="A1", artifact_hash="b" * 64)
     # e2 < e1 (assessment < evidence). Pasar (e1, e2) está unsorted.
     with pytest.raises(ValueError, match="canonically sorted"):
         InvestigationDiff(
@@ -142,16 +132,11 @@ def test_compute_diff_mixed() -> None:
 
 
 def test_compute_diff_results_are_sorted() -> None:
-    refs = tuple(
-        _ref(identifier=f"E{i}", h=f"{i:064x}") for i in range(5)
-    )
+    refs = tuple(_ref(identifier=f"E{i}", h=f"{i:064x}") for i in range(5))
     s_a = _snap("a", ())
     s_b = _snap("b", refs)
     d = compute_diff(s_a, s_b)
-    keys = [
-        (e.reference_type, e.identifier, e.artifact_hash)
-        for e in d.added_artifacts
-    ]
+    keys = [(e.reference_type, e.identifier, e.artifact_hash) for e in d.added_artifacts]
     assert keys == sorted(keys)
 
 
@@ -210,10 +195,7 @@ def test_encode_is_canonical() -> None:
     d = compute_diff(s_a, s_b)
     payload = encode_diff(d)
     parsed = json.loads(payload)
-    canonical = (
-        json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True)
-        + "\n"
-    )
+    canonical = json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     assert payload == canonical
 
 
@@ -232,20 +214,12 @@ def test_diff_imports_no_forbidden_engines() -> None:
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module:
                 parts = node.module.split(".")
-                if (
-                    len(parts) >= 2
-                    and parts[0] == "aip"
-                    and parts[1] in forbidden
-                ):
+                if len(parts) >= 2 and parts[0] == "aip" and parts[1] in forbidden:
                     offenders.append((module_path.name, node.module))
             elif isinstance(node, ast.Import):
                 for n in node.names:
                     parts = n.name.split(".")
-                    if (
-                        len(parts) >= 2
-                        and parts[0] == "aip"
-                        and parts[1] in forbidden
-                    ):
+                    if len(parts) >= 2 and parts[0] == "aip" and parts[1] in forbidden:
                         offenders.append((module_path.name, n.name))
     assert offenders == [], f"diff/ imports forbidden engines: {offenders}"
 
@@ -292,6 +266,4 @@ def test_no_prohibited_tokens_in_diff_module() -> None:
         for token in _FORBIDDEN_TOKENS:
             if token in text:
                 offenders.append((path.name, token))
-    assert offenders == [], (
-        f"Forbidden tokens in diff: {offenders}"
-    )
+    assert offenders == [], f"Forbidden tokens in diff: {offenders}"

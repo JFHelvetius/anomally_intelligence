@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 from pathlib import Path
 from typing import IO
@@ -35,7 +36,11 @@ def snapshot_create_command(
         timeline=timeline,
     )
     persist_snapshot(
-        snapshot, archive_root=args.archive, extra_output=args.output
+        snapshot,
+        archive_root=args.archive,
+        actor=args.actor,
+        clock=lambda: dt.datetime.now(dt.UTC),
+        extra_output=args.output,
     )
     stdout.write(encode_snapshot(snapshot))
     return 0
@@ -93,6 +98,14 @@ def add_snapshot_subparser(
     create.add_argument("--timeline-id", required=True)
     create.add_argument("--archive", required=True, type=Path)
     create.add_argument("--output", type=Path, default=None)
+    create.add_argument(
+        "--actor",
+        required=True,
+        help=(
+            "ActorId that creates the snapshot. Recorded in the audit "
+            "log (ADR-0019 §enmienda E1, ActionKind.BUILD_SNAPSHOT)."
+        ),
+    )
     create.set_defaults(_cmd=snapshot_create_command)
 
     show = sub.add_parser(

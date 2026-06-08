@@ -24,9 +24,10 @@ def test_workspace_schema_version_is_pinned() -> None:
 
 
 def test_allowed_reference_types_is_closed_taxonomy() -> None:
-    assert frozenset(
-        {"evidence", "assessment", "impact_analysis", "context_bundle"}
-    ) == ALLOWED_REFERENCE_TYPES
+    assert (
+        frozenset({"evidence", "assessment", "impact_analysis", "context_bundle"})
+        == ALLOWED_REFERENCE_TYPES
+    )
 
 
 def test_reference_type_enum_matches_allowed_set() -> None:
@@ -273,7 +274,4 @@ def test_no_prohibited_tokens_in_workspace_module() -> None:
         for token in _FORBIDDEN_TOKENS:
             if token in text:
                 offenders.append((path.name, token))
-    assert offenders == [], (
-        f"Forbidden tokens found (ADR-0036 §componentes excluidos): "
-        f"{offenders}"
-    )
+    assert offenders == [], f"Forbidden tokens found (ADR-0036 §componentes excluidos): {offenders}"

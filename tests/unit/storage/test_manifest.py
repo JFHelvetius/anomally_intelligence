@@ -111,11 +111,7 @@ def test_archive_manifest_rejects_naive_generated_at() -> None:
 
 def test_archive_manifest_rejects_subsecond_generated_at() -> None:
     with pytest.raises(ValidationError, match="microsecond"):
-        _make_manifest(
-            generated_at=dt.datetime(
-                2026, 6, 4, 0, 0, 0, 123456, tzinfo=dt.UTC
-            )
-        )
+        _make_manifest(generated_at=dt.datetime(2026, 6, 4, 0, 0, 0, 123456, tzinfo=dt.UTC))
 
 
 def test_archive_manifest_rejects_unknown_field() -> None:
@@ -150,9 +146,7 @@ def test_two_identical_manifests_have_same_hash() -> None:
 
 def test_changing_generated_at_changes_hash() -> None:
     m1 = _make_manifest()
-    m2 = _make_manifest(
-        generated_at=dt.datetime(2026, 6, 5, 0, 0, 0, tzinfo=dt.UTC)
-    )
+    m2 = _make_manifest(generated_at=dt.datetime(2026, 6, 5, 0, 0, 0, tzinfo=dt.UTC))
     assert m1.manifest_hash() != m2.manifest_hash()
 
 

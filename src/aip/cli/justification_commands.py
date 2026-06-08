@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 from pathlib import Path
 from typing import IO
@@ -29,7 +30,11 @@ def justification_build_command(
         workspace_id=args.workspace_id,
     )
     persist_justification(
-        j, archive_root=args.archive, extra_output=args.output
+        j,
+        archive_root=args.archive,
+        actor=args.actor,
+        clock=lambda: dt.datetime.now(dt.UTC),
+        extra_output=args.output,
     )
     stdout.write(encode_justification(j))
     return 0
@@ -100,6 +105,15 @@ def add_justification_subparser(
     build.add_argument("--workspace-id", default=None)
     build.add_argument("--archive", required=True, type=Path)
     build.add_argument("--output", type=Path, default=None)
+    build.add_argument(
+        "--actor",
+        required=True,
+        help=(
+            "ActorId that builds the justification. Recorded in the "
+            "audit log (ADR-0019 §enmienda E1, "
+            "ActionKind.BUILD_JUSTIFICATION)."
+        ),
+    )
     build.set_defaults(_cmd=justification_build_command)
 
     show = sub.add_parser(

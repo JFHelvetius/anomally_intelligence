@@ -74,9 +74,7 @@ def _references_input() -> list[tuple[str, str]]:
 # ---------------------------------------------------------------- create
 
 
-def test_create_workspace_constructs_valid_model(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_create_workspace_constructs_valid_model(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     w = create_workspace(
@@ -103,9 +101,7 @@ def test_create_raises_when_archive_missing(tmp_path: Path) -> None:
         )
 
 
-def test_create_raises_on_duplicate_references(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_create_raises_on_duplicate_references(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     with pytest.raises(ValueError, match="duplicate"):
@@ -117,9 +113,7 @@ def test_create_raises_on_duplicate_references(
         )
 
 
-def test_create_raises_on_invalid_reference_type(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_create_raises_on_invalid_reference_type(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     with pytest.raises(ValueError, match="invalid reference_type"):
@@ -134,9 +128,7 @@ def test_create_raises_on_invalid_reference_type(
 # ---------------------------------------------------------------- determinism
 
 
-def test_workspace_hash_is_deterministic_across_runs(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_workspace_hash_is_deterministic_across_runs(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     w1 = create_workspace(
@@ -181,9 +173,7 @@ def test_workspace_hash_changes_with_input_order_is_canonical(
 # ---------------------------------------------------------------- verify
 
 
-def test_verify_workspace_hash_success(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_workspace_hash_success(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     w = create_workspace(
@@ -214,9 +204,7 @@ def test_verify_workspace_hash_failure_on_tampering() -> None:
     assert verify_workspace_hash(bad) is False
 
 
-def test_compute_workspace_hash_matches_verify_round(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_compute_workspace_hash_matches_verify_round(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     w = create_workspace(
@@ -231,9 +219,7 @@ def test_compute_workspace_hash_matches_verify_round(
 # ---------------------------------------------------------------- encoding
 
 
-def test_encode_workspace_produces_canonical_json(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_encode_workspace_produces_canonical_json(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     w = create_workspace(
@@ -244,16 +230,11 @@ def test_encode_workspace_produces_canonical_json(
     )
     payload = encode_workspace(w)
     parsed = json.loads(payload)
-    canonical = (
-        json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True)
-        + "\n"
-    )
+    canonical = json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     assert payload == canonical
 
 
-def test_roundtrip_decode_encode_preserves_identity(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_roundtrip_decode_encode_preserves_identity(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     w = create_workspace(
@@ -271,9 +252,7 @@ def test_roundtrip_decode_encode_preserves_identity(
 # ---------------------------------------------------------------- persistence
 
 
-def test_persist_workspace_writes_canonical_location(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_persist_workspace_writes_canonical_location(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     w = create_workspace(
@@ -282,15 +261,18 @@ def test_persist_workspace_writes_canonical_location(
         title="t",
         references_input=_references_input(),
     )
-    persist_workspace(w, archive_root=archive_root)
+    persist_workspace(
+        w,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     canonical = workspace_path(archive_root, "fraud-chain-01")
     assert canonical.is_file()
     assert canonical.parent.name == "workspaces"
 
 
-def test_persist_workspace_also_writes_extra_output(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_persist_workspace_also_writes_extra_output(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     w = create_workspace(
@@ -300,14 +282,18 @@ def test_persist_workspace_also_writes_extra_output(
         references_input=_references_input(),
     )
     extra = tmp_path / "external" / "workspace.json"
-    persist_workspace(w, archive_root=archive_root, extra_output=extra)
+    persist_workspace(
+        w,
+        archive_root=archive_root,
+        extra_output=extra,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     canonical = workspace_path(archive_root, "x")
     assert extra.read_bytes() == canonical.read_bytes()
 
 
-def test_load_workspace_reads_canonical_location(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_load_workspace_reads_canonical_location(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     w = create_workspace(
@@ -316,14 +302,17 @@ def test_load_workspace_reads_canonical_location(
         title="t",
         references_input=_references_input(),
     )
-    persist_workspace(w, archive_root=archive_root)
+    persist_workspace(
+        w,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     loaded = load_workspace(archive_root=archive_root, workspace_id="x")
     assert loaded == w
 
 
-def test_load_workspace_raises_when_missing(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_load_workspace_raises_when_missing(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     with pytest.raises(WorkspaceNotFoundError):
@@ -354,7 +343,12 @@ def test_workspace_persistence_does_not_modify_archive_manifest(
         title="t",
         references_input=_references_input(),
     )
-    persist_workspace(w, archive_root=archive_root)
+    persist_workspace(
+        w,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
 
     post_hash = archive.verify(full=True).archive_manifest_hash
     manifest_bytes_post = (archive_root / layout.MANIFEST_FILENAME).read_bytes()
@@ -381,21 +375,11 @@ def test_workspace_imports_no_engines() -> None:
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module:
                 parts = node.module.split(".")
-                if (
-                    len(parts) >= 2
-                    and parts[0] == "aip"
-                    and parts[1] in forbidden_subpaquetes
-                ):
+                if len(parts) >= 2 and parts[0] == "aip" and parts[1] in forbidden_subpaquetes:
                     offenders.append((module_path.name, node.module))
             elif isinstance(node, ast.Import):
                 for n in node.names:
                     parts = n.name.split(".")
-                    if (
-                        len(parts) >= 2
-                        and parts[0] == "aip"
-                        and parts[1] in forbidden_subpaquetes
-                    ):
+                    if len(parts) >= 2 and parts[0] == "aip" and parts[1] in forbidden_subpaquetes:
                         offenders.append((module_path.name, n.name))
-    assert offenders == [], (
-        f"workspace/ imports forbidden analytical engines: {offenders}"
-    )
+    assert offenders == [], f"workspace/ imports forbidden analytical engines: {offenders}"

@@ -66,6 +66,7 @@ def _assess(archive_root: Path, evidence_id: str) -> str:
         evidence_id=evidence_id,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
     return a.assessment_id
 
@@ -99,9 +100,7 @@ def test_build_raises_when_archive_not_archive(archive_root: Path) -> None:
         )
 
 
-def test_build_raises_when_anchor_missing(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_raises_when_anchor_missing(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     with pytest.raises(JustificationAnchorNotFoundError):
@@ -113,9 +112,7 @@ def test_build_raises_when_anchor_missing(
         )
 
 
-def test_build_rejects_non_assessment_anchor_type(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_rejects_non_assessment_anchor_type(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     with pytest.raises(ValueError, match="V1 only supports 'assessment'"):
@@ -130,9 +127,7 @@ def test_build_rejects_non_assessment_anchor_type(
 # ---------------------------------------------------------------- happy path
 
 
-def test_build_minimal_chain_populates_categories(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_minimal_chain_populates_categories(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -159,9 +154,7 @@ def test_build_minimal_chain_populates_categories(
     assert j.intermediate_artifacts == ()
 
 
-def test_build_with_workspace_scope(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_with_workspace_scope(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -171,7 +164,12 @@ def test_build_with_workspace_scope(
         title="t",
         references_input=[("evidence", ev_hash)],
     )
-    persist_workspace(w, archive_root=archive_root)
+    persist_workspace(
+        w,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     j = build_justification(
         archive_root=archive_root,
         conclusion_anchor_type="assessment",
@@ -200,9 +198,7 @@ def test_build_without_workspace_has_none_workspace_hash(
 # ---------------------------------------------------------------- determinism
 
 
-def test_build_is_deterministic_across_runs(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_is_deterministic_across_runs(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -222,9 +218,7 @@ def test_build_is_deterministic_across_runs(
     assert j1.justification_hash == j2.justification_hash
 
 
-def test_workspace_scope_changes_hash(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_workspace_scope_changes_hash(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -234,7 +228,12 @@ def test_workspace_scope_changes_hash(
         title="t",
         references_input=[("evidence", ev_hash)],
     )
-    persist_workspace(w, archive_root=archive_root)
+    persist_workspace(
+        w,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     j_no_ws = build_justification(
         archive_root=archive_root,
         conclusion_anchor_type="assessment",
@@ -254,9 +253,7 @@ def test_workspace_scope_changes_hash(
 # ---------------------------------------------------------------- hashing
 
 
-def test_verify_justification_hash_success(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_justification_hash_success(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -269,9 +266,7 @@ def test_verify_justification_hash_success(
     assert verify_justification_hash(j) is True
 
 
-def test_compute_justification_hash_matches_stored(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_compute_justification_hash_matches_stored(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -287,9 +282,7 @@ def test_compute_justification_hash_matches_stored(
 # ---------------------------------------------------------------- encoding
 
 
-def test_encode_decode_roundtrip(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_encode_decode_roundtrip(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -304,9 +297,7 @@ def test_encode_decode_roundtrip(
     assert decoded == j
 
 
-def test_encode_is_canonical(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_encode_is_canonical(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -318,19 +309,14 @@ def test_encode_is_canonical(
     )
     payload = encode_justification(j)
     parsed = json.loads(payload)
-    canonical = (
-        json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True)
-        + "\n"
-    )
+    canonical = json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     assert payload == canonical
 
 
 # ---------------------------------------------------------------- persistence
 
 
-def test_persist_and_load(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_persist_and_load(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -340,29 +326,26 @@ def test_persist_and_load(
         conclusion_anchor_id=a_id,
         justification_id="j-01",
     )
-    persist_justification(j, archive_root=archive_root)
+    persist_justification(
+        j,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     canonical = justification_path(archive_root, "j-01")
     assert canonical.is_file()
-    loaded = load_justification(
-        archive_root=archive_root, justification_id="j-01"
-    )
+    loaded = load_justification(archive_root=archive_root, justification_id="j-01")
     assert loaded == j
 
 
-def test_load_missing_raises(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_load_missing_raises(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     with pytest.raises(JustificationNotFoundError):
-        load_justification(
-            archive_root=archive_root, justification_id="ghost"
-        )
+        load_justification(archive_root=archive_root, justification_id="ghost")
 
 
-def test_persist_extra_output(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_persist_extra_output(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -374,7 +357,11 @@ def test_persist_extra_output(
     )
     extra = tmp_path / "out" / "j.json"
     persist_justification(
-        j, archive_root=archive_root, extra_output=extra
+        j,
+        archive_root=archive_root,
+        extra_output=extra,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
     )
     canonical = justification_path(archive_root, "j")
     assert extra.read_bytes() == canonical.read_bytes()
@@ -383,9 +370,7 @@ def test_persist_extra_output(
 # ---------------------------------------------------------------- removability
 
 
-def test_persistence_does_not_modify_archive_manifest(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_persistence_does_not_modify_archive_manifest(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -396,7 +381,12 @@ def test_persistence_does_not_modify_archive_manifest(
         conclusion_anchor_id=a_id,
         justification_id="j",
     )
-    persist_justification(j, archive_root=archive_root)
+    persist_justification(
+        j,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     post = (archive_root / layout.MANIFEST_FILENAME).read_bytes()
     assert pre == post
 
@@ -436,25 +426,17 @@ def test_justification_imports_no_forbidden_modules() -> None:
                     mods.append(n.name)
             for mod in mods:
                 parts = mod.split(".")
-                if (
-                    len(parts) >= 2
-                    and parts[0] == "aip"
-                    and parts[1] in forbidden_aip
-                ):
+                if len(parts) >= 2 and parts[0] == "aip" and parts[1] in forbidden_aip:
                     offenders.append((module_path.name, mod))
                 if parts[0] in forbidden_external:
                     offenders.append((module_path.name, mod))
-    assert offenders == [], (
-        f"justification/ imports forbidden modules: {offenders}"
-    )
+    assert offenders == [], f"justification/ imports forbidden modules: {offenders}"
 
 
 # ---------------------------------------------------------------- diff
 
 
-def test_compute_diff_identical_yields_unchanged(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_compute_diff_identical_yields_unchanged(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -470,9 +452,7 @@ def test_compute_diff_identical_yields_unchanged(
     assert len(d.unchanged_entries) >= 1
 
 
-def test_compute_diff_workspace_scope_differs(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_compute_diff_workspace_scope_differs(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -482,7 +462,12 @@ def test_compute_diff_workspace_scope_differs(
         title="t",
         references_input=[("evidence", ev_hash)],
     )
-    persist_workspace(w, archive_root=archive_root)
+    persist_workspace(
+        w,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     j_a = build_justification(
         archive_root=archive_root,
         conclusion_anchor_type="assessment",
@@ -506,9 +491,7 @@ def test_compute_diff_workspace_scope_differs(
     assert d.justification_a_hash != d.justification_b_hash
 
 
-def test_verify_diff_success(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_diff_success(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -522,9 +505,7 @@ def test_verify_diff_success(
     assert verify_justification_diff(d) is True
 
 
-def test_compute_diff_hash_matches(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_compute_diff_hash_matches(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -538,9 +519,7 @@ def test_compute_diff_hash_matches(
     assert compute_justification_diff_hash(d) == d.diff_hash
 
 
-def test_diff_encode_decode_roundtrip(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_diff_encode_decode_roundtrip(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)

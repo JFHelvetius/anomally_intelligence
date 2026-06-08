@@ -28,10 +28,24 @@ def _wrap_clock(*timestamps: dt.datetime):
 # ---------------------------------------------------------------- enums
 
 
-def test_action_kind_v1_subset() -> None:
+def test_action_kind_complete_set() -> None:
+    """Pinea las 8 acciones registrables (ADR-0019 §enmienda E1).
+
+    Los valores string son estables forever — modificarlos invalidaría
+    cadenas históricas. Añadir un nuevo valor es seguro; renombrar /
+    eliminar uno existente NO lo es.
+    """
     assert {a.value for a in log.ActionKind} == {
+        # Capa base (V1 original).
         "archive_bootstrap",
         "ingest_evidence",
+        # Capa derivada (ADR-0019 §enmienda E1, 2026-06-07).
+        "assess_authentication",
+        "build_workspace",
+        "build_timeline",
+        "build_snapshot",
+        "build_justification",
+        "sign_attestation",
     }
 
 
@@ -78,9 +92,7 @@ def test_audit_entry_rejects_naive_timestamp() -> None:
 
 def test_audit_entry_rejects_subsecond_timestamp() -> None:
     with pytest.raises(ValidationError, match="microsecond"):
-        _make_entry(
-            timestamp=dt.datetime(2026, 6, 4, 0, 0, 0, 500, tzinfo=UTC)
-        )
+        _make_entry(timestamp=dt.datetime(2026, 6, 4, 0, 0, 0, 500, tzinfo=UTC))
 
 
 def test_audit_entry_rejects_bad_prev_hash() -> None:

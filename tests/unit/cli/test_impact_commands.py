@@ -50,6 +50,7 @@ def _assess(archive_root: Path, evidence_id: str) -> str:
         evidence_id=evidence_id,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
     return a.assessment_id
 
@@ -77,9 +78,7 @@ def test_impact_subgroup_is_listed() -> None:
 # ---------------------------------------------------------------- impact evidence
 
 
-def test_impact_evidence_happy_path(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_evidence_happy_path(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -106,9 +105,7 @@ def test_impact_evidence_happy_path(
     assert report["total_affected_nodes"] == 1
 
 
-def test_impact_evidence_no_assessments_returns_empty(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_evidence_no_assessments_returns_empty(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -127,9 +124,7 @@ def test_impact_evidence_no_assessments_returns_empty(
     assert payload["report"]["affected_assessments"] == []
 
 
-def test_impact_evidence_not_found_returns_nonzero(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_evidence_not_found_returns_nonzero(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -149,9 +144,7 @@ def test_impact_evidence_not_found_returns_nonzero(
     assert payload["report"] is None
 
 
-def test_impact_evidence_requires_positional_id(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_evidence_requires_positional_id(tmp_path: Path, archive_root: Path) -> None:
     out, err = io.StringIO(), io.StringIO()
     with pytest.raises(SystemExit):
         cli_main.main(
@@ -164,9 +157,7 @@ def test_impact_evidence_requires_positional_id(
 def test_impact_evidence_requires_archive_flag() -> None:
     out, err = io.StringIO(), io.StringIO()
     with pytest.raises(SystemExit):
-        cli_main.main(
-            ["impact", "evidence", "a" * 64], stdout=out, stderr=err
-        )
+        cli_main.main(["impact", "evidence", "a" * 64], stdout=out, stderr=err)
 
 
 # ---------------------------------------------------------------- impact assessment
@@ -198,9 +189,7 @@ def test_impact_assessment_returns_empty_for_terminal_node(
     assert payload["report"]["affected_evidence"] == []
 
 
-def test_impact_assessment_not_found_returns_nonzero(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_assessment_not_found_returns_nonzero(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -238,9 +227,7 @@ def test_impact_archive_missing(tmp_path: Path) -> None:
 # ---------------------------------------------------------------- canonical JSON
 
 
-def test_impact_output_has_sorted_keys(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_output_has_sorted_keys(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -256,16 +243,11 @@ def test_impact_output_has_sorted_keys(
     )
     assert rc == 0
     payload = json.loads(out)
-    canonical = (
-        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
-        + "\n"
-    )
+    canonical = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     assert out == canonical
 
 
-def test_impact_output_is_stable_across_runs(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_output_is_stable_across_runs(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -295,9 +277,7 @@ def test_impact_output_is_stable_across_runs(
 # ---------------------------------------------------------------- honesty fields in JSON
 
 
-def test_impact_report_includes_honesty_fields(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_report_includes_honesty_fields(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -321,9 +301,7 @@ def test_impact_report_includes_honesty_fields(
 # ---------------------------------------------------------------- removability
 
 
-def test_impact_cli_does_not_modify_archive(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_cli_does_not_modify_archive(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -375,17 +353,13 @@ def test_existing_commands_still_work_after_impact_subgroup_added(
             str(archive_root),
         ]
     )
-    rc_list, _, _ = _run(
-        ["list-assessments", "--archive", str(archive_root)]
-    )
+    rc_list, _, _ = _run(["list-assessments", "--archive", str(archive_root)])
     assert rc_show == 0
     assert rc_verify == 0
     assert rc_list == 0
 
 
-def test_impact_does_not_change_manifest_hash(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_does_not_change_manifest_hash(tmp_path: Path, archive_root: Path) -> None:
     """Confirmación operativa: archive_manifest_hash idéntico antes y
     después de cualquier número de invocaciones de `aip impact`."""
     blob = tmp_path / "doc.pdf"

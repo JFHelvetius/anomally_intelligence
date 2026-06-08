@@ -16,9 +16,7 @@ SAMPLE_HASH = "1f4a9c0a" + "0" * 56  # 64 chars hex
 
 def test_caos_path_for_canonical_layout(archive_root: Path) -> None:
     p = layout.caos_path_for(archive_root, SAMPLE_HASH)
-    expected = (
-        archive_root / "objects" / "sha256" / SAMPLE_HASH[:2] / SAMPLE_HASH[2:]
-    )
+    expected = archive_root / "objects" / "sha256" / SAMPLE_HASH[:2] / SAMPLE_HASH[2:]
     assert p == expected
 
 

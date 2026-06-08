@@ -62,6 +62,7 @@ def _assess(archive_root: Path, ev_hash: str) -> str:
         evidence_id=ev_hash,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=_clock(CANONICAL_TS),
+        actor="@test",
     )
     return a.assessment_id
 
@@ -82,15 +83,30 @@ def _bootstrap_full_pipeline(
         title="t",
         references_input=[("evidence", ev_hash), ("assessment", a_id)],
     )
-    persist_workspace(w, archive_root=archive_root)
+    persist_workspace(
+        w,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     t = build_timeline(
         archive_root=archive_root,
         workspace=w,
         timeline_id="tl-01",
     )
-    persist_timeline(t, archive_root=archive_root)
+    persist_timeline(
+        t,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     s = create_snapshot(snapshot_id="s-01", workspace=w, timeline=t)
-    persist_snapshot(s, archive_root=archive_root)
+    persist_snapshot(
+        s,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     j = build_justification(
         archive_root=archive_root,
         conclusion_anchor_type="assessment",
@@ -98,7 +114,12 @@ def _bootstrap_full_pipeline(
         justification_id="j-01",
         workspace_id="w-01",
     )
-    persist_justification(j, archive_root=archive_root)
+    persist_justification(
+        j,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     return ev_hash, a_id, "w-01", "tl-01", "s-01", "j-01"
 
 
@@ -145,9 +166,7 @@ def test_verify_raises_when_not_an_archive(archive_root: Path) -> None:
 # ---------------------------------------------------------------- happy path
 
 
-def test_verify_clean_archive_no_issues(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_clean_archive_no_issues(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap_full_pipeline(tmp_path, archive_root)
     report = verify_derived_integrity(archive_root)
     assert report.ok is True
@@ -176,9 +195,7 @@ def test_verify_no_derived_artifacts_returns_empty_report(
 # ---------------------------------------------------------------- workspace tampering
 
 
-def test_detects_workspace_hash_mismatch(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_workspace_hash_mismatch(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap_full_pipeline(tmp_path, archive_root)
     # Tamper workspace.
     wp = archive_root / "workspaces" / "w-01.json"
@@ -193,21 +210,16 @@ def test_detects_workspace_hash_mismatch(
     hash_mismatches = [
         i
         for i in report.issues
-        if i.issue_kind == IntegrityIssueKind.HASH_MISMATCH.value
-        and i.artifact_kind == "workspace"
+        if i.issue_kind == IntegrityIssueKind.HASH_MISMATCH.value and i.artifact_kind == "workspace"
     ]
     assert len(hash_mismatches) == 1
 
 
-def test_detects_workspace_evidence_dangling(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_workspace_evidence_dangling(tmp_path: Path, archive_root: Path) -> None:
     """Borrar la fila de evidence deja el workspace con referencia rota."""
     _bootstrap_full_pipeline(tmp_path, archive_root)
     # Borrar el row de evidence (rompe referencia).
-    evidence_files = list(
-        (archive_root / "tables" / "evidence").glob("*.parquet")
-    )
+    evidence_files = list((archive_root / "tables" / "evidence").glob("*.parquet"))
     assert len(evidence_files) == 1
     evidence_files[0].unlink()
     report = verify_derived_integrity(archive_root)
@@ -221,9 +233,7 @@ def test_detects_workspace_evidence_dangling(
     assert len(dangling) >= 1
 
 
-def test_detects_workspace_decode_error(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_workspace_decode_error(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap_full_pipeline(tmp_path, archive_root)
     wp = archive_root / "workspaces" / "w-01.json"
     wp.write_text("not valid json {", encoding="utf-8")
@@ -231,8 +241,7 @@ def test_detects_workspace_decode_error(
     decode_errors = [
         i
         for i in report.issues
-        if i.issue_kind == IntegrityIssueKind.DECODE_ERROR.value
-        and i.artifact_kind == "workspace"
+        if i.issue_kind == IntegrityIssueKind.DECODE_ERROR.value and i.artifact_kind == "workspace"
     ]
     assert len(decode_errors) == 1
 
@@ -240,9 +249,7 @@ def test_detects_workspace_decode_error(
 # ---------------------------------------------------------------- timeline tampering
 
 
-def test_detects_timeline_hash_mismatch(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_timeline_hash_mismatch(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap_full_pipeline(tmp_path, archive_root)
     tp = archive_root / "timelines" / "tl-01.json"
     data = json.loads(tp.read_text(encoding="utf-8"))
@@ -255,15 +262,12 @@ def test_detects_timeline_hash_mismatch(
     mismatches = [
         i
         for i in report.issues
-        if i.artifact_kind == "timeline"
-        and i.issue_kind == IntegrityIssueKind.HASH_MISMATCH.value
+        if i.artifact_kind == "timeline" and i.issue_kind == IntegrityIssueKind.HASH_MISMATCH.value
     ]
     assert len(mismatches) == 1
 
 
-def test_detects_timeline_workspace_link_broken(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_timeline_workspace_link_broken(tmp_path: Path, archive_root: Path) -> None:
     """Si borramos el workspace pero el timeline lo referenciaba, link broken."""
     _bootstrap_full_pipeline(tmp_path, archive_root)
     (archive_root / "workspaces" / "w-01.json").unlink()
@@ -280,9 +284,7 @@ def test_detects_timeline_workspace_link_broken(
 # ---------------------------------------------------------------- snapshot tampering
 
 
-def test_detects_snapshot_timeline_link_broken(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_snapshot_timeline_link_broken(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap_full_pipeline(tmp_path, archive_root)
     (archive_root / "timelines" / "tl-01.json").unlink()
     report = verify_derived_integrity(archive_root)
@@ -298,27 +300,20 @@ def test_detects_snapshot_timeline_link_broken(
 # ---------------------------------------------------------------- justification
 
 
-def test_detects_justification_manifest_drift(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_detects_justification_manifest_drift(tmp_path: Path, archive_root: Path) -> None:
     """Crear segundo assessment hace que el manifest cambie; la
     justificación previa queda con source_manifest_hash desactualizado."""
-    ev_hash, _a_id, _, _, _, _ = _bootstrap_full_pipeline(
-        tmp_path, archive_root
-    )
+    ev_hash, _a_id, _, _, _, _ = _bootstrap_full_pipeline(tmp_path, archive_root)
     # Crear OTRO assessment con método distinto → manifest cambia.
     archive = Archive.open(archive_root)
     archive.assess_authentication(
         evidence_id=ev_hash,
         method=AssessmentMethod.MANUAL_RESEARCH,
         clock=_clock(CANONICAL_TS),
+        actor="@test",
     )
     report = verify_derived_integrity(archive_root)
-    drifts = [
-        i
-        for i in report.issues
-        if i.issue_kind == IntegrityIssueKind.MANIFEST_DRIFT.value
-    ]
+    drifts = [i for i in report.issues if i.issue_kind == IntegrityIssueKind.MANIFEST_DRIFT.value]
     assert len(drifts) == 1
 
 
@@ -328,11 +323,7 @@ def test_detects_justification_assessment_anchor_dangling(
     """Borrar el assessment anchor de la justificación."""
     _bootstrap_full_pipeline(tmp_path, archive_root)
     # Borrar el row del assessment.
-    assess_files = list(
-        (archive_root / "tables" / "authentication_assessments").glob(
-            "*.parquet"
-        )
-    )
+    assess_files = list((archive_root / "tables" / "authentication_assessments").glob("*.parquet"))
     assert len(assess_files) == 1
     assess_files[0].unlink()
     report = verify_derived_integrity(archive_root)
@@ -348,9 +339,7 @@ def test_detects_justification_assessment_anchor_dangling(
 # ---------------------------------------------------------------- read-only
 
 
-def test_verify_does_not_modify_archive(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_does_not_modify_archive(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap_full_pipeline(tmp_path, archive_root)
 
     def snapshot() -> dict[str, bytes]:
@@ -381,9 +370,7 @@ def test_verify_does_not_modify_archive(
 # ---------------------------------------------------------------- canonical ordering
 
 
-def test_issues_are_canonically_sorted(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_issues_are_canonically_sorted(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap_full_pipeline(tmp_path, archive_root)
     # Tamper múltiples artefactos.
     for filename in (
@@ -404,17 +391,11 @@ def test_issues_are_canonically_sorted(
         elif "justification_id" in data:
             data["justification_id"] = "tampered-j"
         p.write_text(
-            json.dumps(
-                data, ensure_ascii=False, indent=2, sort_keys=True
-            )
-            + "\n",
+            json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
     report = verify_derived_integrity(archive_root)
-    keys = [
-        (i.artifact_kind, i.artifact_id, i.issue_kind, i.detail)
-        for i in report.issues
-    ]
+    keys = [(i.artifact_kind, i.artifact_id, i.issue_kind, i.detail) for i in report.issues]
     assert keys == sorted(keys)
 
 
@@ -454,9 +435,7 @@ def test_integrity_imports_no_forbidden_modules() -> None:
             for mod in mods:
                 if mod.split(".")[0] in forbidden_external:
                     offenders.append((module_path.name, mod))
-    assert offenders == [], (
-        f"integrity/ imports forbidden modules: {offenders}"
-    )
+    assert offenders == [], f"integrity/ imports forbidden modules: {offenders}"
 
 
 # ---------------------------------------------------------------- forbidden tokens
@@ -507,23 +486,17 @@ def _run(argv: list[str]) -> tuple[int, str, str]:
     return rc, out.getvalue(), err.getvalue()
 
 
-def test_cli_archive_verify_without_derived_unchanged(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_archive_verify_without_derived_unchanged(tmp_path: Path, archive_root: Path) -> None:
     """Sin --derived el comportamiento es idéntico al pre-P2."""
     _bootstrap_full_pipeline(tmp_path, archive_root)
-    rc, out, _ = _run(
-        ["archive", "verify", "--archive-root", str(archive_root), "--json"]
-    )
+    rc, out, _ = _run(["archive", "verify", "--archive-root", str(archive_root), "--json"])
     assert rc == 0
     payload = json.loads(out)
     assert "derived_integrity" not in payload["checks"]
     assert "derived_integrity_issues" not in payload
 
 
-def test_cli_archive_verify_with_derived_clean(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_archive_verify_with_derived_clean(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap_full_pipeline(tmp_path, archive_root)
     rc, out, _ = _run(
         [
@@ -573,9 +546,7 @@ def test_cli_archive_verify_with_derived_detects_tampering(
     assert len(payload["derived_integrity_issues"]) >= 1
 
 
-def test_cli_archive_verify_human_with_derived(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_archive_verify_human_with_derived(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap_full_pipeline(tmp_path, archive_root)
     rc, out, _ = _run(
         [
@@ -601,24 +572,18 @@ def test_removing_integrity_module_does_not_break_existing(
     """G5: el comportamiento default de archive verify no depende del módulo."""
     _bootstrap_full_pipeline(tmp_path, archive_root)
     # Verify sin --derived debe pasar igual.
-    rc, _, _ = _run(
-        ["archive", "verify", "--archive-root", str(archive_root)]
-    )
+    rc, _, _ = _run(["archive", "verify", "--archive-root", str(archive_root)])
     assert rc == 0
 
 
-def test_removability_after_full_pipeline(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_removability_after_full_pipeline(tmp_path: Path, archive_root: Path) -> None:
     """Borrar todos los artefactos derivados no rompe archive verify base."""
     _bootstrap_full_pipeline(tmp_path, archive_root)
     for d in ("workspaces", "timelines", "snapshots", "justifications"):
         target = archive_root / d
         if target.is_dir():
             shutil.rmtree(target)
-    rc, _, _ = _run(
-        ["archive", "verify", "--archive-root", str(archive_root)]
-    )
+    rc, _, _ = _run(["archive", "verify", "--archive-root", str(archive_root)])
     assert rc == 0
     # También --derived (sin artefactos) debe pasar.
     rc, _, _ = _run(

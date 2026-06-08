@@ -58,9 +58,7 @@ def _ingest_with_python_api(archive_root: Path, blob: Path) -> str:
 # ---------------------------------------------------------------- happy path
 
 
-def test_cli_assess_outputs_canonical_json(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_assess_outputs_canonical_json(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest_with_python_api(archive_root, blob)
@@ -72,6 +70,8 @@ def test_cli_assess_outputs_canonical_json(
             str(archive_root),
             "--evidence-id",
             evidence_hash,
+            "--actor",
+            "@test",
         ]
     )
     assert rc == 0, err
@@ -87,9 +87,7 @@ def test_cli_assess_outputs_canonical_json(
     assert assess["assessment_id"] == f"{evidence_hash}__provenance_review"
 
 
-def test_cli_assess_accepts_method_flag(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_assess_accepts_method_flag(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest_with_python_api(archive_root, blob)
@@ -103,20 +101,17 @@ def test_cli_assess_accepts_method_flag(
             evidence_hash,
             "--method",
             "manual_research",
+            "--actor",
+            "@test",
         ]
     )
     assert rc == 0
     payload = json.loads(out)
     assert payload["assessment"]["method"] == "manual_research"
-    assert (
-        payload["assessment"]["assessment_id"]
-        == f"{evidence_hash}__manual_research"
-    )
+    assert payload["assessment"]["assessment_id"] == f"{evidence_hash}__manual_research"
 
 
-def test_cli_assess_accepts_sha256_prefixed_id(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_assess_accepts_sha256_prefixed_id(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest_with_python_api(archive_root, blob)
@@ -128,6 +123,8 @@ def test_cli_assess_accepts_sha256_prefixed_id(
             str(archive_root),
             "--evidence-id",
             f"sha256:{evidence_hash}",
+            "--actor",
+            "@test",
         ]
     )
     assert rc == 0
@@ -144,7 +141,7 @@ def test_cli_assess_requires_archive(archive_root: Path) -> None:
     err = io.StringIO()
     with pytest.raises(SystemExit):
         cli_main.main(
-            ["assess-authentication", "--evidence-id", "a" * 64],
+            ["assess-authentication", "--evidence-id", "a" * 64, "--actor", "@test"],
             stdout=out,
             stderr=err,
         )
@@ -155,7 +152,7 @@ def test_cli_assess_requires_evidence_id(archive_root: Path) -> None:
     err = io.StringIO()
     with pytest.raises(SystemExit):
         cli_main.main(
-            ["assess-authentication", "--archive", str(archive_root)],
+            ["assess-authentication", "--archive", str(archive_root), "--actor", "@test"],
             stdout=out,
             stderr=err,
         )
@@ -169,6 +166,8 @@ def test_cli_assess_returns_nonzero_when_archive_missing(tmp_path: Path) -> None
             str(tmp_path / "does-not-exist"),
             "--evidence-id",
             "a" * 64,
+            "--actor",
+            "@test",
         ]
     )
     assert rc != 0
@@ -188,15 +187,15 @@ def test_cli_assess_returns_nonzero_when_evidence_missing(
             str(archive_root),
             "--evidence-id",
             "c" * 64,
+            "--actor",
+            "@test",
         ]
     )
     assert rc != 0
     assert "EvidenceNotFoundError" in err
 
 
-def test_cli_assess_rejects_invalid_method(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_assess_rejects_invalid_method(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest_with_python_api(archive_root, blob)
@@ -211,6 +210,8 @@ def test_cli_assess_rejects_invalid_method(
                 evidence_hash,
                 "--method",
                 "bayesian_inference",
+                "--actor",
+                "@test",
             ],
             stdout=out,
             stderr=err,
@@ -246,16 +247,12 @@ def test_cli_help_lists_list_assessments() -> None:
 # ---------------------------------------------------------------- aip list-assessments
 
 
-def test_cli_list_empty_when_no_assessments(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_list_empty_when_no_assessments(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest_with_python_api(archive_root, blob)
 
-    rc, out, err = _run(
-        ["list-assessments", "--archive", str(archive_root)]
-    )
+    rc, out, err = _run(["list-assessments", "--archive", str(archive_root)])
     assert rc == 0, err
     payload = json.loads(out)
     assert payload["ok"] is True
@@ -280,13 +277,13 @@ def test_cli_list_returns_single_assessment_after_assess(
             str(archive_root),
             "--evidence-id",
             evidence_hash,
+            "--actor",
+            "@test",
         ]
     )
     assert rc_a == 0
 
-    rc, out, _ = _run(
-        ["list-assessments", "--archive", str(archive_root)]
-    )
+    rc, out, _ = _run(["list-assessments", "--archive", str(archive_root)])
     assert rc == 0
     payload = json.loads(out)
     assert payload["count"] == 1
@@ -297,9 +294,7 @@ def test_cli_list_returns_single_assessment_after_assess(
     assert a["supporting_source_ids"] == ["blue-book-nara"]
 
 
-def test_cli_list_across_multiple_evidences(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_list_across_multiple_evidences(tmp_path: Path, archive_root: Path) -> None:
     # Dos Evidence distintas, una assessment cada una.
     blob_a = tmp_path / "a.pdf"
     blob_a.write_bytes(b"%PDF-1.4 a")
@@ -316,13 +311,13 @@ def test_cli_list_across_multiple_evidences(
                 str(archive_root),
                 "--evidence-id",
                 h,
+                "--actor",
+                "@test",
             ]
         )
         assert rc == 0
 
-    rc, out, _ = _run(
-        ["list-assessments", "--archive", str(archive_root)]
-    )
+    rc, out, _ = _run(["list-assessments", "--archive", str(archive_root)])
     assert rc == 0
     payload = json.loads(out)
     assert payload["count"] == 2
@@ -333,9 +328,7 @@ def test_cli_list_across_multiple_evidences(
     assert aids == sorted(aids)
 
 
-def test_cli_list_filter_by_evidence_id(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_list_filter_by_evidence_id(tmp_path: Path, archive_root: Path) -> None:
     blob_a = tmp_path / "a.pdf"
     blob_a.write_bytes(b"%PDF-1.4 a")
     blob_b = tmp_path / "b.pdf"
@@ -351,6 +344,8 @@ def test_cli_list_filter_by_evidence_id(
                 str(archive_root),
                 "--evidence-id",
                 h,
+                "--actor",
+                "@test",
             ]
         )
         assert rc == 0
@@ -371,9 +366,7 @@ def test_cli_list_filter_by_evidence_id(
     assert payload["assessments"][0]["evidence_id"] == hash_a
 
 
-def test_cli_list_filter_accepts_sha256_prefixed_id(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_list_filter_accepts_sha256_prefixed_id(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest_with_python_api(archive_root, blob)
@@ -384,6 +377,8 @@ def test_cli_list_filter_accepts_sha256_prefixed_id(
             str(archive_root),
             "--evidence-id",
             evidence_hash,
+            "--actor",
+            "@test",
         ]
     )
     assert rc_a == 0
@@ -402,9 +397,7 @@ def test_cli_list_filter_accepts_sha256_prefixed_id(
     assert payload["count"] == 1
 
 
-def test_cli_list_filter_with_no_match_returns_empty(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_list_filter_with_no_match_returns_empty(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest_with_python_api(archive_root, blob)
@@ -415,6 +408,8 @@ def test_cli_list_filter_with_no_match_returns_empty(
             str(archive_root),
             "--evidence-id",
             evidence_hash,
+            "--actor",
+            "@test",
         ]
     )
     assert rc_a == 0
@@ -435,9 +430,7 @@ def test_cli_list_filter_with_no_match_returns_empty(
 
 
 def test_cli_list_archive_missing_returns_nonzero(tmp_path: Path) -> None:
-    rc, _, err = _run(
-        ["list-assessments", "--archive", str(tmp_path / "ghost")]
-    )
+    rc, _, err = _run(["list-assessments", "--archive", str(tmp_path / "ghost")])
     assert rc != 0
     assert "ArchiveNotFoundError" in err
 
@@ -448,9 +441,7 @@ def test_cli_list_requires_archive() -> None:
         cli_main.main(["list-assessments"], stdout=out, stderr=err)
 
 
-def test_cli_list_does_not_modify_archive(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_cli_list_does_not_modify_archive(tmp_path: Path, archive_root: Path) -> None:
     """La simetría de lectura: list-assessments no debe tocar el manifest
     ni el audit log ni las tablas. Snapshot bit a bit antes y después."""
     blob = tmp_path / "doc.pdf"
@@ -463,6 +454,8 @@ def test_cli_list_does_not_modify_archive(
             str(archive_root),
             "--evidence-id",
             evidence_hash,
+            "--actor",
+            "@test",
         ]
     )
     assert rc_a == 0
@@ -470,18 +463,12 @@ def test_cli_list_does_not_modify_archive(
     manifest_before = (archive_root / "manifest.json").read_bytes()
     audit_before = (archive_root / "audit.log").read_bytes()
     table_dir = archive_root / "tables" / "authentication_assessments"
-    table_before = {
-        e.name: e.read_bytes() for e in table_dir.glob("*.parquet")
-    }
+    table_before = {e.name: e.read_bytes() for e in table_dir.glob("*.parquet")}
 
-    rc, _, _ = _run(
-        ["list-assessments", "--archive", str(archive_root)]
-    )
+    rc, _, _ = _run(["list-assessments", "--archive", str(archive_root)])
     assert rc == 0
 
     assert (archive_root / "manifest.json").read_bytes() == manifest_before
     assert (archive_root / "audit.log").read_bytes() == audit_before
-    table_after = {
-        e.name: e.read_bytes() for e in table_dir.glob("*.parquet")
-    }
+    table_after = {e.name: e.read_bytes() for e in table_dir.glob("*.parquet")}
     assert table_after == table_before

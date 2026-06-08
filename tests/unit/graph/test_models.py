@@ -33,9 +33,7 @@ def _src_node(name: str = "blue-book-nara") -> GraphNode:
 
 
 def _assess_node(ev_hex: str = "a", method: str = "provenance_review") -> GraphNode:
-    return GraphNode(
-        kind=NodeKind.ASSESSMENT, id=f"{ev_hex * 64}__{method}"
-    )
+    return GraphNode(kind=NodeKind.ASSESSMENT, id=f"{ev_hex * 64}__{method}")
 
 
 # ---------------------------------------------------------------- enums
@@ -109,37 +107,25 @@ def test_node_sort_key_matches_canonical_order() -> None:
 
 
 def test_graph_edge_constructs_with_kind_src_dst() -> None:
-    e = GraphEdge(
-        kind=EdgeKind.SOURCED_FROM, src=_ev_node(), dst=_src_node()
-    )
+    e = GraphEdge(kind=EdgeKind.SOURCED_FROM, src=_ev_node(), dst=_src_node())
     assert e.kind == EdgeKind.SOURCED_FROM
 
 
 def test_graph_edge_is_frozen() -> None:
-    e = GraphEdge(
-        kind=EdgeKind.SOURCED_FROM, src=_ev_node(), dst=_src_node()
-    )
+    e = GraphEdge(kind=EdgeKind.SOURCED_FROM, src=_ev_node(), dst=_src_node())
     with pytest.raises(FrozenInstanceError):
         e.kind = EdgeKind.DERIVED_FROM  # type: ignore[misc]
 
 
 def test_graph_edge_is_hashable() -> None:
-    e1 = GraphEdge(
-        kind=EdgeKind.SOURCED_FROM, src=_ev_node(), dst=_src_node()
-    )
-    e2 = GraphEdge(
-        kind=EdgeKind.SOURCED_FROM, src=_ev_node(), dst=_src_node()
-    )
+    e1 = GraphEdge(kind=EdgeKind.SOURCED_FROM, src=_ev_node(), dst=_src_node())
+    e2 = GraphEdge(kind=EdgeKind.SOURCED_FROM, src=_ev_node(), dst=_src_node())
     assert len({e1, e2}) == 1
 
 
 def test_edge_sort_key_distinguishes_by_kind_then_endpoints() -> None:
-    e_sourced = GraphEdge(
-        kind=EdgeKind.SOURCED_FROM, src=_ev_node(), dst=_src_node()
-    )
-    e_derived = GraphEdge(
-        kind=EdgeKind.DERIVED_FROM, src=_assess_node(), dst=_src_node()
-    )
+    e_sourced = GraphEdge(kind=EdgeKind.SOURCED_FROM, src=_ev_node(), dst=_src_node())
+    e_derived = GraphEdge(kind=EdgeKind.DERIVED_FROM, src=_assess_node(), dst=_src_node())
     # "derived_from" < "sourced_from".
     assert edge_sort_key(e_derived) < edge_sort_key(e_sourced)
 

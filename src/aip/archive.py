@@ -391,6 +391,7 @@ class Archive:
         self,
         *,
         evidence_id: str,
+        actor: str,
         method: AssessmentMethod = AssessmentMethod.PROVENANCE_REVIEW,
         clock: Callable[[], dt.datetime] | None = None,
     ) -> DerivedAuthenticationAssessment:
@@ -410,11 +411,13 @@ class Archive:
         bit. ``created_at`` depende del ``clock`` inyectado (mismo clock ⇒
         mismo created_at; sin clock, se usa :func:`default_clock`).
 
-        El método **no** modifica Evidence ni Source ni Provenance ni
-        audit log: la única escritura es una fila nueva en la tabla
-        ``authentication_assessments`` + recomputo del manifest. Eliminar
-        el row.parquet revierte el archive a su estado previo sin pérdida
-        de información sustantiva (ADR-0032 §principio).
+        El método no modifica Evidence ni Source ni Provenance: las únicas
+        escrituras son (i) una fila nueva en la tabla
+        ``authentication_assessments``, (ii) recomputo del manifest, y
+        (iii) una entry ``ASSESS_AUTHENTICATION`` en el audit log
+        (ADR-0019 §enmienda E1). Eliminar el row.parquet revierte el
+        archive a su estado previo sin pérdida de información sustantiva;
+        la entry del audit log queda como rastro del intento.
         """
         if clock is None:
             clock = default_clock
@@ -480,6 +483,26 @@ class Archive:
         # 7. Recomputar y reescribir manifest para reflejar el nuevo row.
         manifest = self._compute_manifest(generated_at=clock())
         write_manifest_atomic(self.root / layout.MANIFEST_FILENAME, manifest)
+
+        # 8. Audit log entry (ADR-0019 §enmienda E1). Extiende la cadena
+        # hash-encadenada para cubrir la capa derivada. Para assessments
+        # el "self_hash" del artefacto es el ``evidence_id`` que ancla la
+        # evaluación — un assessment es función determinista de
+        # (evidence_id, method), sin hash propio independiente.
+        audit_log.record_derived_artifact(
+            self.root,
+            action=audit_log.ActionKind.ASSESS_AUTHENTICATION,
+            artifact_kind="assessment",
+            artifact_id=assessment.assessment_id,
+            self_hash=assessment.evidence_id,
+            actor=actor,
+            clock=clock,
+            schema_version=SCHEMA_VERSION,
+            extra_parameters={
+                "method": method.value,
+                "status": assessment.status.value,
+            },
+        )
 
         return assessment
 

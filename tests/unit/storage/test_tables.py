@@ -237,9 +237,7 @@ def test_manifest_hash_changes_when_row_appended(archive_root: Path) -> None:
         schema_version="0.1.0",
     )
 
-    tables.append_row(
-        archive_root, "sources", "blue-book-nara", {"id": "blue-book-nara"}
-    )
+    tables.append_row(archive_root, "sources", "blue-book-nara", {"id": "blue-book-nara"})
 
     m_one = compute_manifest(
         archive_root,

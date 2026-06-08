@@ -57,24 +57,21 @@ def _assess(archive_root: Path, evidence_id: str, method=None):
         evidence_id=evidence_id,
         method=method or AssessmentMethod.PROVENANCE_REVIEW,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
 
 
 # ---------------------------------------------------------------- get_assessments_for_evidence
 
 
-def test_get_assessments_for_evidence_empty_when_none(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_get_assessments_for_evidence_empty_when_none(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     graph = build_graph(archive_root)
     assert get_assessments_for_evidence(graph, evidence.hash) == ()
 
 
-def test_get_assessments_for_evidence_returns_one(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_get_assessments_for_evidence_returns_one(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     assessment = _assess(archive_root, evidence.hash)
@@ -107,9 +104,7 @@ def test_get_assessments_for_evidence_returns_all_methods_sorted(
 # ---------------------------------------------------------------- get_evidence_for_assessment
 
 
-def test_get_evidence_for_assessment_returns_evidence(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_get_evidence_for_assessment_returns_evidence(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     assessment = _assess(archive_root, evidence.hash)
@@ -132,9 +127,7 @@ def test_get_evidence_for_assessment_returns_none_when_not_found(
 # ---------------------------------------------------------------- get_dependency_chain
 
 
-def test_get_dependency_chain_from_source_is_empty(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_get_dependency_chain_from_source_is_empty(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     graph = build_graph(archive_root)
@@ -259,22 +252,16 @@ def test_validate_graph_integrity_detects_dangling_src() -> None:
     # Construimos un grafo sintético con una arista cuyo src no es nodo.
     phantom_src = GraphNode(kind=NodeKind.ASSESSMENT, id="a" * 64 + "__provenance_review")
     real_dst = GraphNode(kind=NodeKind.EVIDENCE, id="b" * 64)
-    edge = GraphEdge(
-        kind=EdgeKind.ASSESSED_FROM, src=phantom_src, dst=real_dst
-    )
+    edge = GraphEdge(kind=EdgeKind.ASSESSED_FROM, src=phantom_src, dst=real_dst)
     g = EvidenceGraph(nodes=(real_dst,), edges=(edge,))
     issues = validate_graph_integrity(g)
-    assert any(
-        i.kind is GraphIntegrityIssueKind.DANGLING_SRC for i in issues
-    )
+    assert any(i.kind is GraphIntegrityIssueKind.DANGLING_SRC for i in issues)
 
 
 # ---------------------------------------------------------------- removability
 
 
-def test_building_graph_does_not_modify_archive(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_building_graph_does_not_modify_archive(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     _assess(archive_root, evidence.hash)
@@ -300,9 +287,7 @@ def test_building_graph_does_not_modify_archive(
     assert before == after
 
 
-def test_archive_verify_passes_after_graph_build(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_archive_verify_passes_after_graph_build(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     _assess(archive_root, evidence.hash)

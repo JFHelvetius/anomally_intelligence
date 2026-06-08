@@ -9,6 +9,7 @@ import dataclasses
 import datetime as dt
 import hashlib
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
@@ -19,12 +20,14 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
 )
 
+from aip._version import SCHEMA_VERSION
 from aip.attestation.models import (
     ALLOWED_ARTIFACT_KINDS,
     ATTESTATION_SCHEMA_VERSION,
     SIGNATURE_ALGORITHM,
     OperatorAttestation,
 )
+from aip.audit import log as audit_log
 from aip.core.hashing import JsonValue, jcs_canonicalize, sha256_hex
 from aip.errors import AIPError
 from aip.storage.manifest import ArchiveManifest
@@ -313,9 +316,17 @@ def persist_attestation(
     *,
     archive_root: Path,
     attestation_id: str,
+    actor: str,
+    clock: Callable[[], dt.datetime],
     extra_output: Path | None = None,
 ) -> Path:
-    """Persiste la atestación bajo ``<archive>/attestations/<id>.json``."""
+    """Persiste la atestación bajo ``<archive>/attestations/<id>.json``.
+
+    Emite una entry ``SIGN_ATTESTATION`` en el audit log (ADR-0019
+    §enmienda E1). ``actor`` y ``clock`` son operator-supplied y entran
+    en la cadena hash-encadenada del log; el ``signer_id`` y ``signed_at``
+    de la atestación firmada permanecen en el JSON canónico del artefacto.
+    """
     target = _attestation_path(archive_root, attestation_id)
     target.parent.mkdir(parents=True, exist_ok=True)
     payload = encode_attestation(att)
@@ -323,6 +334,20 @@ def persist_attestation(
     if extra_output is not None:
         extra_output.parent.mkdir(parents=True, exist_ok=True)
         extra_output.write_text(payload, encoding="utf-8")
+    audit_log.record_derived_artifact(
+        archive_root,
+        action=audit_log.ActionKind.SIGN_ATTESTATION,
+        artifact_kind="attestation",
+        artifact_id=attestation_id,
+        self_hash=att.attestation_hash,
+        actor=actor,
+        clock=clock,
+        schema_version=SCHEMA_VERSION,
+        extra_parameters={
+            "signer_id": att.signer_id,
+            "public_key_fingerprint": att.public_key_fingerprint,
+        },
+    )
     return target
 
 

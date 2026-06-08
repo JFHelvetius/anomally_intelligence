@@ -63,9 +63,7 @@ EXPECTED_SCHEMA_HASHES: dict[str, str] = {
 }
 
 # Manifest hash canónico de un archive vacío con los inputs anteriores.
-EXPECTED_EMPTY_MANIFEST_HASH = (
-    "ef07ea2790e4622bae2fe590cce0898d45015da3c1cbc28ae46f55eaa77a0b82"
-)
+EXPECTED_EMPTY_MANIFEST_HASH = "ef07ea2790e4622bae2fe590cce0898d45015da3c1cbc28ae46f55eaa77a0b82"
 
 
 # ----------------------------------------------------------------- tests
@@ -121,15 +119,11 @@ def test_empty_archive_manifest_recomputation_is_stable(archive_root: Path) -> N
     assert m1.manifest_hash() == m2.manifest_hash()
 
 
-EXPECTED_DEMO_PDF_SHA256 = (
-    "65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1"
-)
+EXPECTED_DEMO_PDF_SHA256 = "65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1"
 """SHA-256 del Twining Memo (fixture de Pre-F1.C). Anclado al fichero
 ``tests/data/twining-memo-1947-09-23.pdf``."""
 
-EXPECTED_DEMO_MANIFEST_HASH = (
-    "364b23977466ad44c6f7a544a2b99987dc8ed9cabc82d227fc8a670942fda7bc"
-)
+EXPECTED_DEMO_MANIFEST_HASH = "364b23977466ad44c6f7a544a2b99987dc8ed9cabc82d227fc8a670942fda7bc"
 """``manifest_hash`` canónico tras ingestar el fixture con los siguientes
 inputs deterministas:
 
@@ -164,9 +158,7 @@ def test_archive_with_demo_pdf_manifest_hash_is_canonical_pinned(
     2. ``Evidence.hash`` post-ingest coincide con SHA-256 del fixture (CAOS OK).
     3. ``manifest_hash`` con clock canónico coincide con el pinned (manifest OK).
     """
-    fixture = (
-        Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
-    )
+    fixture = Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
     if not fixture.is_file():
         pytest.skip(f"fixture missing: {fixture}")
 
@@ -249,9 +241,7 @@ def test_archive_with_demo_pdf_and_assessment_manifest_hash_is_canonical_pinned(
     fixture + mismo clock + mismo método ⇒ mismo manifest hash, sesión tras
     sesión, máquina tras máquina.
     """
-    fixture = (
-        Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
-    )
+    fixture = Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
     if not fixture.is_file():
         pytest.skip(f"fixture missing: {fixture}")
 
@@ -279,6 +269,7 @@ def test_archive_with_demo_pdf_and_assessment_manifest_hash_is_canonical_pinned(
         evidence_id=evidence.hash,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=lambda: CANONICAL_GENERATED_AT,
+        actor="@test",
     )
     # La regla emite SUPPORTED por construcción (post-ingest tiene Source +
     # Provenance con un paso y referencias intactas). Pinear el status
@@ -339,9 +330,7 @@ def test_demo_context_bundle_hash_is_canonical_pinned(tmp_path: Path) -> None:
     2. ``verify_bundle_hash(bundle)`` es ``True`` (self-consistencia
        del hash declarado vs. recomputo).
     """
-    fixture = (
-        Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
-    )
+    fixture = Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
     if not fixture.is_file():
         pytest.skip(f"fixture missing: {fixture}")
 
@@ -365,6 +354,7 @@ def test_demo_context_bundle_hash_is_canonical_pinned(tmp_path: Path) -> None:
         evidence_id=evidence.hash,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=lambda: CANONICAL_GENERATED_AT,
+        actor="@test",
     )
 
     bundle = assemble_context(
@@ -430,9 +420,7 @@ def test_demo_justification_hash_is_canonical_pinned(tmp_path: Path) -> None:
     2. ``verify_justification_hash(j) is True`` — self-consistencia del
        hash declarado vs. recomputo offline.
     """
-    fixture = (
-        Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
-    )
+    fixture = Path(__file__).parent.parent / "data" / "twining-memo-1947-09-23.pdf"
     if not fixture.is_file():
         pytest.skip(f"fixture missing: {fixture}")
 
@@ -456,6 +444,7 @@ def test_demo_justification_hash_is_canonical_pinned(tmp_path: Path) -> None:
         evidence_id=evidence.hash,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=lambda: CANONICAL_GENERATED_AT,
+        actor="@test",
     )
     j = build_justification(
         archive_root=archive_root,

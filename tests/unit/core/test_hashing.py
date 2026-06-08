@@ -71,10 +71,7 @@ def test_jcs_orders_keys_lexicographically() -> None:
 
 def test_jcs_nested_dict_keys_ordered_recursively() -> None:
     obj = {"nested": {"b": [1, 2, 3], "a": "x"}, "top": True}
-    assert (
-        hashing.jcs_canonicalize(obj)
-        == b'{"nested":{"a":"x","b":[1,2,3]},"top":true}'
-    )
+    assert hashing.jcs_canonicalize(obj) == b'{"nested":{"a":"x","b":[1,2,3]},"top":true}'
 
 
 def test_jcs_empty_dict() -> None:

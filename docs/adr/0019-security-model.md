@@ -244,4 +244,126 @@ P6 (local-first). La mayoría de los usuarios no necesitan acceso remoto. Por de
 
 ## Historial de enmiendas
 
-*Sin enmiendas a fecha de aceptación.*
+### E1 — 2026-06-07 — Audit chain archive-wide (capa derivada)
+
+**Motivación.** La versión original de ADR-0019 introdujo el audit log con dos
+acciones de capa base (`ARCHIVE_BOOTSTRAP`, `INGEST_EVIDENCE`). El propio ADR
+anticipaba que "otras acciones (`create_claim`, `revise_case`,
+`enclave_access`, etc.) están diferidas; cuando se incorporen, deberán añadirse
+a esta enum sin romper la cadena histórica."
+
+Tras P1–P5 y ADRs 0032–0041, el archive tiene **9 dominios** con estado
+persistido. Solo **1** (ingesta) emite entries de audit. Los otros 8
+(`analysis`, `workspace`, `timeline`, `snapshot`, `diff`, `justification`,
+`context`, `attestation`) persisten artefactos sin dejar rastro en la cadena
+hash-encadenada. Esto deja la promesa central del proyecto — *"demostrar que
+la información no fue alterada"* — cubriendo sólo la ingesta base. Un
+operador hostil puede crear, sobrescribir o borrar workspaces, timelines,
+snapshots, justifications o **incluso atestaciones criptográficas** sin que
+la cadena append-only registre nada.
+
+**Decisión.** Extender `ActionKind` con **6 valores nuevos**, uno por cada
+dominio que persiste estado canónico en una localización del archive:
+
+| ActionKind | Dominio | Localización canónica |
+|---|---|---|
+| `ASSESS_AUTHENTICATION` | `analysis` (ADR-0032) | tabla `authentication_assessments` |
+| `BUILD_WORKSPACE` | `workspace` (ADR-0036) | `<archive>/workspaces/<id>.json` |
+| `BUILD_TIMELINE` | `timeline` (ADR-0037) | `<archive>/timelines/<id>.json` |
+| `BUILD_SNAPSHOT` | `snapshot` (ADR-0038) | `<archive>/snapshots/<id>.json` |
+| `BUILD_JUSTIFICATION` | `justification` (ADR-0040) | `<archive>/justifications/<id>.json` |
+| `SIGN_ATTESTATION` | `attestation` (ADR-0041) | `<archive>/attestations/<id>.json` |
+
+Cada función de persistencia (`persist_workspace`, `persist_timeline`,
+`persist_snapshot`, `persist_justification`, `persist_attestation`,
+`Archive.assess_authentication`) recibe `actor: str` y
+`clock: Callable[[], datetime]` como keyword args **requeridos**, y tras la
+escritura llama al helper compartido `audit_log.record_derived_artifact(...)`.
+
+El helper enforza estructuralmente:
+
+- El `target` sigue el esquema URI canónico `aip:<kind>/<id>`.
+- El `self_hash` del artefacto se incluye en `parameters`.
+- Sólo se aceptan ActionKinds de la capa derivada (el helper rechaza
+  `INGEST_EVIDENCE` y `ARCHIVE_BOOTSTRAP` — esas son responsabilidad de la
+  capa base, contra reuso accidental).
+
+**Excluidos explícitamente de V1 (decisión coherente, no oversight).**
+
+- **`diff`** (ADR-0039): es ephemeral, no tiene localización canónica en el
+  archive; sólo se emite por CLI a stdout/`--output`. Auditar diff sería
+  registrar ejecución de queries, no cambios de estado del archive — error
+  de categoría.
+- **`context`** (ADR-0035): `assemble_context` produce un ContextBundle
+  pero no lo persiste en una localización canónica; el CLI puede emitirlo
+  a `--output` pero esa es una operación de lectura más serialización, no
+  un cambio de estado del archive.
+
+Cuando alguno de estos dominios gane una localización canónica
+persistente (futuro ADR de enmienda), su ActionKind se añade entonces, no
+antes.
+
+**Contrato de actor y clock.**
+
+- `actor` es operator-supplied (igual que `signer_id` en ADR-0041 §componentes
+  excluidos: no PKI en V1). El CLI lo expone como `--actor` requerido en
+  los 5 comandos write-side (`workspace create`, `timeline build`,
+  `snapshot create`, `justification build`, `assess-authentication`). Para
+  `attestation sign` se reutiliza `--signer-id` (mismo actor del acto
+  criptográfico).
+- `clock` es un `Callable[[], datetime]` inyectable. En tests se pasa un
+  clock fijo para reproducibilidad bit a bit. En la CLI se usa
+  `datetime.now(UTC)`. La regla `microsecond=0` del ADR-0024 L2 se aplica
+  en `append_entry` (truncado defensivo).
+
+**Garantías estructurales (verificadas por `tests/unit/audit/test_derived_actions.py`).**
+
+- **G_E1_a — exactamente una entry por persistencia derivada.** Llamar a
+  `persist_workspace`, `persist_timeline`, etc. añade UNA entry, no cero, no
+  dos. La entry contiene `action`, `target=aip:<kind>/<id>`,
+  `parameters["self_hash"]=<artifact_hash>`.
+- **G_E1_b — la cadena verifica con derivados intercalados y el verifier
+  detecta tampering.** `verify_chain(root)` recorre las entries derivadas
+  igual que las de la capa base. Editar el `actor` (o cualquier otro
+  campo) de una entry derivada en disco hace que el verifier devuelva
+  `ok=False` con `first_failure_seq` apuntando a la entry alterada.
+- **G_E1_c — `audit_log_head_hash` es archive-state fingerprint
+  diferenciador.** Dos archives con misma evidencia base pero distintos
+  derivados producen heads distintos. Esto convierte el par
+  (`manifest_hash`, `audit_log_head_hash`) en fingerprint completo del
+  archive: el primero pinea el estado actual de tablas+blobs, el segundo
+  pinea la historia de operaciones.
+- **Invariante de manifest preservada.** Las entries derivadas no entran
+  en la canonicalización del manifest; `archive_manifest_hash` permanece
+  bit-idéntico ante operaciones de capa derivada (consistente con las
+  reglas S11, S15, S16 de ADR-0030 — los directorios `workspaces/`,
+  `timelines/`, etc. son periféricos a `V1_TABLES`).
+
+**Compatibilidad con pins de reproducibility.**
+
+- Los 16 hashes pinned en `tests/reproducibility/test_manifest_hash.py` y
+  `tests/reproducibility/test_jcs.py` permanecen idénticos. Razón: el
+  manifest no incluye el audit log y los JCS pins no canonicalizan audit
+  entries.
+- Los 2 hashes pinned en `tests/reproducibility/test_audit_chain.py`
+  (`EXPECTED_BOOTSTRAP_HASH`, `EXPECTED_INGEST_HASH`) permanecen idénticos.
+  Razón: ese test construye su cadena de dos entries manualmente sin pasar
+  por engines derivados; los valores string de `ARCHIVE_BOOTSTRAP` e
+  `INGEST_EVIDENCE` son estables.
+
+**Alineación ADR-0000.**
+
+- **P2 (trazabilidad):** se extiende de 1/9 dominios a 6/6 dominios con
+  estado persistido canónico. Ningún cambio de estado del archive escapa
+  ya de la cadena hash-encadenada.
+- **P11 (inmutabilidad):** el audit log gana cobertura simétrica sobre todos
+  los artefactos derivados. Si un row de assessment o un workspace.json se
+  borran, la entry permanece como rastro append-only de que el acto
+  ocurrió.
+- **P5 (reproducibilidad):** los 16 pins se mantienen verdes.
+
+Sin esta enmienda, ADR-0041 (Operator Attestation Engine) dejaba un hueco
+estructural: una atestación criptográfica puede registrar el vínculo
+clave↔artefacto, pero el **acto** de atestar (cuándo, por quién, sobre
+qué artefacto) no entraba en ninguna cadena append-only. E1 cierra ese
+ciclo.

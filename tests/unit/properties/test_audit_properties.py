@@ -66,14 +66,18 @@ def _build_clock(start: dt.datetime) -> Any:
 # Acción no-bootstrap (V1: solo INGEST_EVIDENCE en la práctica).
 _action_strategy = st.just(log.ActionKind.INGEST_EVIDENCE)
 
-_actor_strategy = st.text(
-    alphabet=st.characters(
-        whitelist_categories=("Lu", "Ll", "Nd"),
-        whitelist_characters="@.-_",
-    ),
-    min_size=1,
-    max_size=20,
-).map(lambda s: "@" + s.lstrip("@") if not s.startswith("@") else s).filter(lambda s: len(s) >= 2)
+_actor_strategy = (
+    st.text(
+        alphabet=st.characters(
+            whitelist_categories=("Lu", "Ll", "Nd"),
+            whitelist_characters="@.-_",
+        ),
+        min_size=1,
+        max_size=20,
+    )
+    .map(lambda s: "@" + s.lstrip("@") if not s.startswith("@") else s)
+    .filter(lambda s: len(s) >= 2)
+)
 
 _hash_strategy = st.text(alphabet="0123456789abcdef", min_size=64, max_size=64)
 
@@ -142,9 +146,7 @@ def _read_jsonl(root: Path) -> list[dict[str, Any]]:
     """
     path = root / "audit.log"
     return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").split("\n")
-        if line.strip()
+        json.loads(line) for line in path.read_text(encoding="utf-8").split("\n") if line.strip()
     ]
 
 

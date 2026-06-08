@@ -49,6 +49,7 @@ def _assess(archive_root: Path, evidence_id: str) -> str:
         evidence_id=evidence_id,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
     return a.assessment_id
 
@@ -103,9 +104,7 @@ def test_graph_show_empty_archive(tmp_path: Path, archive_root: Path) -> None:
     assert payload["graph"]["integrity"]["ok"] is True
 
 
-def test_graph_show_populated_archive(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_graph_show_populated_archive(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -125,9 +124,7 @@ def test_graph_show_populated_archive(
 
 
 def test_graph_show_archive_missing(tmp_path: Path) -> None:
-    rc, _, err = _run(
-        ["graph", "show", "--archive", str(tmp_path / "ghost")]
-    )
+    rc, _, err = _run(["graph", "show", "--archive", str(tmp_path / "ghost")])
     assert rc != 0
     assert "ArchiveNotFoundError" in err
 
@@ -138,9 +135,7 @@ def test_graph_show_requires_archive_flag() -> None:
         cli_main.main(["graph", "show"], stdout=out, stderr=err)
 
 
-def test_graph_show_output_is_canonical_across_runs(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_graph_show_output_is_canonical_across_runs(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -152,9 +147,7 @@ def test_graph_show_output_is_canonical_across_runs(
     assert out1 == out2
 
 
-def test_graph_show_does_not_modify_archive(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_graph_show_does_not_modify_archive(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -170,9 +163,7 @@ def test_graph_show_does_not_modify_archive(
     assert (archive_root / "audit.log").read_bytes() == audit_before
 
 
-def test_graph_show_canonical_json_has_sorted_keys(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_graph_show_canonical_json_has_sorted_keys(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -181,18 +172,14 @@ def test_graph_show_canonical_json_has_sorted_keys(
     # Re-parse el JSON y verificamos que serializar con sort_keys=True
     # produce idéntica salida (canonical confirm).
     payload = json.loads(out)
-    canonical = json.dumps(
-        payload, ensure_ascii=False, indent=2, sort_keys=True
-    ) + "\n"
+    canonical = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     assert out == canonical
 
 
 # ---------------------------------------------------------------- explain-assessment
 
 
-def test_graph_explain_assessment_existing(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_graph_explain_assessment_existing(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -219,9 +206,7 @@ def test_graph_explain_assessment_existing(
     assert "source" in kinds
 
 
-def test_graph_explain_assessment_not_found(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_graph_explain_assessment_not_found(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -241,9 +226,7 @@ def test_graph_explain_assessment_not_found(
     assert payload["exists"] is False
 
 
-def test_graph_explain_assessment_requires_both_args(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_graph_explain_assessment_requires_both_args(tmp_path: Path, archive_root: Path) -> None:
     out, err = io.StringIO(), io.StringIO()
     with pytest.raises(SystemExit):
         cli_main.main(
@@ -261,9 +244,7 @@ def test_graph_explain_assessment_requires_both_args(
 # ---------------------------------------------------------------- explain-evidence
 
 
-def test_graph_explain_evidence_existing(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_graph_explain_evidence_existing(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -293,9 +274,7 @@ def test_graph_explain_evidence_existing(
     assert "source" in chain_kinds
 
 
-def test_graph_explain_evidence_not_found(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_graph_explain_evidence_not_found(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -341,9 +320,7 @@ def test_graph_explain_evidence_no_assessments_returns_empty_lists(
 # ---------------------------------------------------------------- backwards compatibility
 
 
-def test_graph_does_not_break_existing_evidence_show(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_graph_does_not_break_existing_evidence_show(tmp_path: Path, archive_root: Path) -> None:
     """Verifica que añadir el grafo no degrada la salida existente del
     comando `evidence show`. Lectura tras lectura: misma estructura."""
     blob = tmp_path / "doc.pdf"
@@ -380,9 +357,7 @@ def test_graph_does_not_break_existing_evidence_show(
     assert json.loads(out_pre) == json.loads(out_post)
 
 
-def test_graph_does_not_break_archive_verify(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_graph_does_not_break_archive_verify(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -411,7 +386,4 @@ def test_graph_does_not_break_archive_verify(
     pre = json.loads(out_pre)
     post = json.loads(out_post)
     # archive_manifest_hash idéntico antes y después del graph show.
-    assert (
-        pre["summary"]["archive_manifest_hash"]
-        == post["summary"]["archive_manifest_hash"]
-    )
+    assert pre["summary"]["archive_manifest_hash"] == post["summary"]["archive_manifest_hash"]

@@ -50,6 +50,7 @@ def _assess(archive_root: Path, evidence_id: str) -> str:
         evidence_id=evidence_id,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
     return a.assessment_id
 
@@ -77,9 +78,7 @@ def test_context_subgroup_is_listed() -> None:
 # ---------------------------------------------------------------- show evidence
 
 
-def test_context_show_evidence_happy_path(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_context_show_evidence_happy_path(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -108,9 +107,7 @@ def test_context_show_evidence_happy_path(
     assert bundle["impact_report"]["total_affected_nodes"] == 1
 
 
-def test_context_show_evidence_not_found(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_context_show_evidence_not_found(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -134,9 +131,7 @@ def test_context_show_evidence_not_found(
 def test_context_show_evidence_requires_id() -> None:
     out, err = io.StringIO(), io.StringIO()
     with pytest.raises(SystemExit):
-        cli_main.main(
-            ["context", "show", "evidence"], stdout=out, stderr=err
-        )
+        cli_main.main(["context", "show", "evidence"], stdout=out, stderr=err)
 
 
 def test_context_show_evidence_requires_archive() -> None:
@@ -152,9 +147,7 @@ def test_context_show_evidence_requires_archive() -> None:
 # ---------------------------------------------------------------- show assessment
 
 
-def test_context_show_assessment_happy_path(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_context_show_assessment_happy_path(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -180,9 +173,7 @@ def test_context_show_assessment_happy_path(
     assert bundle["evidence"]["hash"] == evidence_hash
 
 
-def test_context_show_assessment_not_found(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_context_show_assessment_not_found(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -222,9 +213,7 @@ def test_context_show_archive_missing(tmp_path: Path) -> None:
 # ---------------------------------------------------------------- canonical JSON
 
 
-def test_context_output_has_sorted_keys(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_context_output_has_sorted_keys(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -241,16 +230,11 @@ def test_context_output_has_sorted_keys(
     )
     assert rc == 0
     payload = json.loads(out)
-    canonical = (
-        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
-        + "\n"
-    )
+    canonical = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     assert out == canonical
 
 
-def test_context_output_is_stable_across_runs(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_context_output_is_stable_across_runs(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -282,9 +266,7 @@ def test_context_output_is_stable_across_runs(
 # ---------------------------------------------------------------- honesty
 
 
-def test_context_cli_emits_hashes_and_honesty_fields(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_context_cli_emits_hashes_and_honesty_fields(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)
@@ -312,9 +294,7 @@ def test_context_cli_emits_hashes_and_honesty_fields(
 # ---------------------------------------------------------------- removability
 
 
-def test_context_cli_does_not_modify_archive(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_context_cli_does_not_modify_archive(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     evidence_hash = _ingest(archive_root, blob)

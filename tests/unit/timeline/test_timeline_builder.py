@@ -60,6 +60,7 @@ def _assess(archive_root: Path, evidence_id: str) -> str:
         evidence_id=evidence_id,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
     return a.assessment_id
 
@@ -84,18 +85,14 @@ def test_build_timeline_empty_when_no_referenced_artifacts(
         title="t",
         references_input=[],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl-empty"
-    )
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl-empty")
     assert tl.event_count == 0
     assert tl.ordered_events == ()
     assert tl.first_timestamp is None
     assert tl.last_timestamp is None
 
 
-def test_build_timeline_with_evidence_reference(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_timeline_with_evidence_reference(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     w = create_workspace(
@@ -104,9 +101,7 @@ def test_build_timeline_with_evidence_reference(
         title="t",
         references_input=[("evidence", ev_hash)],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl-ev"
-    )
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl-ev")
     assert tl.event_count == 1
     e = tl.ordered_events[0]
     assert e.artifact_type == "evidence"
@@ -114,9 +109,7 @@ def test_build_timeline_with_evidence_reference(
     assert e.observed_at == CANONICAL_TS
 
 
-def test_build_timeline_with_assessment_reference(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_timeline_with_assessment_reference(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     a_id = _assess(archive_root, ev_hash)
@@ -126,17 +119,13 @@ def test_build_timeline_with_assessment_reference(
         title="t",
         references_input=[("assessment", a_id)],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl-a"
-    )
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl-a")
     assert tl.event_count == 1
     assert tl.ordered_events[0].artifact_type == "assessment"
     assert tl.ordered_events[0].source_reference == "assessment.created_at"
 
 
-def test_build_timeline_skips_impact_and_context(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_timeline_skips_impact_and_context(tmp_path: Path, archive_root: Path) -> None:
     """impact_analysis y context_bundle se omiten (ADR-0037 §alcance)."""
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
@@ -150,17 +139,13 @@ def test_build_timeline_skips_impact_and_context(
             ("context_bundle", "C1"),
         ],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl"
-    )
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl")
     # Sólo el evento de evidence; los otros dos se omiten.
     assert tl.event_count == 1
     assert tl.ordered_events[0].artifact_type == "evidence"
 
 
-def test_build_timeline_skips_missing_evidence(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_timeline_skips_missing_evidence(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     w = create_workspace(
@@ -169,9 +154,7 @@ def test_build_timeline_skips_missing_evidence(
         title="t",
         references_input=[("evidence", "f" * 64)],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl"
-    )
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl")
     assert tl.event_count == 0
 
 
@@ -196,9 +179,7 @@ def test_build_raises_when_archive_missing(tmp_path: Path) -> None:
 # ---------------------------------------------------------------- determinism
 
 
-def test_build_timeline_is_deterministic_across_runs(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_timeline_is_deterministic_across_runs(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     _assess(archive_root, ev_hash)
@@ -211,12 +192,8 @@ def test_build_timeline_is_deterministic_across_runs(
             ("assessment", _assess(archive_root, ev_hash)),
         ],
     )
-    t1 = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl"
-    )
-    t2 = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl"
-    )
+    t1 = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl")
+    t2 = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl")
     assert t1 == t2
     assert t1.timeline_hash == t2.timeline_hash
 
@@ -224,9 +201,7 @@ def test_build_timeline_is_deterministic_across_runs(
 # ---------------------------------------------------------------- hashing
 
 
-def test_verify_timeline_hash_success(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_timeline_hash_success(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     w = create_workspace(
@@ -235,15 +210,11 @@ def test_verify_timeline_hash_success(
         title="t",
         references_input=[("evidence", ev_hash)],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl"
-    )
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl")
     assert verify_timeline_hash(tl) is True
 
 
-def test_compute_timeline_hash_matches_stored(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_compute_timeline_hash_matches_stored(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     w = create_workspace(
@@ -252,18 +223,14 @@ def test_compute_timeline_hash_matches_stored(
         title="t",
         references_input=[("evidence", ev_hash)],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl"
-    )
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl")
     assert compute_timeline_hash(tl) == tl.timeline_hash
 
 
 # ---------------------------------------------------------------- encoding
 
 
-def test_encode_decode_roundtrip(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_encode_decode_roundtrip(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     w = create_workspace(
@@ -272,17 +239,13 @@ def test_encode_decode_roundtrip(
         title="t",
         references_input=[("evidence", ev_hash)],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl"
-    )
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl")
     payload = encode_timeline(tl)
     decoded = decode_timeline(payload)
     assert decoded == tl
 
 
-def test_encode_is_canonical(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_encode_is_canonical(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     w = create_workspace(
@@ -291,24 +254,17 @@ def test_encode_is_canonical(
         title="t",
         references_input=[("evidence", ev_hash)],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl"
-    )
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl")
     payload = encode_timeline(tl)
     parsed = json.loads(payload)
-    canonical = (
-        json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True)
-        + "\n"
-    )
+    canonical = json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     assert payload == canonical
 
 
 # ---------------------------------------------------------------- persistence
 
 
-def test_persist_and_load(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_persist_and_load(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     w = create_workspace(
@@ -317,30 +273,27 @@ def test_persist_and_load(
         title="t",
         references_input=[("evidence", ev_hash)],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl-01"
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl-01")
+    persist_timeline(
+        tl,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
     )
-    persist_timeline(tl, archive_root=archive_root)
     canonical = timeline_path(archive_root, "tl-01")
     assert canonical.is_file()
-    loaded = load_timeline(
-        archive_root=archive_root, timeline_id="tl-01"
-    )
+    loaded = load_timeline(archive_root=archive_root, timeline_id="tl-01")
     assert loaded == tl
 
 
-def test_load_missing_raises(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_load_missing_raises(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     with pytest.raises(TimelineNotFoundError):
         load_timeline(archive_root=archive_root, timeline_id="ghost")
 
 
-def test_persist_extra_output(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_persist_extra_output(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     w = create_workspace(
@@ -349,11 +302,15 @@ def test_persist_extra_output(
         title="t",
         references_input=[("evidence", ev_hash)],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl"
-    )
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl")
     extra = tmp_path / "out" / "tl.json"
-    persist_timeline(tl, archive_root=archive_root, extra_output=extra)
+    persist_timeline(
+        tl,
+        archive_root=archive_root,
+        extra_output=extra,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     canonical = timeline_path(archive_root, "tl")
     assert extra.read_bytes() == canonical.read_bytes()
 
@@ -361,9 +318,7 @@ def test_persist_extra_output(
 # ---------------------------------------------------------------- removability
 
 
-def test_timeline_does_not_modify_archive_manifest(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_timeline_does_not_modify_archive_manifest(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     ev_hash = _ingest(archive_root, blob)
     pre = (archive_root / layout.MANIFEST_FILENAME).read_bytes()
@@ -373,10 +328,13 @@ def test_timeline_does_not_modify_archive_manifest(
         title="t",
         references_input=[("evidence", ev_hash)],
     )
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl"
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl")
+    persist_timeline(
+        tl,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
     )
-    persist_timeline(tl, archive_root=archive_root)
     post = (archive_root / layout.MANIFEST_FILENAME).read_bytes()
     assert pre == post
 
@@ -403,12 +361,6 @@ def test_timeline_imports_no_forbidden_engines() -> None:
             elif isinstance(node, ast.Import):
                 for n in node.names:
                     parts = n.name.split(".")
-                    if (
-                        len(parts) >= 2
-                        and parts[0] == "aip"
-                        and parts[1] in forbidden
-                    ):
+                    if len(parts) >= 2 and parts[0] == "aip" and parts[1] in forbidden:
                         offenders.append((module_path.name, n.name))
-    assert offenders == [], (
-        f"timeline/ imports forbidden engines: {offenders}"
-    )
+    assert offenders == [], f"timeline/ imports forbidden engines: {offenders}"

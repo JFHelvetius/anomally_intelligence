@@ -39,6 +39,7 @@ def assess_authentication_command(
     assessment = archive.assess_authentication(
         evidence_id=args.evidence_id,
         method=args.method,
+        actor=args.actor,
     )
     payload = {
         "ok": True,
@@ -98,6 +99,15 @@ def add_assessment_subparser(
             "La regla aplicada es la misma para los tres valores; el método "
             "diferencia assessments creados con propósitos distintos sobre "
             "la misma Evidence (ADR-0032 §2)."
+        ),
+    )
+    cmd.add_argument(
+        "--actor",
+        required=True,
+        help=(
+            "ActorId que ejecuta el assessment. Se persiste en el audit log "
+            "(ADR-0019 §enmienda E1, ActionKind.ASSESS_AUTHENTICATION). "
+            "Operator-supplied, no PKI."
         ),
     )
     cmd.set_defaults(_cmd=assess_authentication_command)

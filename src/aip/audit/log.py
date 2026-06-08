@@ -12,15 +12,39 @@ El reloj (``clock``) se inyecta para que los tests sean reproducibles bit a
 bit (ADR-0031 R1, R7). En producción se usa
 ``datetime.now(timezone.utc).replace(microsecond=0)``.
 
-V1 implementa dos acciones (ADR-0023):
+Acciones registradas (ADR-0023 + ADR-0019 §enmienda E1):
+
+Capa base:
 
 - :attr:`ActionKind.ARCHIVE_BOOTSTRAP` — primera entrada de un archive nuevo.
 - :attr:`ActionKind.INGEST_EVIDENCE` — ingesta de un blob como evidencia.
 
-Otras acciones del ADR-0019 (``create_claim``, ``revise_case``, ``enclave_access``,
-etc.) están diferidas. Cuando se incorporen, deberán añadirse a esta enum sin
-romper la cadena histórica (la enum es por valor, los valores existentes son
-estables).
+Capa derivada (ADR-0019 §enmienda E1, 2026-06-07): cada operación que
+persiste un artefacto derivado en su localización canónica del archive
+emite una entry. Esto extiende la cadena hash-chained desde "1/9 dominios"
+a "6/6 dominios con estado persistido":
+
+- :attr:`ActionKind.ASSESS_AUTHENTICATION` — fila nueva en la tabla
+  ``authentication_assessments`` (ADR-0032).
+- :attr:`ActionKind.BUILD_WORKSPACE` — ``<archive>/workspaces/<id>.json``
+  (ADR-0036).
+- :attr:`ActionKind.BUILD_TIMELINE` — ``<archive>/timelines/<id>.json``
+  (ADR-0037).
+- :attr:`ActionKind.BUILD_SNAPSHOT` — ``<archive>/snapshots/<id>.json``
+  (ADR-0038).
+- :attr:`ActionKind.BUILD_JUSTIFICATION` —
+  ``<archive>/justifications/<id>.json`` (ADR-0040).
+- :attr:`ActionKind.SIGN_ATTESTATION` —
+  ``<archive>/attestations/<id>.json`` (ADR-0041).
+
+Deliberadamente excluidas en V1: ``COMPUTE_DIFF`` y ``ASSEMBLE_CONTEXT``.
+Diff (ADR-0039) y Context Bundle (ADR-0035) no tienen localización
+canónica en el archive — son artefactos emitidos por la CLI a stdout o a
+``--output``. Añadirlos al audit log sería un error de categoría
+(registraría ejecución de queries, no cambios de estado del archive).
+
+Otras acciones del ADR-0019 originales (``create_claim``, ``revise_case``,
+``enclave_access``, etc.) siguen diferidas por ADR-0023.
 """
 
 from __future__ import annotations
@@ -58,10 +82,23 @@ Sha256Hex = Annotated[
 
 
 class ActionKind(StrEnum):
-    """Acciones registrables en el audit log (subset V1)."""
+    """Acciones registrables en el audit log.
 
+    Los valores string son **estables forever** — modificarlos invalidaría
+    cadenas históricas. Añadir un nuevo valor es seguro; renombrar /
+    eliminar uno existente NO lo es.
+    """
+
+    # --- Capa base (V1 original) -------------------------------------
     ARCHIVE_BOOTSTRAP = "archive_bootstrap"
     INGEST_EVIDENCE = "ingest_evidence"
+    # --- Capa derivada (ADR-0019 §enmienda E1, 2026-06-07) -----------
+    ASSESS_AUTHENTICATION = "assess_authentication"
+    BUILD_WORKSPACE = "build_workspace"
+    BUILD_TIMELINE = "build_timeline"
+    BUILD_SNAPSHOT = "build_snapshot"
+    BUILD_JUSTIFICATION = "build_justification"
+    SIGN_ATTESTATION = "sign_attestation"
 
 
 class ResultKind(StrEnum):
@@ -314,3 +351,79 @@ def bootstrap(
         schema_version=schema_version,
         clock=clock,
     )
+
+
+# --------------------------------------------------------------------- derived helper
+
+
+def record_derived_artifact(
+    root: Path,
+    *,
+    action: ActionKind,
+    artifact_kind: str,
+    artifact_id: str,
+    self_hash: str,
+    actor: str,
+    clock: Callable[[], dt.datetime],
+    schema_version: str,
+    extra_parameters: dict[str, str] | None = None,
+) -> AuditEntry:
+    """Emite una entry de audit para la persistencia de un artefacto derivado.
+
+    Helper compartido por los 6 puntos canónicos de persistencia derivada
+    (ADR-0019 §enmienda E1). Construye un ``target`` con el esquema URI
+    canónico (``aip:<kind>/<id>``) y un ``parameters`` que incluye al menos
+    el self-hash del artefacto recién persistido.
+
+    Args:
+        root: raíz del archive.
+        action: una de las :class:`ActionKind` de capa derivada
+            (ASSESS_AUTHENTICATION, BUILD_WORKSPACE, BUILD_TIMELINE,
+            BUILD_SNAPSHOT, BUILD_JUSTIFICATION, SIGN_ATTESTATION).
+        artifact_kind: prefijo del URI (``workspace``, ``timeline``,
+            ``snapshot``, ``justification``, ``attestation``, ``assessment``).
+        artifact_id: identificador del artefacto.
+        self_hash: hash auto-referente del artefacto persistido.
+        actor: identificador del operador (operator-supplied; no
+            autenticado por PKI en V1).
+        clock: reloj inyectable (callable que devuelve datetime tz-aware).
+        schema_version: SemVer del esquema lógico de datos.
+        extra_parameters: parámetros adicionales opcionales que se
+            mezclan con ``{"self_hash": self_hash}``.
+
+    Raises:
+        ValueError: si ``action`` no es de la capa derivada.
+    """
+    if action not in _DERIVED_ACTION_KINDS:
+        raise ValueError(
+            f"record_derived_artifact requires a derived ActionKind; "
+            f"got {action!r}. Allowed: "
+            f"{sorted(a.value for a in _DERIVED_ACTION_KINDS)}."
+        )
+    parameters: dict[str, str] = {"self_hash": self_hash}
+    if extra_parameters is not None:
+        parameters.update(extra_parameters)
+    return append_entry(
+        root,
+        action=action,
+        target=f"aip:{artifact_kind}/{artifact_id}",
+        actor=actor,
+        parameters=parameters,
+        result=ResultKind.SUCCESS,
+        schema_version=schema_version,
+        clock=clock,
+    )
+
+
+_DERIVED_ACTION_KINDS: Final[frozenset[ActionKind]] = frozenset(
+    {
+        ActionKind.ASSESS_AUTHENTICATION,
+        ActionKind.BUILD_WORKSPACE,
+        ActionKind.BUILD_TIMELINE,
+        ActionKind.BUILD_SNAPSHOT,
+        ActionKind.BUILD_JUSTIFICATION,
+        ActionKind.SIGN_ATTESTATION,
+    }
+)
+"""Subconjunto de :class:`ActionKind` introducido por la enmienda E1 al
+ADR-0019. Restringe :func:`record_derived_artifact` a la capa derivada."""

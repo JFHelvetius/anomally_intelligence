@@ -13,6 +13,7 @@ JSON canónico (``sort_keys=True``). Sin ejecución de motores analíticos
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 from pathlib import Path
 from typing import IO
@@ -65,6 +66,8 @@ def workspace_create_command(
     persist_workspace(
         workspace,
         archive_root=args.archive,
+        actor=args.actor,
+        clock=lambda: dt.datetime.now(dt.UTC),
         extra_output=args.output,
     )
     stdout.write(encode_workspace(workspace))
@@ -191,6 +194,14 @@ def add_workspace_subparser(
         help=(
             "Optional extra output path. The workspace is always also "
             "persisted to <archive>/workspaces/<id>.json."
+        ),
+    )
+    create.add_argument(
+        "--actor",
+        required=True,
+        help=(
+            "ActorId that creates the workspace. Recorded in the audit "
+            "log (ADR-0019 §enmienda E1, ActionKind.BUILD_WORKSPACE)."
         ),
     )
     create.set_defaults(_cmd=workspace_create_command)

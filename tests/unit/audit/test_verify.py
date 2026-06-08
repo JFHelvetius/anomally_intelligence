@@ -92,9 +92,7 @@ def _rewrite_log(root: Path, mutator) -> None:
     """Aplica ``mutator(entries: list[dict]) -> list[dict]`` al fichero."""
     path = root / "audit.log"
     lines = [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
     new_lines = mutator(lines)
     path.write_text(

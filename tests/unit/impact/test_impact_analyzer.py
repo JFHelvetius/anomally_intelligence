@@ -36,9 +36,7 @@ def _fixed_clock(ts: dt.datetime) -> Callable[[], dt.datetime]:
     return lambda: ts
 
 
-def _ingest(
-    archive_root: Path, blob: Path, *, source_id: str = "blue-book-nara"
-):
+def _ingest(archive_root: Path, blob: Path, *, source_id: str = "blue-book-nara"):
     archive = Archive.open(archive_root)
     return archive.ingest_evidence(
         blob,
@@ -61,6 +59,7 @@ def _assess(archive_root: Path, evidence_id: str, method=None):
         evidence_id=evidence_id,
         method=method or AssessmentMethod.PROVENANCE_REVIEW,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
 
 
@@ -73,9 +72,7 @@ def _write_blob(tmp_path: Path, name: str, content: bytes) -> Path:
 # ---------------------------------------------------------------- error paths
 
 
-def test_analyze_raises_when_root_not_in_graph(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_analyze_raises_when_root_not_in_graph(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
     graph = build_graph(archive_root)
@@ -98,9 +95,7 @@ def test_report_to_impact_nodes_raises_when_root_not_in_graph(
 # ---------------------------------------------------------------- empty impact
 
 
-def test_assessment_root_has_empty_impact(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_assessment_root_has_empty_impact(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     assessment = _assess(archive_root, evidence.hash)
@@ -188,9 +183,7 @@ def test_source_root_propagates_to_evidence_and_assessments(
     assert report.total_affected_nodes == 2
 
 
-def test_source_root_with_multiple_evidences(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_source_root_with_multiple_evidences(tmp_path: Path, archive_root: Path) -> None:
     blob_a = _write_blob(tmp_path, "a.pdf", b"%PDF-1.4 a")
     blob_b = _write_blob(tmp_path, "b.pdf", b"%PDF-1.4 b")
     ev_a = _ingest(archive_root, blob_a, source_id="shared-source")
@@ -209,9 +202,7 @@ def test_source_root_with_multiple_evidences(
 # ---------------------------------------------------------------- deterministic ordering
 
 
-def test_affected_assessments_are_canonically_sorted(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_affected_assessments_are_canonically_sorted(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     for method in (
@@ -221,22 +212,16 @@ def test_affected_assessments_are_canonically_sorted(
     ):
         _assess(archive_root, evidence.hash, method)
     graph = build_graph(archive_root)
-    report = analyze_removal_impact(
-        graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    report = analyze_removal_impact(graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     assert report.affected_assessments == sorted(report.affected_assessments)
 
 
-def test_impact_nodes_are_canonically_sorted(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_nodes_are_canonically_sorted(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob, source_id="shared")
     _assess(archive_root, evidence.hash)
     graph = build_graph(archive_root)
-    nodes = report_to_impact_nodes(
-        graph, GraphNode(kind=NodeKind.SOURCE, id="shared")
-    )
+    nodes = report_to_impact_nodes(graph, GraphNode(kind=NodeKind.SOURCE, id="shared"))
     keys = [(n.distance_from_root, n.node_type, n.node_id) for n in nodes]
     assert keys == sorted(keys)
 
@@ -244,9 +229,7 @@ def test_impact_nodes_are_canonically_sorted(
 # ---------------------------------------------------------------- reproducibility
 
 
-def test_impact_report_is_deterministic_across_runs(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_report_is_deterministic_across_runs(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     _assess(archive_root, evidence.hash)
@@ -257,18 +240,14 @@ def test_impact_report_is_deterministic_across_runs(
     assert r1 == r2
 
 
-def test_impact_does_not_modify_archive(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_impact_does_not_modify_archive(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     _assess(archive_root, evidence.hash)
     archive = Archive.open(archive_root)
     pre_hash = archive.verify(full=True).archive_manifest_hash
     graph = build_graph(archive_root)
-    analyze_removal_impact(
-        graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    analyze_removal_impact(graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     post_hash = archive.verify(full=True).archive_manifest_hash
     assert pre_hash == post_hash
 
@@ -276,39 +255,27 @@ def test_impact_does_not_modify_archive(
 # ---------------------------------------------------------------- honesty fields
 
 
-def test_report_carries_engine_version(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_report_carries_engine_version(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     graph = build_graph(archive_root)
-    report = analyze_removal_impact(
-        graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    report = analyze_removal_impact(graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     assert report.analysis_engine_version == IMPACT_ENGINE_VERSION
 
 
-def test_report_carries_schema_version(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_report_carries_schema_version(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     graph = build_graph(archive_root)
-    report = analyze_removal_impact(
-        graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    report = analyze_removal_impact(graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     assert report.schema_version == SCHEMA_VERSION
 
 
-def test_report_carries_analysis_method_name(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_report_carries_analysis_method_name(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     graph = build_graph(archive_root)
-    report = analyze_removal_impact(
-        graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    report = analyze_removal_impact(graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     assert report.analysis_method_name == "dependency_reachability_v1"
 
 
@@ -334,9 +301,7 @@ def test_synthetic_cycle_does_not_loop_forever() -> None:
     assert report.dependency_depth_max == 1
 
 
-def test_root_is_excluded_from_affected_nodes(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_root_is_excluded_from_affected_nodes(tmp_path: Path, archive_root: Path) -> None:
     """Un nodo nunca es dependencia inversa de sí mismo."""
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
@@ -351,16 +316,12 @@ def test_root_is_excluded_from_affected_nodes(
 # ---------------------------------------------------------------- distance tracking
 
 
-def test_distance_from_root_is_one_for_direct_neighbors(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_distance_from_root_is_one_for_direct_neighbors(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     _assess(archive_root, evidence.hash)
     graph = build_graph(archive_root)
-    nodes = report_to_impact_nodes(
-        graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash)
-    )
+    nodes = report_to_impact_nodes(graph, GraphNode(kind=NodeKind.EVIDENCE, id=evidence.hash))
     assert all(n.distance_from_root == 1 for n in nodes)
 
 
@@ -370,9 +331,7 @@ def test_distance_is_minimum_for_diamond_graph() -> None:
     root = GraphNode(kind=NodeKind.SOURCE, id="root")
     a = GraphNode(kind=NodeKind.EVIDENCE, id="a" * 64)
     b = GraphNode(kind=NodeKind.EVIDENCE, id="b" * 64)
-    x = GraphNode(
-        kind=NodeKind.ASSESSMENT, id="x" * 64 + "__provenance_review"
-    )
+    x = GraphNode(kind=NodeKind.ASSESSMENT, id="x" * 64 + "__provenance_review")
     # Aristas: x → a (assessed_from), x → b (assessed_from),
     # a → root (sourced_from), b → root (sourced_from).
     edges = (

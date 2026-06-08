@@ -264,9 +264,7 @@ def test_verify_structural_only(tmp_path: Path) -> None:
             str(sig_path),
         ]
     )
-    rc, out, err = _run(
-        ["attestation", "verify", str(sig_path)]
-    )
+    rc, out, err = _run(["attestation", "verify", str(sig_path)])
     assert rc == 0, err
     payload = json.loads(out)
     assert payload["ok"] is True
@@ -343,9 +341,7 @@ def test_verify_with_wrong_public_key_rc1(tmp_path: Path) -> None:
 
 
 def test_verify_missing_file_rc1(tmp_path: Path) -> None:
-    rc, _, err = _run(
-        ["attestation", "verify", str(tmp_path / "absent.json")]
-    )
+    rc, _, err = _run(["attestation", "verify", str(tmp_path / "absent.json")])
     assert rc == 1
     assert "not found" in err
 
@@ -374,9 +370,7 @@ def test_show_loads_persisted_attestation(tmp_path: Path) -> None:
             "att-1",
         ]
     )
-    rc, out, err = _run(
-        ["attestation", "show", "att-1", "--archive", str(archive)]
-    )
+    rc, out, err = _run(["attestation", "show", "att-1", "--archive", str(archive)])
     assert rc == 0, err
     payload = json.loads(out)
     assert payload["signer_id"] == "@op"
@@ -385,9 +379,7 @@ def test_show_loads_persisted_attestation(tmp_path: Path) -> None:
 def test_show_missing_id_rc1(tmp_path: Path) -> None:
     archive = tmp_path / "archive"
     archive.mkdir()
-    rc, _, err = _run(
-        ["attestation", "show", "absent", "--archive", str(archive)]
-    )
+    rc, _, err = _run(["attestation", "show", "absent", "--archive", str(archive)])
     assert rc == 1
     assert "absent" in err
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 from pathlib import Path
 from typing import IO
@@ -31,7 +32,11 @@ def timeline_build_command(
         timeline_id=args.timeline_id,
     )
     persist_timeline(
-        timeline, archive_root=args.archive, extra_output=args.output
+        timeline,
+        archive_root=args.archive,
+        actor=args.actor,
+        clock=lambda: dt.datetime.now(dt.UTC),
+        extra_output=args.output,
     )
     stdout.write(encode_timeline(timeline))
     return 0
@@ -89,6 +94,14 @@ def add_timeline_subparser(
     build.add_argument("--timeline-id", required=True)
     build.add_argument("--archive", required=True, type=Path)
     build.add_argument("--output", type=Path, default=None)
+    build.add_argument(
+        "--actor",
+        required=True,
+        help=(
+            "ActorId that builds the timeline. Recorded in the audit "
+            "log (ADR-0019 §enmienda E1, ActionKind.BUILD_TIMELINE)."
+        ),
+    )
     build.set_defaults(_cmd=timeline_build_command)
 
     show = sub.add_parser(

@@ -37,15 +37,18 @@ def test_method_name_pinned() -> None:
 
 
 def test_allowed_entry_roles_is_closed() -> None:
-    assert frozenset(
-        {
-            "evidence",
-            "source",
-            "assessment",
-            "provenance_step",
-            "graph_node",
-        }
-    ) == ALLOWED_ENTRY_ROLES
+    assert (
+        frozenset(
+            {
+                "evidence",
+                "source",
+                "assessment",
+                "provenance_step",
+                "graph_node",
+            }
+        )
+        == ALLOWED_ENTRY_ROLES
+    )
 
 
 def test_allowed_anchor_types_is_closed() -> None:
@@ -155,9 +158,7 @@ def _valid_justification(**overrides) -> InvestigationJustification:
         "justification_id": "j-01",
         "conclusion_anchor_type": "assessment",
         "conclusion_anchor_id": "A1",
-        "conclusion_anchor_hash": compute_chain_entry_hash(
-            "assessment", "A1"
-        ),
+        "conclusion_anchor_hash": compute_chain_entry_hash("assessment", "A1"),
         "minimal_evidence": (e,),
         "supporting_assessments": (a,),
         "graph_nodes_used": (),
@@ -336,7 +337,4 @@ def test_no_prohibited_tokens_in_justification_module() -> None:
         for token in _FORBIDDEN_TOKENS:
             if token in text:
                 offenders.append((path.name, token))
-    assert offenders == [], (
-        f"Forbidden tokens in justification (ADR-0040 §G6): "
-        f"{offenders}"
-    )
+    assert offenders == [], f"Forbidden tokens in justification (ADR-0040 §G6): {offenders}"

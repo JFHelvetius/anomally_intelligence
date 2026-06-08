@@ -27,9 +27,7 @@ FIXTURE_NAME = "twining-memo-1947-09-23.pdf"
 # Pinned por Pre-F1.C cerrada el 2026-06-06.
 # Fuente: archive.org/details/twinning-memo (slug con typo histórico del item).
 # Verificado en `tests/data/twining-memo-1947-09-23.pdf` (250 022 bytes).
-EXPECTED_PDF_SHA256: str = (
-    "65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1"
-)
+EXPECTED_PDF_SHA256: str = "65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1"
 EXPECTED_PDF_SIZE_BYTES: int = 250022
 
 # Constantes canónicas de la demo (Pre-F1.D + demo-evidence-selection.md).
@@ -57,10 +55,7 @@ def _fixture_path() -> Path:
 
 def _skip_if_no_fixture() -> None:
     if not EXPECTED_PDF_SHA256:
-        pytest.skip(
-            "awaiting Pre-F1.C pinned values; see "
-            "docs/phase-1/demo-evidence-selection.md"
-        )
+        pytest.skip("awaiting Pre-F1.C pinned values; see docs/phase-1/demo-evidence-selection.md")
     fx = _fixture_path()
     if not fx.is_file():
         pytest.skip(
@@ -292,6 +287,8 @@ def test_demo_pipeline_full_derived_layers(tmp_path: Path) -> None:
             str(archive_root),
             "--evidence-id",
             ev_hash,
+            "--actor",
+            "@test",
         ],
         stdout=out,
         stderr=err,
@@ -318,6 +315,8 @@ def test_demo_pipeline_full_derived_layers(tmp_path: Path) -> None:
             assessment_id,
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ],
         stdout=out,
         stderr=err,
@@ -326,9 +325,7 @@ def test_demo_pipeline_full_derived_layers(tmp_path: Path) -> None:
     workspace_payload = json.loads(out.getvalue())
     assert workspace_payload["workspace_id"] == DEMO_WORKSPACE_ID
     assert len(workspace_payload["references"]) == 2
-    assert (
-        archive_root / "workspaces" / f"{DEMO_WORKSPACE_ID}.json"
-    ).is_file()
+    assert (archive_root / "workspaces" / f"{DEMO_WORKSPACE_ID}.json").is_file()
 
     # ----- timeline ---------------------------------------------------------
     out, err = io.StringIO(), io.StringIO()
@@ -342,6 +339,8 @@ def test_demo_pipeline_full_derived_layers(tmp_path: Path) -> None:
             DEMO_TIMELINE_ID,
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ],
         stdout=out,
         stderr=err,
@@ -351,9 +350,7 @@ def test_demo_pipeline_full_derived_layers(tmp_path: Path) -> None:
     assert timeline_payload["timeline_id"] == DEMO_TIMELINE_ID
     # Evidence + assessment → 2 eventos (ambos con timestamp nativo).
     assert timeline_payload["event_count"] == 2
-    assert (
-        archive_root / "timelines" / f"{DEMO_TIMELINE_ID}.json"
-    ).is_file()
+    assert (archive_root / "timelines" / f"{DEMO_TIMELINE_ID}.json").is_file()
 
     # ----- snapshot ---------------------------------------------------------
     out, err = io.StringIO(), io.StringIO()
@@ -369,6 +366,8 @@ def test_demo_pipeline_full_derived_layers(tmp_path: Path) -> None:
             DEMO_TIMELINE_ID,
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ],
         stdout=out,
         stderr=err,
@@ -376,9 +375,7 @@ def test_demo_pipeline_full_derived_layers(tmp_path: Path) -> None:
     assert rc == 0, err.getvalue()
     snapshot_payload = json.loads(out.getvalue())
     assert snapshot_payload["snapshot_id"] == DEMO_SNAPSHOT_ID
-    assert (
-        archive_root / "snapshots" / f"{DEMO_SNAPSHOT_ID}.json"
-    ).is_file()
+    assert (archive_root / "snapshots" / f"{DEMO_SNAPSHOT_ID}.json").is_file()
 
     # ----- justification ----------------------------------------------------
     out, err = io.StringIO(), io.StringIO()
@@ -396,24 +393,22 @@ def test_demo_pipeline_full_derived_layers(tmp_path: Path) -> None:
             DEMO_WORKSPACE_ID,
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ],
         stdout=out,
         stderr=err,
     )
     assert rc == 0, err.getvalue()
     justification_payload = json.loads(out.getvalue())
-    assert (
-        justification_payload["justification_id"] == DEMO_JUSTIFICATION_ID
-    )
+    assert justification_payload["justification_id"] == DEMO_JUSTIFICATION_ID
     assert justification_payload["conclusion_anchor_id"] == assessment_id
     assert justification_payload["workspace_hash"] is not None
     # La cadena no debe ser vacía: el assessment está respaldado por
     # al menos una evidencia + una source + un provenance step.
     assert len(justification_payload["minimal_evidence"]) >= 1
     assert len(justification_payload["provenance_chain"]) >= 1
-    assert (
-        archive_root / "justifications" / f"{DEMO_JUSTIFICATION_ID}.json"
-    ).is_file()
+    assert (archive_root / "justifications" / f"{DEMO_JUSTIFICATION_ID}.json").is_file()
 
     # ----- diff snapshots ---------------------------------------------------
     # Crear un segundo snapshot sobre el mismo workspace+timeline para
@@ -431,6 +426,8 @@ def test_demo_pipeline_full_derived_layers(tmp_path: Path) -> None:
             DEMO_TIMELINE_ID,
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ],
         stdout=out,
         stderr=err,
@@ -461,16 +458,8 @@ def test_demo_pipeline_full_derived_layers(tmp_path: Path) -> None:
         [
             "diff",
             "justifications",
-            str(
-                archive_root
-                / "justifications"
-                / f"{DEMO_JUSTIFICATION_ID}.json"
-            ),
-            str(
-                archive_root
-                / "justifications"
-                / f"{DEMO_JUSTIFICATION_ID}.json"
-            ),
+            str(archive_root / "justifications" / f"{DEMO_JUSTIFICATION_ID}.json"),
+            str(archive_root / "justifications" / f"{DEMO_JUSTIFICATION_ID}.json"),
         ],
         stdout=out,
         stderr=err,

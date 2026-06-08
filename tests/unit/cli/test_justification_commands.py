@@ -48,6 +48,7 @@ def _assess(archive_root: Path, evidence_id: str) -> str:
         evidence_id=evidence_id,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
     return a.assessment_id
 
@@ -82,9 +83,7 @@ def test_justification_subgroup_listed() -> None:
 # ---------------------------------------------------------------- build
 
 
-def test_justification_build_happy_path(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_justification_build_happy_path(tmp_path: Path, archive_root: Path) -> None:
     a_id = _bootstrap(tmp_path, archive_root)
     rc, out, err = _run(
         [
@@ -98,6 +97,8 @@ def test_justification_build_happy_path(
             "j-01",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     assert rc == 0, err
@@ -109,9 +110,7 @@ def test_justification_build_happy_path(
     assert canonical.is_file()
 
 
-def test_justification_build_extra_output(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_justification_build_extra_output(tmp_path: Path, archive_root: Path) -> None:
     a_id = _bootstrap(tmp_path, archive_root)
     extra = tmp_path / "shared" / "j.json"
     rc, _, _ = _run(
@@ -128,6 +127,8 @@ def test_justification_build_extra_output(
             str(archive_root),
             "--output",
             str(extra),
+            "--actor",
+            "@test",
         ]
     )
     assert rc == 0
@@ -135,9 +136,7 @@ def test_justification_build_extra_output(
     assert extra.read_bytes() == canonical.read_bytes()
 
 
-def test_justification_build_with_workspace_scope(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_justification_build_with_workspace_scope(tmp_path: Path, archive_root: Path) -> None:
     a_id = _bootstrap(tmp_path, archive_root)
     # Crear workspace para usar como scope.
     _run(
@@ -150,6 +149,8 @@ def test_justification_build_with_workspace_scope(
             "T",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     rc, out, _ = _run(
@@ -166,6 +167,8 @@ def test_justification_build_with_workspace_scope(
             "w",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     assert rc == 0
@@ -191,15 +194,15 @@ def test_justification_build_rejects_invalid_anchor_type(
                 "j",
                 "--archive",
                 str(archive_root),
+                "--actor",
+                "@test",
             ],
             stdout=out,
             stderr=err,
         )
 
 
-def test_justification_build_anchor_not_found(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_justification_build_anchor_not_found(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap(tmp_path, archive_root)
     rc, _, err = _run(
         [
@@ -213,6 +216,8 @@ def test_justification_build_anchor_not_found(
             "j",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     assert rc != 0
@@ -222,9 +227,7 @@ def test_justification_build_anchor_not_found(
 # ---------------------------------------------------------------- show
 
 
-def test_justification_show_returns_persisted(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_justification_show_returns_persisted(tmp_path: Path, archive_root: Path) -> None:
     a_id = _bootstrap(tmp_path, archive_root)
     _run(
         [
@@ -238,6 +241,8 @@ def test_justification_show_returns_persisted(
             "j",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     rc, out, _ = _run(
@@ -254,9 +259,7 @@ def test_justification_show_returns_persisted(
     assert payload["justification_id"] == "j"
 
 
-def test_justification_show_missing_returns_error(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_justification_show_missing_returns_error(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap(tmp_path, archive_root)
     rc, _, err = _run(
         [
@@ -274,9 +277,7 @@ def test_justification_show_missing_returns_error(
 # ---------------------------------------------------------------- verify
 
 
-def test_justification_verify_valid(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_justification_verify_valid(tmp_path: Path, archive_root: Path) -> None:
     a_id = _bootstrap(tmp_path, archive_root)
     _run(
         [
@@ -290,6 +291,8 @@ def test_justification_verify_valid(
             "j",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     path = archive_root / "justifications" / "j.json"
@@ -298,9 +301,7 @@ def test_justification_verify_valid(
     assert json.loads(out)["ok"] is True
 
 
-def test_justification_verify_tampered(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_justification_verify_tampered(tmp_path: Path, archive_root: Path) -> None:
     a_id = _bootstrap(tmp_path, archive_root)
     _run(
         [
@@ -314,6 +315,8 @@ def test_justification_verify_tampered(
             "j",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     path = archive_root / "justifications" / "j.json"
@@ -329,9 +332,7 @@ def test_justification_verify_tampered(
 
 
 def test_justification_verify_missing_file(tmp_path: Path) -> None:
-    rc, _, err = _run(
-        ["justification", "verify", str(tmp_path / "ghost.json")]
-    )
+    rc, _, err = _run(["justification", "verify", str(tmp_path / "ghost.json")])
     assert rc != 0
     assert "not found" in err.lower()
 
@@ -339,9 +340,7 @@ def test_justification_verify_missing_file(tmp_path: Path) -> None:
 # ---------------------------------------------------------------- byte-identical
 
 
-def test_justification_build_byte_identical(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_justification_build_byte_identical(tmp_path: Path, archive_root: Path) -> None:
     a_id = _bootstrap(tmp_path, archive_root)
     rc1, out1, _ = _run(
         [
@@ -355,6 +354,8 @@ def test_justification_build_byte_identical(
             "j",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     rc2, out2, _ = _run(
@@ -369,6 +370,8 @@ def test_justification_build_byte_identical(
             "j",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     assert rc1 == rc2 == 0
@@ -378,9 +381,7 @@ def test_justification_build_byte_identical(
 # ---------------------------------------------------------------- aip diff justifications
 
 
-def test_diff_justifications_identical(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_diff_justifications_identical(tmp_path: Path, archive_root: Path) -> None:
     a_id = _bootstrap(tmp_path, archive_root)
     _run(
         [
@@ -394,12 +395,12 @@ def test_diff_justifications_identical(
             "j",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     path = archive_root / "justifications" / "j.json"
-    rc, out, err = _run(
-        ["diff", "justifications", str(path), str(path)]
-    )
+    rc, out, err = _run(["diff", "justifications", str(path), str(path)])
     assert rc == 0, err
     payload = json.loads(out)
     assert payload["added_entries"] == []
@@ -407,9 +408,7 @@ def test_diff_justifications_identical(
     assert len(payload["unchanged_entries"]) >= 1
 
 
-def test_diff_justifications_writes_output(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_diff_justifications_writes_output(tmp_path: Path, archive_root: Path) -> None:
     a_id = _bootstrap(tmp_path, archive_root)
     _run(
         [
@@ -423,6 +422,8 @@ def test_diff_justifications_writes_output(
             "j",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     path = archive_root / "justifications" / "j.json"
@@ -454,9 +455,7 @@ def test_diff_justifications_missing_files(tmp_path: Path) -> None:
     assert "not found" in err.lower()
 
 
-def test_diff_justifications_rejects_schema_mismatch(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_diff_justifications_rejects_schema_mismatch(tmp_path: Path, archive_root: Path) -> None:
     a_id = _bootstrap(tmp_path, archive_root)
     _run(
         [
@@ -470,6 +469,8 @@ def test_diff_justifications_rejects_schema_mismatch(
             "j",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     path = archive_root / "justifications" / "j.json"
@@ -481,9 +482,7 @@ def test_diff_justifications_rejects_schema_mismatch(
         json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    rc, _, err = _run(
-        ["diff", "justifications", str(path), str(fake)]
-    )
+    rc, _, err = _run(["diff", "justifications", str(path), str(fake)])
     assert rc != 0
     assert "schema_version mismatch" in err
 
@@ -491,9 +490,7 @@ def test_diff_justifications_rejects_schema_mismatch(
 # ---------------------------------------------------------------- backwards compat
 
 
-def test_existing_commands_unaffected(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_existing_commands_unaffected(tmp_path: Path, archive_root: Path) -> None:
     a_id = _bootstrap(tmp_path, archive_root)
     blob = tmp_path / "doc.pdf"
     ev_hash = _ingest(archive_root, blob)
@@ -522,6 +519,8 @@ def test_existing_commands_unaffected(
             str(archive_root),
             "--evidence-id",
             ev_hash,
+            "--actor",
+            "@test",
         ],
     ):
         rc, _, _ = _run(argv)

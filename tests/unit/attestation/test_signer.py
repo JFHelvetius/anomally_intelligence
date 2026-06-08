@@ -71,10 +71,7 @@ def test_keypair_pem_roundtrip(tmp_path: Path) -> None:
     pub_path.write_bytes(serialize_public_key_pem(pub))
     priv_loaded = load_private_key(priv_path)
     pub_loaded = load_public_key(pub_path)
-    assert (
-        priv_loaded.public_key().public_bytes_raw()
-        == priv.public_key().public_bytes_raw()
-    )
+    assert priv_loaded.public_key().public_bytes_raw() == priv.public_key().public_bytes_raw()
     assert pub_loaded.public_bytes_raw() == pub.public_bytes_raw()
 
 
@@ -170,9 +167,7 @@ def test_tampered_artifact_hash_invalidates_signature(tmp_path: Path) -> None:
     tampered = dataclasses.replace(
         att,
         artifact_hash="b" * 64,
-        attestation_hash=compute_attestation_hash(
-            dataclasses.replace(att, artifact_hash="b" * 64)
-        ),
+        attestation_hash=compute_attestation_hash(dataclasses.replace(att, artifact_hash="b" * 64)),
     )
     # attestation_hash recomputado pasa, pero la firma no.
     assert verify_attestation(tampered, public_key=pub) is False
@@ -190,9 +185,7 @@ def test_tampered_signature_fails_verify(tmp_path: Path) -> None:
     )
     flipped = att.signature[:-2] + ("ff" if att.signature[-2:] != "ff" else "00")
     bad = dataclasses.replace(att, signature=flipped)
-    bad = dataclasses.replace(
-        bad, attestation_hash=compute_attestation_hash(bad)
-    )
+    bad = dataclasses.replace(bad, attestation_hash=compute_attestation_hash(bad))
     assert verify_attestation(bad, public_key=pub) is False
 
 
@@ -271,9 +264,7 @@ def test_signed_at_microseconds_discarded(tmp_path: Path) -> None:
 
 
 def test_extract_self_hash_workspace(tmp_path: Path) -> None:
-    artifact = _write_workspace_artifact(
-        tmp_path / "ws.json", workspace_hash="d" * 64
-    )
+    artifact = _write_workspace_artifact(tmp_path / "ws.json", workspace_hash="d" * 64)
     assert extract_artifact_self_hash("workspace", artifact) == "d" * 64
 
 
@@ -313,21 +304,21 @@ def test_persist_and_load_roundtrip(tmp_path: Path) -> None:
     )
     archive = tmp_path / "archive"
     target = persist_attestation(
-        att, archive_root=archive, attestation_id="att-1"
+        att,
+        archive_root=archive,
+        attestation_id="att-1",
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
     )
     assert target.is_file()
     assert target.parent.name == "attestations"
-    loaded = load_attestation(
-        archive_root=archive, attestation_id="att-1"
-    )
+    loaded = load_attestation(archive_root=archive, attestation_id="att-1")
     assert loaded == att
 
 
 def test_load_attestation_not_found(tmp_path: Path) -> None:
     with pytest.raises(AttestationNotFoundError, match="att-missing"):
-        load_attestation(
-            archive_root=tmp_path / "archive", attestation_id="att-missing"
-        )
+        load_attestation(archive_root=tmp_path / "archive", attestation_id="att-missing")
 
 
 def test_encode_decode_roundtrip() -> None:
@@ -379,6 +370,8 @@ def test_persist_extra_output(tmp_path: Path) -> None:
         archive_root=archive,
         attestation_id="att-1",
         extra_output=extra,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
     )
     assert extra.is_file()
     assert decode_attestation(extra.read_text(encoding="utf-8")) == att
@@ -399,8 +392,14 @@ def test_attestations_dir_is_peripheral_to_manifest() -> None:
 def test_persist_attestation_creates_peripheral_dir_only(
     tmp_path: Path,
 ) -> None:
-    """G4 (operacional): persistir bajo ``<archive>/attestations/`` no
-    crea ni toca ``manifest.json`` ni ningún directorio de ``V1_TABLES``."""
+    """G4 (operacional, refinado por ADR-0019 §E1): persistir bajo
+    ``<archive>/attestations/`` no crea ni toca ``manifest.json`` ni
+    ningún directorio de ``V1_TABLES``.
+
+    Sí escribe ``audit.log`` en la raíz del archive — la entry
+    ``SIGN_ATTESTATION`` que registra el acto criptográfico. Eso es el
+    cierre del ciclo "vínculo clave-artefacto + trazabilidad histórica".
+    """
     priv, _ = generate_keypair()
     artifact = _write_workspace_artifact(tmp_path / "ws.json")
     att = sign_artifact(
@@ -412,10 +411,14 @@ def test_persist_attestation_creates_peripheral_dir_only(
     )
     archive = tmp_path / "archive"
     persist_attestation(
-        att, archive_root=archive, attestation_id="att-1"
+        att,
+        archive_root=archive,
+        attestation_id="att-1",
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
     )
     children = {p.name for p in archive.iterdir()}
-    assert children == {"attestations"}
+    assert children == {"attestations", "audit.log"}
     for table in V1_TABLES:
         assert not (archive / table).exists()
     assert not (archive / "manifest.json").exists()
@@ -474,9 +477,7 @@ def test_no_prohibited_tokens_in_attestation_module() -> None:
         for token in _FORBIDDEN_TOKENS:
             if token in text:
                 offenders.append((path.name, token))
-    assert offenders == [], (
-        f"Forbidden tokens in attestation (ADR-0041 §G6): {offenders}"
-    )
+    assert offenders == [], f"Forbidden tokens in attestation (ADR-0041 §G6): {offenders}"
 
 
 # ---------------------------------------------------------------- G7 import boundary
@@ -526,23 +527,28 @@ def test_attestation_imports_only_allowed_modules() -> None:
                     mods.append(n.name)
             for mod in mods:
                 parts = mod.split(".")
-                if (
-                    len(parts) >= 2
-                    and parts[0] == "aip"
-                    and parts[1] in forbidden_aip
-                ):
+                if len(parts) >= 2 and parts[0] == "aip" and parts[1] in forbidden_aip:
                     offenders.append((module_path.name, mod))
                 if parts[0] in forbidden_external:
                     offenders.append((module_path.name, mod))
-    assert offenders == [], (
-        f"attestation/ imports forbidden modules: {offenders}"
-    )
+    assert offenders == [], f"attestation/ imports forbidden modules: {offenders}"
 
 
 def test_signer_uses_cryptography_only_for_crypto() -> None:
     """La única dependencia externa de attestation/ debe ser
     ``cryptography``. Tests pinea que ``hashlib`` (stdlib) y
     ``cryptography`` son las únicas dependencias de crypto."""
+    stdlib_allowed = {
+        "aip",
+        "collections",  # collections.abc.Callable
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "pathlib",
+        "typing",
+        "__future__",
+    }
     here = Path(__file__).resolve()
     repo = here.parents[3]
     signer = repo / "src" / "aip" / "attestation" / "signer.py"
@@ -554,31 +560,12 @@ def test_signer_uses_cryptography_only_for_crypto() -> None:
             mod = node.module
         elif isinstance(node, ast.Import):
             for n in node.names:
-                if n.name.split(".")[0] not in {
-                    "aip",
-                    "dataclasses",
-                    "datetime",
-                    "hashlib",
-                    "json",
-                    "pathlib",
-                    "typing",
-                    "__future__",
-                }:
+                if n.name.split(".")[0] not in stdlib_allowed:
                     external_crypto_libs.add(n.name.split(".")[0])
-        if mod and mod.split(".")[0] not in {
-            "aip",
-            "dataclasses",
-            "datetime",
-            "hashlib",
-            "json",
-            "pathlib",
-            "typing",
-            "__future__",
-        }:
+        if mod and mod.split(".")[0] not in stdlib_allowed:
             external_crypto_libs.add(mod.split(".")[0])
     assert external_crypto_libs == {"cryptography"}, (
-        f"signer.py external imports must be exactly "
-        f"{{'cryptography'}}; got {external_crypto_libs}"
+        f"signer.py external imports must be exactly {{'cryptography'}}; got {external_crypto_libs}"
     )
 
 

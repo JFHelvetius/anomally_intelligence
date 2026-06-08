@@ -64,9 +64,7 @@ def test_workspace_subgroup_is_listed() -> None:
 # ---------------------------------------------------------------- create
 
 
-def _create_args(
-    archive_root: Path, *, output: Path | None = None
-) -> list[str]:
+def _create_args(archive_root: Path, *, output: Path | None = None) -> list[str]:
     args = [
         "workspace",
         "create",
@@ -86,15 +84,15 @@ def _create_args(
         "C001",
         "--archive",
         str(archive_root),
+        "--actor",
+        "@test",
     ]
     if output is not None:
         args.extend(["--output", str(output)])
     return args
 
 
-def test_workspace_create_happy_path(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_workspace_create_happy_path(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -109,9 +107,7 @@ def test_workspace_create_happy_path(
     assert canonical.is_file()
 
 
-def test_workspace_create_extra_output(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_workspace_create_extra_output(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -122,9 +118,7 @@ def test_workspace_create_extra_output(
     assert extra.read_bytes() == canonical.read_bytes()
 
 
-def test_workspace_create_rejects_duplicate_evidence(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_workspace_create_rejects_duplicate_evidence(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -142,15 +136,15 @@ def test_workspace_create_rejects_duplicate_evidence(
             "E1",
             "--archive",
             str(archive_root),
+            "--actor",
+            "@test",
         ]
     )
     assert rc != 0
     assert "duplicate" in err.lower()
 
 
-def test_workspace_create_requires_workspace_id(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_workspace_create_requires_workspace_id(tmp_path: Path, archive_root: Path) -> None:
     out, err = io.StringIO(), io.StringIO()
     with pytest.raises(SystemExit):
         cli_main.main(
@@ -161,6 +155,8 @@ def test_workspace_create_requires_workspace_id(
                 "t",
                 "--archive",
                 str(archive_root),
+                "--actor",
+                "@test",
             ],
             stdout=out,
             stderr=err,
@@ -170,9 +166,7 @@ def test_workspace_create_requires_workspace_id(
 # ---------------------------------------------------------------- show
 
 
-def test_workspace_show_returns_persisted_workspace(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_workspace_show_returns_persisted_workspace(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -192,9 +186,7 @@ def test_workspace_show_returns_persisted_workspace(
     assert len(payload["references"]) == 5
 
 
-def test_workspace_show_missing_returns_error(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_workspace_show_missing_returns_error(tmp_path: Path, archive_root: Path) -> None:
     blob = tmp_path / "doc.pdf"
     blob.write_bytes(b"%PDF-1.4 sample")
     _ingest(archive_root, blob)
@@ -306,6 +298,8 @@ def test_archive_verify_passes_after_workspace_operations(
                 "E1",
                 "--archive",
                 str(archive_root),
+                "--actor",
+                "@test",
             ]
         )
         assert rc == 0

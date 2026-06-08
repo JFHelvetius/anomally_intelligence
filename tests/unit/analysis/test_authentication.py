@@ -214,9 +214,7 @@ def test_make_assessment_id_is_deterministic() -> None:
 def test_make_assessment_id_distinguishes_methods() -> None:
     a = make_assessment_id(CANONICAL_EVIDENCE_ID, AssessmentMethod.MANUAL_RESEARCH)
     b = make_assessment_id(CANONICAL_EVIDENCE_ID, AssessmentMethod.PROVENANCE_REVIEW)
-    c = make_assessment_id(
-        CANONICAL_EVIDENCE_ID, AssessmentMethod.CHAIN_OF_CUSTODY_REVIEW
-    )
+    c = make_assessment_id(CANONICAL_EVIDENCE_ID, AssessmentMethod.CHAIN_OF_CUSTODY_REVIEW)
     assert len({a, b, c}) == 3
 
 

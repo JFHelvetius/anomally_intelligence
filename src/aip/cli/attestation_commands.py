@@ -193,6 +193,8 @@ def attestation_sign_command(
             attestation,
             archive_root=args.archive,
             attestation_id=args.attestation_id,
+            actor=args.signer_id,
+            clock=lambda: dt.datetime.now(dt.UTC),
             extra_output=extra_output,
         )
     elif extra_output is not None:

@@ -113,9 +113,7 @@ def test_build_graph_single_evidence_emits_two_nodes_one_edge(
 # ---------------------------------------------------------------- multiple evidences
 
 
-def test_build_graph_multiple_evidences_sharing_source(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_graph_multiple_evidences_sharing_source(tmp_path: Path, archive_root: Path) -> None:
     blob_a = _write_blob(tmp_path, "a.pdf", b"%PDF-1.4 a")
     blob_b = _write_blob(tmp_path, "b.pdf", b"%PDF-1.4 b")
     ev_a = _ingest(archive_root, blob_a)
@@ -155,6 +153,7 @@ def test_build_graph_with_assessment_emits_three_edge_kinds(
         evidence_id=evidence.hash,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
     graph = build_graph(archive_root)
     # 1 evidence + 1 source + 1 assessment = 3 nodos.
@@ -171,9 +170,7 @@ def test_build_graph_with_assessment_emits_three_edge_kinds(
     }
 
 
-def test_build_graph_multiple_assessments_same_evidence(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_graph_multiple_assessments_same_evidence(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     archive = Archive.open(archive_root)
@@ -186,13 +183,12 @@ def test_build_graph_multiple_assessments_same_evidence(
             evidence_id=evidence.hash,
             method=method,
             clock=_fixed_clock(CANONICAL_TS),
+            actor="@test",
         )
     graph = build_graph(archive_root)
     # 1 evidence + 1 source + 3 assessments = 5 nodos.
     assert len(graph.nodes) == 5
-    assert (
-        sum(1 for n in graph.nodes if n.kind is NodeKind.ASSESSMENT) == 3
-    )
+    assert sum(1 for n in graph.nodes if n.kind is NodeKind.ASSESSMENT) == 3
     # 1 sourced_from + 3 assessed_from + 3 derived_from = 7 aristas.
     assert len(graph.edges) == 7
 
@@ -200,9 +196,7 @@ def test_build_graph_multiple_assessments_same_evidence(
 # ---------------------------------------------------------------- determinism
 
 
-def test_build_graph_is_deterministic_across_runs(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_graph_is_deterministic_across_runs(tmp_path: Path, archive_root: Path) -> None:
     blob_a = _write_blob(tmp_path, "a.pdf", b"%PDF-1.4 a")
     blob_b = _write_blob(tmp_path, "b.pdf", b"%PDF-1.4 b")
     _ingest(archive_root, blob_a)
@@ -211,6 +205,7 @@ def test_build_graph_is_deterministic_across_runs(
     archive.assess_authentication(
         evidence_id=_ingest(archive_root, blob_a).hash,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
     g1 = build_graph(archive_root)
     g2 = build_graph(archive_root)
@@ -219,9 +214,7 @@ def test_build_graph_is_deterministic_across_runs(
     assert g1.edges == g2.edges
 
 
-def test_build_graph_nodes_are_canonically_ordered(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_graph_nodes_are_canonically_ordered(tmp_path: Path, archive_root: Path) -> None:
     blob_a = _write_blob(tmp_path, "a.pdf", b"%PDF-1.4 a")
     blob_b = _write_blob(tmp_path, "b.pdf", b"%PDF-1.4 b")
     _ingest(archive_root, blob_a, source_id="zeta-archive")
@@ -230,6 +223,7 @@ def test_build_graph_nodes_are_canonically_ordered(
     archive.assess_authentication(
         evidence_id=_ingest(archive_root, blob_a, source_id="zeta-archive").hash,
         clock=_fixed_clock(CANONICAL_TS),
+        actor="@test",
     )
     graph = build_graph(archive_root)
     # Verificamos orden por (kind.value, id) en posición.
@@ -239,14 +233,12 @@ def test_build_graph_nodes_are_canonically_ordered(
         assert (a.kind.value, a.id) <= (b.kind.value, b.id)
 
 
-def test_build_graph_edges_are_canonically_ordered(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_build_graph_edges_are_canonically_ordered(tmp_path: Path, archive_root: Path) -> None:
     blob = _write_blob(tmp_path, "doc.pdf", b"%PDF-1.4 sample")
     evidence = _ingest(archive_root, blob)
     archive = Archive.open(archive_root)
     archive.assess_authentication(
-        evidence_id=evidence.hash, clock=_fixed_clock(CANONICAL_TS)
+        evidence_id=evidence.hash, clock=_fixed_clock(CANONICAL_TS), actor="@test"
     )
     graph = build_graph(archive_root)
     keys = [

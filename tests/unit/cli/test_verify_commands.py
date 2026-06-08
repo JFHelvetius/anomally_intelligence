@@ -63,6 +63,7 @@ def _bootstrap(tmp_path: Path, archive_root: Path) -> dict[str, Path]:
         evidence_id=ev_hash,
         method=AssessmentMethod.PROVENANCE_REVIEW,
         clock=_clock(CANONICAL_TS),
+        actor="@test",
     )
 
     w = create_workspace(
@@ -71,20 +72,38 @@ def _bootstrap(tmp_path: Path, archive_root: Path) -> dict[str, Path]:
         title="t",
         references_input=[("evidence", ev_hash), ("assessment", a.assessment_id)],
     )
-    persist_workspace(w, archive_root=archive_root)
-    tl = build_timeline(
-        archive_root=archive_root, workspace=w, timeline_id="tl-01"
+    persist_workspace(
+        w,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
     )
-    persist_timeline(tl, archive_root=archive_root)
+    tl = build_timeline(archive_root=archive_root, workspace=w, timeline_id="tl-01")
+    persist_timeline(
+        tl,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     sn = create_snapshot(snapshot_id="s-01", workspace=w, timeline=tl)
-    persist_snapshot(sn, archive_root=archive_root)
+    persist_snapshot(
+        sn,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
     j = build_justification(
         archive_root=archive_root,
         conclusion_anchor_type="assessment",
         conclusion_anchor_id=a.assessment_id,
         justification_id="j-01",
     )
-    persist_justification(j, archive_root=archive_root)
+    persist_justification(
+        j,
+        archive_root=archive_root,
+        actor="@test",
+        clock=lambda: dt.datetime(2026, 6, 4, tzinfo=dt.UTC),
+    )
 
     # Context bundle: assemble + write to disk for test.
     bundle = assemble_context(
@@ -131,9 +150,7 @@ def test_verify_command_is_listed() -> None:
 # ---------------------------------------------------------------- happy paths
 
 
-def test_verify_workspace(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_workspace(tmp_path: Path, archive_root: Path) -> None:
     paths = _bootstrap(tmp_path, archive_root)
     rc, out, _ = _run(["verify", str(paths["workspace"])])
     assert rc == 0
@@ -162,9 +179,7 @@ def test_verify_snapshot(tmp_path: Path, archive_root: Path) -> None:
     assert payload["artifact_identity"] == "s-01"
 
 
-def test_verify_justification(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_justification(tmp_path: Path, archive_root: Path) -> None:
     paths = _bootstrap(tmp_path, archive_root)
     rc, out, _ = _run(["verify", str(paths["justification"])])
     assert rc == 0
@@ -173,9 +188,7 @@ def test_verify_justification(
     assert payload["artifact_identity"] == "j-01"
 
 
-def test_verify_context_bundle(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_context_bundle(tmp_path: Path, archive_root: Path) -> None:
     paths = _bootstrap(tmp_path, archive_root)
     rc, out, _ = _run(["verify", str(paths["context_bundle"])])
     assert rc == 0
@@ -186,9 +199,7 @@ def test_verify_context_bundle(
 # ---------------------------------------------------------------- tampering
 
 
-def test_verify_detects_tampered_workspace(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_detects_tampered_workspace(tmp_path: Path, archive_root: Path) -> None:
     paths = _bootstrap(tmp_path, archive_root)
     p = paths["workspace"]
     data = json.loads(p.read_text(encoding="utf-8"))
@@ -204,9 +215,7 @@ def test_verify_detects_tampered_workspace(
     assert payload["self_hash_ok"] is False
 
 
-def test_verify_detects_tampered_justification(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_detects_tampered_justification(tmp_path: Path, archive_root: Path) -> None:
     paths = _bootstrap(tmp_path, archive_root)
     p = paths["justification"]
     data = json.loads(p.read_text(encoding="utf-8"))
@@ -258,9 +267,7 @@ def test_verify_root_not_object(tmp_path: Path) -> None:
 # ---------------------------------------------------------------- against-archive
 
 
-def test_verify_against_archive_clean(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_against_archive_clean(tmp_path: Path, archive_root: Path) -> None:
     """Workspace válido + archive sin cambios → no drift."""
     paths = _bootstrap(tmp_path, archive_root)
     rc, out, _ = _run(
@@ -285,13 +292,12 @@ def test_verify_against_archive_detects_source_manifest_drift(
     paths = _bootstrap(tmp_path, archive_root)
     # Crear OTRO assessment → manifest cambia.
     archive = Archive.open(archive_root)
-    ev_hash = next(
-        (archive_root / "tables" / "evidence").glob("*.parquet")
-    ).stem
+    ev_hash = next((archive_root / "tables" / "evidence").glob("*.parquet")).stem
     archive.assess_authentication(
         evidence_id=ev_hash,
         method=AssessmentMethod.MANUAL_RESEARCH,
         clock=_clock(CANONICAL_TS),
+        actor="@test",
     )
     rc, out, _ = _run(
         [
@@ -306,8 +312,7 @@ def test_verify_against_archive_detects_source_manifest_drift(
     assert payload["self_hash_ok"] is True  # estructura intacta
     assert payload["archive_drift"]["ok"] is False
     assert any(
-        "source_manifest_hash drift" in issue
-        for issue in payload["archive_drift"]["issues"]
+        "source_manifest_hash drift" in issue for issue in payload["archive_drift"]["issues"]
     )
 
 
@@ -333,15 +338,10 @@ def test_verify_against_archive_detects_workspace_link_broken(
     assert any(
         "workspace_hash" in issue and "not\n" not in issue
         for issue in payload["archive_drift"]["issues"]
-    ) or any(
-        "workspace_hash" in issue
-        for issue in payload["archive_drift"]["issues"]
-    )
+    ) or any("workspace_hash" in issue for issue in payload["archive_drift"]["issues"])
 
 
-def test_verify_against_archive_invalid_path(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_verify_against_archive_invalid_path(tmp_path: Path, archive_root: Path) -> None:
     paths = _bootstrap(tmp_path, archive_root)
     rc, out, _ = _run(
         [
@@ -359,28 +359,20 @@ def test_verify_against_archive_invalid_path(
 # ---------------------------------------------------------------- backwards compat
 
 
-def test_existing_verify_subcommands_still_work(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_existing_verify_subcommands_still_work(tmp_path: Path, archive_root: Path) -> None:
     """Los verify específicos por tipo deben seguir funcionando."""
     paths = _bootstrap(tmp_path, archive_root)
     rc_w, _, _ = _run(["workspace", "verify", str(paths["workspace"])])
     rc_t, _, _ = _run(["timeline", "verify", str(paths["timeline"])])
     rc_s, _, _ = _run(["snapshot", "verify", str(paths["snapshot"])])
-    rc_j, _, _ = _run(
-        ["justification", "verify", str(paths["justification"])]
-    )
+    rc_j, _, _ = _run(["justification", "verify", str(paths["justification"])])
     assert rc_w == 0
     assert rc_t == 0
     assert rc_s == 0
     assert rc_j == 0
 
 
-def test_archive_verify_unaffected_by_new_command(
-    tmp_path: Path, archive_root: Path
-) -> None:
+def test_archive_verify_unaffected_by_new_command(tmp_path: Path, archive_root: Path) -> None:
     _bootstrap(tmp_path, archive_root)
-    rc, _, _ = _run(
-        ["archive", "verify", "--archive-root", str(archive_root)]
-    )
+    rc, _, _ = _run(["archive", "verify", "--archive-root", str(archive_root)])
     assert rc == 0

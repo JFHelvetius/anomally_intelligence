@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import dataclasses
+import datetime as dt
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
+from aip._version import SCHEMA_VERSION
+from aip.audit import log as audit_log
 from aip.core.hashing import JsonValue, jcs_canonicalize, sha256_hex
 from aip.errors import AIPError
 from aip.snapshot.models import (
@@ -108,8 +112,12 @@ def persist_snapshot(
     snapshot: InvestigationSnapshot,
     *,
     archive_root: Path,
+    actor: str,
+    clock: Callable[[], dt.datetime],
     extra_output: Path | None = None,
 ) -> Path:
+    """Persiste el snapshot y emite ``BUILD_SNAPSHOT`` al audit log
+    (ADR-0019 §enmienda E1)."""
     target = snapshot_path(archive_root, snapshot.snapshot_id)
     target.parent.mkdir(parents=True, exist_ok=True)
     payload = encode_snapshot(snapshot)
@@ -117,6 +125,16 @@ def persist_snapshot(
     if extra_output is not None:
         extra_output.parent.mkdir(parents=True, exist_ok=True)
         extra_output.write_text(payload, encoding="utf-8")
+    audit_log.record_derived_artifact(
+        archive_root,
+        action=audit_log.ActionKind.BUILD_SNAPSHOT,
+        artifact_kind="snapshot",
+        artifact_id=snapshot.snapshot_id,
+        self_hash=snapshot.snapshot_hash,
+        actor=actor,
+        clock=clock,
+        schema_version=SCHEMA_VERSION,
+    )
     return target
 
 

@@ -33,29 +33,21 @@ def test_assembly_method_name_is_pinned() -> None:
 
 
 def test_context_node_constructs_with_three_fields() -> None:
-    n = ContextNode(
-        distance_from_anchor=1, node_type="assessment", node_id="x"
-    )
+    n = ContextNode(distance_from_anchor=1, node_type="assessment", node_id="x")
     assert n.distance_from_anchor == 1
     assert n.node_type == "assessment"
     assert n.node_id == "x"
 
 
 def test_context_node_is_frozen() -> None:
-    n = ContextNode(
-        distance_from_anchor=1, node_type="assessment", node_id="x"
-    )
+    n = ContextNode(distance_from_anchor=1, node_type="assessment", node_id="x")
     with pytest.raises(FrozenInstanceError):
         n.distance_from_anchor = 2  # type: ignore[misc]
 
 
 def test_context_node_orders_by_distance_then_type_then_id() -> None:
-    closer = ContextNode(
-        distance_from_anchor=1, node_type="zzz", node_id="zzz"
-    )
-    further = ContextNode(
-        distance_from_anchor=2, node_type="aaa", node_id="aaa"
-    )
+    closer = ContextNode(distance_from_anchor=1, node_type="zzz", node_id="zzz")
+    further = ContextNode(distance_from_anchor=2, node_type="aaa", node_id="aaa")
     assert closer < further
 
 
@@ -160,7 +152,4 @@ def test_no_prohibited_tokens_in_context_module() -> None:
         for token in _FORBIDDEN_TOKENS:
             if token in text:
                 offenders.append((path.name, token))
-    assert offenders == [], (
-        f"Forbidden tokens found (ADR-0035 §componentes excluidos): "
-        f"{offenders}"
-    )
+    assert offenders == [], f"Forbidden tokens found (ADR-0035 §componentes excluidos): {offenders}"
