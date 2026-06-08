@@ -20,6 +20,10 @@ import json
 from pathlib import Path
 from typing import IO, Final
 
+from aip.attestation import (
+    decode_attestation,
+    verify_attestation,
+)
 from aip.context import verify_bundle_hash
 from aip.context.models import ContextBundle, ContextNode, GraphNeighborhood
 from aip.errors import AIPError
@@ -39,10 +43,45 @@ ARTIFACT_DETECTOR_PRIORITY: Final[tuple[str, ...]] = (
     "snapshot",
     "justification",
     "context_bundle",
+    "attestation",
 )
 
 
 # --------------------------------------------------------------------- detect
+
+
+_KIND_SIGNATURES: Final[tuple[tuple[str, frozenset[str]], ...]] = (
+    ("workspace", frozenset({"workspace_id", "workspace_hash", "references"})),
+    ("timeline", frozenset({"timeline_id", "timeline_hash", "ordered_events"})),
+    (
+        "snapshot",
+        frozenset({"snapshot_id", "snapshot_hash", "referenced_artifacts"}),
+    ),
+    (
+        "justification",
+        frozenset(
+            {"justification_id", "justification_hash", "conclusion_anchor_type"}
+        ),
+    ),
+    (
+        "context_bundle",
+        frozenset(
+            {"context_bundle_hash", "assembly_method_name", "graph_neighborhood"}
+        ),
+    ),
+    (
+        "attestation",
+        frozenset(
+            {
+                "signature",
+                "signature_algorithm",
+                "attestation_hash",
+                "public_key_fingerprint",
+            }
+        ),
+    ),
+)
+"""Firma estructural por kind para el dispatcher universal."""
 
 
 def _detect_artifact_kind(data: dict[str, object]) -> str | None:
@@ -51,41 +90,10 @@ def _detect_artifact_kind(data: dict[str, object]) -> str | None:
     Cada tipo tiene una firma de campos únicos. Devuelve ``None`` si no
     coincide con ninguno conocido.
     """
-    # Workspace: workspace_id + workspace_hash + references
-    if (
-        "workspace_id" in data
-        and "workspace_hash" in data
-        and "references" in data
-    ):
-        return "workspace"
-    # Timeline
-    if (
-        "timeline_id" in data
-        and "timeline_hash" in data
-        and "ordered_events" in data
-    ):
-        return "timeline"
-    # Snapshot
-    if (
-        "snapshot_id" in data
-        and "snapshot_hash" in data
-        and "referenced_artifacts" in data
-    ):
-        return "snapshot"
-    # Justification
-    if (
-        "justification_id" in data
-        and "justification_hash" in data
-        and "conclusion_anchor_type" in data
-    ):
-        return "justification"
-    # Context bundle
-    if (
-        "context_bundle_hash" in data
-        and "assembly_method_name" in data
-        and "graph_neighborhood" in data
-    ):
-        return "context_bundle"
+    keys = data.keys()
+    for kind, required in _KIND_SIGNATURES:
+        if required <= keys:
+            return kind
     return None
 
 
@@ -189,6 +197,17 @@ def _verify_self(
             verify_bundle_hash(bundle),
             f"{bundle.anchor_node_kind}:{bundle.anchor_node_id}",
             bundle.context_bundle_hash,
+        )
+    if kind == "attestation":
+        att = decode_attestation(raw_text)
+        # Structural-only: la verificación criptográfica requiere la
+        # clave pública del firmante, que no se pasa por este comando
+        # universal. Para crypto-verify usar ``aip attestation verify
+        # <file> --public-key key.pub``.
+        return (
+            verify_attestation(att),
+            f"{att.signer_id}:{att.artifact_kind}:{att.artifact_hash[:8]}",
+            att.attestation_hash,
         )
     raise AIPError(f"unsupported artifact kind: {kind}")
 

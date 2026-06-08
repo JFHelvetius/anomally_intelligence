@@ -19,6 +19,7 @@ from aip.cli.assessment_commands import (
     add_assessment_subparser,
     add_list_assessments_subparser,
 )
+from aip.cli.attestation_commands import add_attestation_subparser
 from aip.cli.context_commands import add_context_subparser
 from aip.cli.diff_commands import add_diff_subparser
 from aip.cli.evidence_commands import add_evidence_subparser
@@ -130,6 +131,10 @@ def build_parser() -> argparse.ArgumentParser:
     # auto-detecta el tipo y ejecuta verificación offline. Distinto de
     # ``archive verify`` (audita el archive) — éste audita artefactos.
     add_verify_subparser(subparsers)
+    # ``attestation`` es subgrupo (ADR-0041 §CLI): capa de atestación
+    # criptográfica ed25519. Vincula artefactos a una clave operada por
+    # el firmante; verificación exógena offline.
+    add_attestation_subparser(subparsers)
 
     return parser
 

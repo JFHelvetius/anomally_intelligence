@@ -595,3 +595,31 @@ src/aip/
 **El módulo `aip.diff` queda explícitamente fuera de S15:** el integrity checker no compara artefactos entre sí; sólo audita cada uno contra el estado actual del archive.
 
 **E14 no muta bytes hasheados.** El comportamiento default de `archive verify` es idéntico. Los 16 pinned hashes siguen verdes. El comando `--derived` añade información sin alterar la existente.
+
+### Enmienda al pie — 2026-06-07 (E15, post-ADR-0041)
+
+ADR-0041 (Operator Attestation Engine V1) introdujo un **duodécimo subpaquete** bajo `src/aip/`:
+
+```
+src/aip/
+├── ...
+├── workspace/
+├── timeline/
+├── snapshot/
+├── diff/
+├── justification/
+├── integrity/
+└── attestation/   ← nuevo (ADR-0041): firma/verificación ed25519 ofrecida sobre artefactos
+```
+
+**S16 (vigente desde 2026-06-07):** `attestation/` puede depender de `core/`, `storage/` (sólo lectura del manifest para extraer `manifest_hash`) y `errors`. **No** depende de `analysis/`, `graph/`, `impact/`, `context/`, `workspace/`, `timeline/`, `snapshot/`, `diff/`, `justification/`, `integrity/`. La única dependencia externa nueva permitida en este subpaquete es la librería `cryptography` (ed25519). Tests AST inspect verifican estas restricciones.
+
+**Por qué `attestation/` es subpaquete propio y no parte de `integrity/`:** `integrity/` es **endógena** — audita el archive contra sí mismo. `attestation/` es **exógena** — convierte la verificación en algo demostrable contra una clave externa, sin acceso al archive. Mezclar ambos borraría una de las distinciones centrales del proyecto (modelo de confianza endógeno vs. exógeno). Además, `integrity/` no necesita primitivas criptográficas asimétricas; introducir `cryptography` allí ampliaría sin necesidad la superficie de dependencias de la capa que más artefactos lee.
+
+**Persistencia:** `<archive>/attestations/<id>.json` — directorio periférico, **no entra** en `V1_TABLES` ni en `compute_manifest`. `archive_manifest_hash` permanece invariante ante operaciones de attestation. Esto preserva backward compat absoluta: un archive sin atestaciones produce exactamente el mismo `archive_manifest_hash` que producía antes de ADR-0041.
+
+**Integración con `aip verify` universal sin modificar el modelo:** el dispatcher `verify_commands.py` (capa CLI) detecta el sexto kind (`attestation`) por inspección de claves estructurales (`signature` + `signature_algorithm` + `attestation_hash` + `public_key_fingerprint`) y delega a `aip.attestation.verify_attestation`. La verificación universal es **estructural-only** por diseño (no requiere clave pública); la verificación criptográfica completa exige `aip attestation verify <file> --public-key key.pub`.
+
+**Nueva dependencia de runtime:** `cryptography>=42,<46`. La justificación completa vive en ADR-0029 §enmienda E1. Resumen: rolling-our-own ed25519 es anti-patrón de seguridad; `cryptography` es el estándar de facto Python audit-friendly; rango cubre 12+ meses de estabilidad; `uv.lock` pinea bit a bit.
+
+**E15 no muta bytes hasheados.** Los 16 pinned hashes siguen verdes. El sub-comando `aip verify` extendido sólo añade un kind detectable; los 5 kinds previos producen output idéntico. `archive_manifest_hash` invariante porque `<archive>/attestations/` es periférico.

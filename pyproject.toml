@@ -27,6 +27,12 @@ dependencies = [
     # se usa para timestamps UTC con tz explícita (ADR-0012 diferido pero los
     # timestamps del audit log y de Evidence.ingested_at son tz-aware desde V1).
     "tzdata; sys_platform == 'win32'",
+    # Atestación criptográfica (ADR-0041). Provee ed25519 sign/verify a
+    # través de wheels pre-construidos en Linux/macOS/Windows. Audit-friendly,
+    # mantenida por la PSF y la Open Tech Fund. Rolling-our-own ed25519
+    # es un anti-patrón de seguridad — la dep es load-bearing para la
+    # garantía de atestación criptográfica.
+    "cryptography >=42,<46",
 ]
 
 [project.optional-dependencies]

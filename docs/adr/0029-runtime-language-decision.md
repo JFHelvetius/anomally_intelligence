@@ -264,4 +264,35 @@ Este ADR se revisa si:
 
 ## Historial de enmiendas
 
-*Sin enmiendas a fecha de aceptación.*
+### E1 — 2026-06-07 — `cryptography>=42,<46` (ADR-0041)
+
+ADR-0041 (Operator Attestation Engine V1) introduce una nueva dependencia
+de runtime: `cryptography>=42,<46`. Es la **quinta** dependencia de
+runtime del proyecto y la única que aporta primitivas criptográficas
+(ed25519 sign/verify).
+
+**Justificación:**
+
+- **Load-bearing para la misión:** la atestación criptográfica responde
+  directamente a la pregunta del proyecto ("¿qué evidencia existe y cómo
+  demostramos que no fue alterada?"). Sin firma ed25519 no hay
+  verificación exógena posible.
+- **Rolling-our-own ed25519 es anti-patrón:** implementar primitivas
+  asimétricas en código propio es uno de los modos clásicos de falla en
+  software de seguridad. La regla operativa es delegar en una librería
+  auditada.
+- **`cryptography` es el estándar de facto en Python:** mantenida por la
+  PSF y la Open Tech Fund, audit-friendly, wheels pre-construidos en
+  Linux/macOS/Windows para Python 3.11/3.12, ~5 MB de install.
+- **Rango `>=42,<46` cubre cuatro major versions** — suficiente para
+  12+ meses de estabilidad. `uv.lock` pinea bit a bit.
+
+**Trigger de revisión adicional:**
+
+- Vulnerabilidad CVE significativa en `cryptography` que requiera salto
+  de major fuera del rango pineado.
+- Aparición de alternativa auditada con superficie menor (p. ej. binding
+  directo de libsodium con manifest más estable).
+
+Sin esta enmienda, el ADR-0041 no podría implementarse de forma compatible
+con la política de dependencias de este ADR.
