@@ -119,6 +119,10 @@ _SELF_HASH_FIELD_BY_KIND: dict[str, str] = {
     "snapshot": "snapshot_hash",
     "justification": "justification_hash",
     "context_bundle": "context_bundle_hash",
+    # ADR-0042: ArchiveSnapshot tiene snapshot_hash como self-hash.
+    # Aunque colisiona en nombre con InvestigationSnapshot, son
+    # distinguidos por artifact_kind ("archive_snapshot" vs "snapshot").
+    "archive_snapshot": "snapshot_hash",
 }
 
 

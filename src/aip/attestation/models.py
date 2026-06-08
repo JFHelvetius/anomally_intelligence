@@ -20,6 +20,10 @@ ALLOWED_ARTIFACT_KINDS: Final[frozenset[str]] = frozenset(
         "justification",
         "context_bundle",
         "manifest",
+        # ADR-0042: ArchiveSnapshot (manifest_hash + audit_log_head_hash
+        # combinados en un único valor JCS-canónico). Permite atestar el
+        # archive como un todo, no sólo artefactos individuales.
+        "archive_snapshot",
     }
 )
 """Taxonomía cerrada de artefactos firmables en V1."""

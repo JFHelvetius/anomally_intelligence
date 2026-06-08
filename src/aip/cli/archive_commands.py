@@ -1,12 +1,18 @@
-"""Subcomando ``aip archive verify`` (Pre-F1.D §3 + post-ADR-0040 hardening)."""
+"""Subcomandos ``aip archive`` (verify + snapshot)."""
 
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
+from pathlib import Path
 from typing import IO
 
 from aip.archive import Archive, VerificationReport
+from aip.audit import (
+    compute_archive_snapshot,
+    encode_archive_snapshot,
+)
 from aip.errors import UsageError
 from aip.integrity import DerivedIntegrityReport, verify_derived_integrity
 
@@ -171,6 +177,56 @@ def _print_verify_json(
 # --------------------------------------------------------------------- argparse
 
 
+def snapshot_command(args: argparse.Namespace, *, stdout: IO[str]) -> int:
+    """Implementa ``aip archive snapshot`` (ADR-0042).
+
+    Read-only: lee el manifest + recorre el audit log, computa un
+    ``ArchiveSnapshot`` JCS-canónico que combina ``manifest_hash`` y
+    ``audit_log_head_hash`` en un único valor. Emite el JSON canónico
+    a stdout (y opcionalmente a ``--output``). Cero escritura en el
+    archive.
+
+    ``generated_at`` se inyecta por el operador (igual contrato que
+    ADR-0041 §signed_at — no TSA en V1) o se usa el reloj actual.
+    """
+    archive = Archive.open(args.archive_root)
+    if args.generated_at is not None:
+        generated_at = _parse_iso_utc(args.generated_at)
+    else:
+        generated_at = dt.datetime.now(dt.UTC)
+    snap = compute_archive_snapshot(
+        archive.root, generated_at=generated_at
+    )
+    payload = encode_archive_snapshot(snap)
+    if args.output is not None:
+        out_path: Path = args.output
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(payload, encoding="utf-8")
+    stdout.write(payload)
+    return 0
+
+
+def _parse_iso_utc(value: str) -> dt.datetime:
+    """Parsea ISO-8601 UTC con sufijo ``Z``."""
+    try:
+        if value.endswith("Z"):
+            parsed = dt.datetime.fromisoformat(value[:-1]).replace(
+                tzinfo=dt.UTC
+            )
+        else:
+            parsed = dt.datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise UsageError(
+            f"invalid --generated-at {value!r}: {exc}. "
+            "Expected ISO-8601 UTC, e.g. 2026-06-07T12:00:00Z."
+        ) from exc
+    if parsed.tzinfo is None:
+        raise UsageError(
+            f"--generated-at {value!r} must be timezone-aware (UTC)."
+        )
+    return parsed
+
+
 def add_archive_subparser(
     subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
     *,
@@ -179,7 +235,7 @@ def add_archive_subparser(
     parents = parents or []
     archive = subparsers.add_parser(
         "archive",
-        help="Operations on the archive (verify).",
+        help="Operations on the archive (verify, snapshot).",
     )
     sub = archive.add_subparsers(dest="archive_action", required=True)
 
@@ -209,3 +265,32 @@ def add_archive_subparser(
         ),
     )
     verify.set_defaults(_cmd=verify_command)
+
+    snapshot = sub.add_parser(
+        "snapshot",
+        help=(
+            "Emit an ArchiveSnapshot (ADR-0042) — JCS-canonical "
+            "combination of manifest_hash and audit_log_head_hash. "
+            "Read-only. Sign via `aip attestation sign --artifact-kind "
+            "archive_snapshot`."
+        ),
+        parents=parents,
+    )
+    snapshot.add_argument(
+        "--generated-at",
+        default=None,
+        help=(
+            "ISO-8601 UTC timestamp (e.g. 2026-06-07T12:00:00Z). "
+            "Default: current system clock. Operator-supplied; no TSA in V1."
+        ),
+    )
+    snapshot.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help=(
+            "Optional output path for the snapshot JSON. The same payload "
+            "is always also emitted to stdout."
+        ),
+    )
+    snapshot.set_defaults(_cmd=snapshot_command)

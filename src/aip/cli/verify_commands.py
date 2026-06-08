@@ -24,6 +24,10 @@ from aip.attestation import (
     decode_attestation,
     verify_attestation,
 )
+from aip.audit import (
+    decode_archive_snapshot,
+    verify_archive_snapshot_hash,
+)
 from aip.context import verify_bundle_hash
 from aip.context.models import ContextBundle, ContextNode, GraphNeighborhood
 from aip.errors import AIPError
@@ -44,6 +48,7 @@ ARTIFACT_DETECTOR_PRIORITY: Final[tuple[str, ...]] = (
     "justification",
     "context_bundle",
     "attestation",
+    "archive_snapshot",
 )
 
 
@@ -77,6 +82,18 @@ _KIND_SIGNATURES: Final[tuple[tuple[str, frozenset[str]], ...]] = (
                 "signature_algorithm",
                 "attestation_hash",
                 "public_key_fingerprint",
+            }
+        ),
+    ),
+    # ADR-0042: ArchiveSnapshot.
+    (
+        "archive_snapshot",
+        frozenset(
+            {
+                "manifest_hash",
+                "audit_log_head_hash",
+                "audit_log_total_entries",
+                "snapshot_hash",
             }
         ),
     ),
@@ -158,7 +175,7 @@ def verify_command(
     return 0 if overall_ok else 1
 
 
-def _verify_self(
+def _verify_self(  # noqa: PLR0911 — typecase dispatch sobre 7 kinds cerrados
     *, kind: str, raw_text: str, data: dict[str, object]
 ) -> tuple[bool, str, str]:
     """Recomputa el self-hash del artefacto y compara con el declarado.
@@ -208,6 +225,17 @@ def _verify_self(
             verify_attestation(att),
             f"{att.signer_id}:{att.artifact_kind}:{att.artifact_hash[:8]}",
             att.attestation_hash,
+        )
+    if kind == "archive_snapshot":
+        snap = decode_archive_snapshot(raw_text)
+        # Structural-only: recomputa snapshot_hash y compara. La
+        # verificación archive-wide (snapshot vs estado actual del
+        # archive) requiere acceso al archive y `compute_archive_snapshot`
+        # — fuera del alcance del verificador universal.
+        return (
+            verify_archive_snapshot_hash(snap),
+            f"{snap.generated_at}:{snap.manifest_hash[:8]}:{snap.audit_log_head_hash[:8]}",
+            snap.snapshot_hash,
         )
     raise AIPError(f"unsupported artifact kind: {kind}")
 

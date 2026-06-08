@@ -36,6 +36,11 @@ def _valid(**overrides: object) -> OperatorAttestation:
 
 
 def test_constants_are_pinned() -> None:
+    """Pinned constants for ADR-0041 + ADR-0042.
+
+    7 valores: los 6 originales de ADR-0041 + ``archive_snapshot`` añadido
+    por ADR-0042 (cierra el ciclo de atestación archive-wide).
+    """
     assert ATTESTATION_SCHEMA_VERSION == "1"
     assert SIGNATURE_ALGORITHM == "ed25519-v1"
     assert (
@@ -47,6 +52,7 @@ def test_constants_are_pinned() -> None:
                 "justification",
                 "context_bundle",
                 "manifest",
+                "archive_snapshot",
             }
         )
         == ALLOWED_ARTIFACT_KINDS

@@ -573,6 +573,8 @@ def test_signer_uses_cryptography_only_for_crypto() -> None:
 
 
 def test_allowed_artifact_kinds_match_adr() -> None:
+    """6 valores originales de ADR-0041 + ``archive_snapshot`` añadido por
+    ADR-0042 (cierra ciclo de atestación archive-wide)."""
     expected = {
         "workspace",
         "timeline",
@@ -580,5 +582,6 @@ def test_allowed_artifact_kinds_match_adr() -> None:
         "justification",
         "context_bundle",
         "manifest",
+        "archive_snapshot",
     }
     assert set(ALLOWED_ARTIFACT_KINDS) == expected
