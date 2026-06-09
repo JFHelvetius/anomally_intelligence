@@ -412,3 +412,44 @@ def test_universal_verify_autodetects_attestation(tmp_path: Path) -> None:
     payload = json.loads(out)
     assert payload["artifact_kind"] == "attestation"
     assert payload["ok"] is True
+
+
+def test_sign_autodetects_archive_snapshot(tmp_path: Path) -> None:
+    """Regresión v0.2.1: ``aip attestation sign`` debe auto-detectar el
+    kind ``archive_snapshot`` (ADR-0042) sin necesidad de ``--artifact-kind``
+    explícito. En v0.2.0 el detector de attestation_commands se olvidó de
+    incluir el nuevo kind y obligaba al usuario a pasarlo a mano.
+    """
+    priv, _ = _keygen(tmp_path)
+    # Mínimo archive_snapshot estructuralmente válido para detección.
+    snap_path = tmp_path / "snap.json"
+    snap_path.write_text(
+        json.dumps(
+            {
+                "manifest_hash": "a" * 64,
+                "audit_log_head_hash": "b" * 64,
+                "audit_log_total_entries": 2,
+                "generated_at": "2026-06-08T20:00:00Z",
+                "snapshot_hash": "c" * 64,
+                "schema_version": "1",
+            }
+        ),
+        encoding="utf-8",
+    )
+    rc, out, err = _run(
+        [
+            "attestation",
+            "sign",
+            str(snap_path),
+            "--private-key",
+            str(priv),
+            "--signer-id",
+            "@op",
+            "--signed-at",
+            "2026-06-08T20:00:00Z",
+            "--output",
+            str(tmp_path / "sig.json"),
+        ]
+    )
+    assert rc == 0, err
+    assert json.loads(out)["artifact_kind"] == "archive_snapshot"

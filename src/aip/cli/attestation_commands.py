@@ -58,9 +58,22 @@ _KIND_SIGNATURES: tuple[tuple[str, frozenset[str]], ...] = (
         "manifest",
         frozenset({"tables", "blobs_root", "schema_version", "generated_at"}),
     ),
+    # ADR-0042 — ArchiveSnapshot. Detección por las 4 claves load-bearing
+    # que no aparecen en ningún otro kind.
+    (
+        "archive_snapshot",
+        frozenset(
+            {
+                "manifest_hash",
+                "audit_log_head_hash",
+                "audit_log_total_entries",
+                "snapshot_hash",
+            }
+        ),
+    ),
 )
 """Firma estructural (subconjunto de claves obligatorias) por
-``artifact_kind``. Cubre los seis kinds firmables de ADR-0041."""
+``artifact_kind``. Cubre los siete kinds firmables (ADR-0041 + ADR-0042)."""
 
 
 def _detect_artifact_kind_from_json(

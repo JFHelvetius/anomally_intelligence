@@ -1,6 +1,6 @@
 [project]
 name = "aip"
-version = "0.2.0"
+version = "0.2.1"
 description = "Anomaly Intelligence Platform — evidence-first archive with bit-by-bit traceability."
 readme = "README.md"
 license = { file = "LICENSE" }
