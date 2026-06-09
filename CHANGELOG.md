@@ -5,6 +5,35 @@ El proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.1] — 2026-06-08
+
+Patch UX descubierto durante el primer uso real del flujo de atestación
+sobre `archive_snapshot` (ADR-0042).
+
+### Fixed
+
+- **`aip attestation sign` auto-detect para `archive_snapshot`**. En
+  v0.2.0 el kind `archive_snapshot` se añadió a
+  `ALLOWED_ARTIFACT_KINDS` y al verificador universal (`aip verify`),
+  pero el detector local de `attestation_commands.py` se olvidó de
+  incluirlo. Síntoma: `aip attestation sign snap.json ...` fallaba con
+  `could not auto-detect artifact_kind` aunque el archivo era un
+  ArchiveSnapshot válido. Workaround en v0.2.0: `--artifact-kind
+  archive_snapshot` explícito.
+
+### Added
+
+- Regression test `test_sign_autodetects_archive_snapshot` en
+  `tests/unit/cli/test_attestation_commands.py`.
+
+### Metrics
+
+- 911 tests (era 910).
+- 17/17 pins reproducibility intactos.
+- 2/2 pins audit-chain base intactos.
+
+---
+
 ## [0.2.0] — 2026-06-08
 
 Cierre arquitectónico de V1. Capa de atestación criptográfica ed25519,
@@ -199,5 +228,6 @@ Ver release notes históricas del tag `v0.1.0`.
 
 ---
 
+[0.2.1]: https://github.com/JFHelvetius/anomally_intelligence/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/JFHelvetius/anomally_intelligence/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/JFHelvetius/anomally_intelligence/releases/tag/v0.1.0
