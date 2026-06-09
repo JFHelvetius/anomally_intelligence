@@ -2,7 +2,7 @@
 
 > Plataforma open source para investigar, organizar y cuantificar la incertidumbre que rodea a los reportes de fenómenos anómalos aéreos, orbitales, marítimos, astronómicos y observacionales. Sin posturas. Sin sensacionalismo. Sin conclusiones predeterminadas.
 
-**Estado del proyecto:** **Fase 1 cerrada · release `v0.1.0` (2026-06-06) · motor derivado de autenticidad incorporado (ADR-0032).** V1 ejecutable con `aip evidence ingest|show`, `aip archive verify` y `aip assess-authentication`. Ver [`PROJECT_STATUS.md`](PROJECT_STATUS.md) y [`docs/reviews/phase-1-review.md`](docs/reviews/phase-1-review.md).
+**Estado del proyecto:** **V1 arquitectónicamente cerrado · release `v0.2.0` (2026-06-08).** 42 ADRs aceptados + 3 enmiendas estructurales. Capa de atestación criptográfica ed25519 (ADR-0041), snapshot archive-wide atestable (ADR-0042), cadena de audit extendida a 6 dominios derivados (ADR-0019 §E1) y reconciliación disco↔log (ADR-0030 §E16). 910 tests · 17 pins canónicos de reproducibility · mypy --strict limpio. Ver [`CHANGELOG.md`](CHANGELOG.md) para el detalle completo.
 
 ## Sobre este repositorio
 
@@ -48,25 +48,49 @@ Instalación canónica conforme a [ADR-0029](docs/adr/0029-runtime-language-deci
 uv sync --frozen --all-extras
 ```
 
-`uv sync --frozen` instala exactamente las versiones declaradas en `uv.lock` (sin re-resolver). Tras la instalación, los comandos del alcance V1 + ADR-0032 son:
+`uv sync --frozen` instala exactamente las versiones declaradas en `uv.lock` (sin re-resolver). Tras la instalación, los comandos disponibles cubren cuatro capas:
 
 ```sh
-# Núcleo V1 (ADR-0023)
-aip evidence ingest <pdf> \
-    --source-id <id> --source-name "<name>" \
-    --source-kind <kind> --source-authority <level> \
-    --ingested-by <actor> [--json]
+# Núcleo V1 (ADR-0023): ingesta + verificación base
+aip evidence ingest <pdf> --source-id ... --ingested-by @op
+aip evidence show <hash>
+aip archive verify [--quick|--full] [--derived] [--json]
 
-aip evidence show <hash|sha256:hash|aip:evidence/sha256:hash> [--json]
+# Capa derivada — motores (ADR-0032 a ADR-0040, opt-in, removible)
+aip assess-authentication --archive PATH --evidence-id <hash> --actor @op
+aip list-assessments --archive PATH [--evidence-id <hash>]
+aip graph build|show|neighbors
+aip impact analyze|show
+aip context assemble|show|verify
+aip workspace create|show|verify
+aip timeline build|show|verify
+aip snapshot create|show|verify
+aip diff snapshots|justifications
+aip justification build|show|verify
 
-aip archive verify [--quick|--full] [--json]
+# Verificación universal (post-V1 hardening)
+aip verify <artifact.json>          # auto-detecta 7 kinds + verifica self-hash
 
-# Capa derivada (ADR-0032)
-aip assess-authentication --archive <path> --evidence-id <hash> \
-    [--method manual_research|provenance_review|chain_of_custody_review]
+# Atestación criptográfica (ADR-0041 — ed25519)
+aip attestation keygen --output-private key.pem --output-public key.pub
+aip attestation sign <artifact.json> --signer-id @op --signed-at TS \
+    --private-key key.pem [--archive PATH] [--attestation-id ID]
+aip attestation verify <sig.json> [--public-key key.pub]
+
+# Snapshot archive-wide (ADR-0042 — read-only, firmable)
+aip archive snapshot [--generated-at TS] [--output FILE]
 ```
 
-La demo de cierre F1 — pipeline reproducible sobre el Twining Memo (1947) — vive en [`tests/integration/test_demo_pipeline.py`](tests/integration/test_demo_pipeline.py). El pin de reproducibilidad del motor de autenticidad sobre la misma demo vive en [`tests/reproducibility/test_manifest_hash.py`](tests/reproducibility/test_manifest_hash.py).
+Pipeline canónico de compromiso público con archive-state:
+
+```sh
+aip archive snapshot --archive-root PATH > snap.json
+aip attestation sign snap.json --signer-id @op --signed-at TS \
+    --private-key priv.pem --output sig.json
+aip attestation verify sig.json --public-key pub.pem    # rc=0 si íntegro
+```
+
+La demo reproducible vive en [`tests/integration/test_demo_pipeline.py`](tests/integration/test_demo_pipeline.py). Los 17 pins canónicos (PDF, manifests, audit chain, JCS, context bundle, justification, archive snapshot) viven en [`tests/reproducibility/`](tests/reproducibility/).
 
 ## Lo que el proyecto distingue rigurosamente
 

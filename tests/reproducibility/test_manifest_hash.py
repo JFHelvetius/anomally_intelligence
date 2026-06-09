@@ -22,7 +22,6 @@ import pytest
 
 from aip import Archive
 from aip._version import SCHEMA_VERSION
-from aip._version import __version__ as SOFTWARE_VERSION
 from aip.analysis.authentication import AssessmentMethod
 from aip.audit import compute_archive_snapshot, verify_archive_snapshot_hash
 from aip.context import assemble_context, verify_bundle_hash
@@ -32,7 +31,7 @@ from aip.core.source import AuthorityLevel, SourceKind
 from aip.graph.models import GraphNode, NodeKind
 from aip.justification import build_justification, verify_justification_hash
 from aip.storage import layout
-from aip.storage.manifest import compute_manifest
+from aip.storage.manifest import compute_manifest, write_manifest_atomic
 from aip.storage.tables import get_schemas
 
 pytestmark = pytest.mark.reproducibility
@@ -41,6 +40,27 @@ pytestmark = pytest.mark.reproducibility
 CANONICAL_GENERATED_AT = dt.datetime(2026, 6, 4, 0, 0, 0, tzinfo=dt.UTC)
 CANONICAL_SOFTWARE_VERSION = "0.0.1"
 CANONICAL_SCHEMA_VERSION = "0.1.0"
+
+
+def _rewrite_manifest_canonical(archive_root: Path) -> None:
+    """Sobrescribe ``manifest.json`` con CANONICAL_SOFTWARE_VERSION.
+
+    Las APIs ``Archive.ingest_evidence`` y ``Archive.assess_authentication``
+    persisten el manifest con la SOFTWARE_VERSION en vivo del paquete. Los
+    pins canónicos están hechos con ``software_version="0.0.1"``. Sin
+    esta normalización, cada bump de versión invalidaría todos los pins —
+    defeating su propósito. La normalización mantiene los pins
+    version-agnósticos: protegen contra cambios accidentales en el modelo
+    o canonicalización, no contra bumps de versión legítimos.
+    """
+    canonical = compute_manifest(
+        archive_root,
+        schemas=get_schemas(),
+        generated_at=CANONICAL_GENERATED_AT,
+        software_version=CANONICAL_SOFTWARE_VERSION,
+        schema_version=SCHEMA_VERSION,
+    )
+    write_manifest_atomic(archive_root / "manifest.json", canonical)
 
 
 # ----------------------------------------------------------------- canonical hashes
@@ -194,7 +214,7 @@ def test_archive_with_demo_pdf_manifest_hash_is_canonical_pinned(
         archive_root,
         schemas=get_schemas(),
         generated_at=CANONICAL_GENERATED_AT,
-        software_version=SOFTWARE_VERSION,
+        software_version=CANONICAL_SOFTWARE_VERSION,
         schema_version=SCHEMA_VERSION,
     )
     assert manifest.manifest_hash() == EXPECTED_DEMO_MANIFEST_HASH
@@ -283,7 +303,7 @@ def test_archive_with_demo_pdf_and_assessment_manifest_hash_is_canonical_pinned(
         archive_root,
         schemas=get_schemas(),
         generated_at=CANONICAL_GENERATED_AT,
-        software_version=SOFTWARE_VERSION,
+        software_version=CANONICAL_SOFTWARE_VERSION,
         schema_version=SCHEMA_VERSION,
     )
     assert manifest.manifest_hash() == EXPECTED_DEMO_ASSESSMENT_MANIFEST_HASH
@@ -357,6 +377,7 @@ def test_demo_context_bundle_hash_is_canonical_pinned(tmp_path: Path) -> None:
         clock=lambda: CANONICAL_GENERATED_AT,
         actor="@test",
     )
+    _rewrite_manifest_canonical(archive_root)
 
     bundle = assemble_context(
         archive_root,
@@ -447,6 +468,7 @@ def test_demo_justification_hash_is_canonical_pinned(tmp_path: Path) -> None:
         clock=lambda: CANONICAL_GENERATED_AT,
         actor="@test",
     )
+    _rewrite_manifest_canonical(archive_root)
     j = build_justification(
         archive_root=archive_root,
         conclusion_anchor_type="assessment",
@@ -525,6 +547,7 @@ def test_demo_archive_snapshot_hash_is_canonical_pinned(tmp_path: Path) -> None:
         clock=lambda: CANONICAL_GENERATED_AT,
     )
     assert evidence.hash == EXPECTED_DEMO_PDF_SHA256
+    _rewrite_manifest_canonical(archive_root)
 
     snap = compute_archive_snapshot(
         archive_root, generated_at=CANONICAL_GENERATED_AT

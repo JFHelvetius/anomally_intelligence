@@ -1,6 +1,6 @@
 """Versión del paquete `aip` y del esquema de datos (ADR-0016, ADR-0030)."""
 
-__version__ = "0.0.1"
+__version__ = "0.2.0"
 """SemVer del paquete. Cambia por release."""
 
 SCHEMA_VERSION = "0.1.0"
