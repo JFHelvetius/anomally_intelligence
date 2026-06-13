@@ -17,6 +17,11 @@ from aip.justification import (
     persist_justification,
     verify_justification_hash,
 )
+from aip.justification.logic import (
+    decode_proof,
+    verify_proof_hash,
+    verify_structural,
+)
 
 
 def justification_build_command(
@@ -71,6 +76,89 @@ def justification_verify_command(
         + "\n"
     )
     return 0 if ok else 1
+
+
+def justification_verify_logic_command(
+    args: argparse.Namespace, *, stdout: IO[str]
+) -> int:
+    """Verifica estructura de un :class:`InferenceProof` (Phase epistémica).
+
+    Devuelve rc=0 si la DAG es estructuralmente válida (sin importar si las
+    premisas son ciertas — eso es del analista). rc=1 si hay errores
+    estructurales (ciclos, refs rotas, rules desconocidas, etc.).
+    """
+    proof_path_arg: Path = args.proof_file
+    if not proof_path_arg.is_file():
+        raise AIPError(f"inference proof file not found: {proof_path_arg}")
+    proof = decode_proof(proof_path_arg.read_text(encoding="utf-8"))
+
+    # First: proof_hash structural self-check. If it fails, the proof is
+    # tampered with — reject before doing DAG analysis.
+    hash_ok = verify_proof_hash(proof)
+    if not hash_ok:
+        payload = {
+            "ok": False,
+            "action": "justification_verify_logic",
+            "proof_file": str(proof_path_arg),
+            "proof_id": proof.proof_id,
+            "errors": ["proof_hash mismatch — the proof has been tampered with."],
+        }
+        stdout.write(
+            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
+            + "\n"
+        )
+        return 1
+
+    # Optional: bind to a specific target justification if provided.
+    target_match: bool | None = None
+    if args.target_justification is not None:
+        if not args.target_justification.is_file():
+            raise AIPError(
+                f"target justification file not found: {args.target_justification}"
+            )
+        target_j = decode_justification(
+            args.target_justification.read_text(encoding="utf-8")
+        )
+        target_match = (
+            target_j.justification_hash == proof.target_justification_hash
+            and target_j.justification_id == proof.target_justification_id
+        )
+
+    result = verify_structural(proof)
+
+    payload: dict[str, object] = {
+        "ok": result.ok and (target_match is not False),
+        "action": "justification_verify_logic",
+        "proof_file": str(proof_path_arg),
+        "proof_id": proof.proof_id,
+        "proof_hash": proof.proof_hash,
+        "target_justification_id": proof.target_justification_id,
+        "target_justification_hash": proof.target_justification_hash,
+        "conclusion_claim_id": proof.conclusion_claim_id,
+        "structure": result.structure,
+        "weak_inferences": [
+            {
+                "inference_id": w.inference_id,
+                "rule": w.rule,
+                "output_claim_id": w.output_claim_id,
+            }
+            for w in result.weak_inferences
+        ],
+        "errors": list(result.errors),
+    }
+    if target_match is not None:
+        payload["target_match"] = target_match
+        if not target_match:
+            payload["errors"] = [
+                *payload["errors"],
+                "target_justification provided does not match the proof's "
+                "target_justification_id and/or target_justification_hash.",
+            ]
+
+    stdout.write(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    )
+    return 0 if payload["ok"] else 1
 
 
 def add_justification_subparser(
@@ -132,3 +220,25 @@ def add_justification_subparser(
     )
     verify.add_argument("justification_file", type=Path)
     verify.set_defaults(_cmd=justification_verify_command)
+
+    verify_logic = sub.add_parser(
+        "verify-logic",
+        help=(
+            "Structural verification of an InferenceProof (machine-checkable "
+            "reasoning layer). Checks: rule vocabulary, arity, refs exist, "
+            "DAG acyclic, conclusion reachable from premises. Flags weak "
+            "(non-deductive) inferences. Does NOT verify truth of premises."
+        ),
+    )
+    verify_logic.add_argument("proof_file", type=Path)
+    verify_logic.add_argument(
+        "--target-justification",
+        type=Path,
+        default=None,
+        help=(
+            "Optional path to the InvestigationJustification this proof "
+            "targets. When provided, verifies that the proof's "
+            "target_justification_id and target_justification_hash match."
+        ),
+    )
+    verify_logic.set_defaults(_cmd=justification_verify_logic_command)
