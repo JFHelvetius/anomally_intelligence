@@ -42,6 +42,12 @@ from aip.analysis.authentication import (
 )
 from aip.audit import log as audit_log
 from aip.audit import verify as audit_verify
+from aip.capture import (
+    CaptureCertificate,
+    compute_certificate_hash,
+    decode_certificate,
+    encode_certificate,
+)
 from aip.core.evidence import (
     AuthenticationAssessment,
     Evidence,
@@ -68,6 +74,7 @@ from aip.errors import (
     ManifestError,
 )
 from aip.storage import layout, tables
+from aip.storage.atomic_io import atomic_write_text
 from aip.storage.manifest import ArchiveManifest, compute_manifest, write_manifest_atomic
 
 ASSESSMENTS_TABLE: Final[str] = "authentication_assessments"
@@ -82,6 +89,18 @@ DEFAULT_INGEST_GAP: Final[str] = (
 )
 """Texto canónico del único ``GapDescription`` que :meth:`ingest_evidence`
 declara al crear una nueva :class:`Provenance` mínima en V1."""
+
+SIGNED_CAPTURE_GAP: Final[str] = (
+    "intervalo entre captura firmada y ingestión sin reconstrucción"
+)
+"""Variante del gap cuando la ingesta lleva un ``CaptureCertificate`` adjunto
+(Phase 2). El extremo de captura está respaldado criptográficamente; lo que
+sigue desconocido es el tránsito entre ``captured_at`` y ``ingested_at``."""
+
+CAPTURE_CERTIFICATES_DIRNAME: Final[str] = "capture-certificates"
+"""Directorio sidecar para certificates de captura ingestados (Phase 2).
+Creado on-demand; no entra en :func:`aip.storage.layout.ensure_archive_layout`
+por simetría con ``attestations/`` (también creado on-demand)."""
 
 
 def default_clock() -> dt.datetime:
@@ -165,6 +184,7 @@ class Archive:
         mime_type: str | None = None,
         ingested_by: str,
         notes: str | None = None,
+        capture_certificate_path: Path | None = None,
         dry_run: bool = False,
         clock: Callable[[], dt.datetime] | None = None,
     ) -> Evidence:
@@ -195,6 +215,18 @@ class Archive:
         size_bytes = path.stat().st_size
         kind = evidence_kind if evidence_kind is not None else _infer_kind(path, mime_type)
         mime = mime_type if mime_type is not None else _infer_mime(path, kind)
+
+        # 2b. Cargar y validar capture certificate (Phase 2). Si se proveyó,
+        # debe haber sido firmado para ESTE blob (cert.evidence_sha256 ==
+        # blob_hash) y su self-hash debe recomputar — defense in depth contra
+        # certs swapeados o tampered. La verificación criptográfica de la
+        # firma ed25519 queda fuera del ingest (requiere clave pública
+        # exógena) — se hace con ``aip capture verify --public-key``.
+        capture_cert: CaptureCertificate | None = None
+        if capture_certificate_path is not None:
+            capture_cert = _load_and_validate_capture_cert(
+                capture_certificate_path, evidence_hash=blob_hash
+            )
 
         # 3. Idempotencia: ¿el blob ya está en CAOS y la Evidence ya está en tabla?
         existing_path = layout.caos_path_for(self.root, blob_hash) if not dry_run else None
@@ -238,18 +270,16 @@ class Archive:
                 license=source_license,
             )
 
-        # 5. Construir Provenance mínima (un paso, un gap declarado).
+        # 5. Construir Provenance. Si hay capture cert, el step ORIGINAL_CAPTURE
+        # lleva actor/timestamp/cert_hash en parameters. El gap cambia a una
+        # descripción más honesta (sabemos el momento de captura, no el tránsito).
+        origin_step, gap_description = _build_origin_step(capture_cert)
         provenance = Provenance(
             evidence_hash=blob_hash,
             origin_source_id=source.id,
-            steps=[
-                ProvenanceStep(
-                    step_id=1,
-                    kind=StepKind.ORIGINAL_CAPTURE,
-                )
-            ],
+            steps=[origin_step],
             is_complete=False,
-            gaps=[GapDescription(description=DEFAULT_INGEST_GAP)],
+            gaps=[GapDescription(description=gap_description)],
             attestor=ingested_by,
             attested_at=clock(),
         )
@@ -306,13 +336,19 @@ class Archive:
                 step.model_dump(mode="json"),
             )
 
-        # 9. Audit log entry.
+        # 8b + 9. Persistir el capture cert como sidecar (idempotente) y
+        # construir los audit params (incluyendo cert_hash si aplica). Ambas
+        # acciones se agrupan en un helper para mantener la complejidad
+        # ciclomática de ``ingest_evidence`` bajo control.
+        audit_params = self._persist_capture_cert_and_build_audit_params(
+            capture_cert, size_bytes
+        )
         audit_log.append_entry(
             self.root,
             action=audit_log.ActionKind.INGEST_EVIDENCE,
             target=evidence.aip_uri(),
             actor=ingested_by,
-            parameters={"size_bytes": str(size_bytes)},
+            parameters=audit_params,
             result=audit_log.ResultKind.SUCCESS,
             schema_version=SCHEMA_VERSION,
             clock=clock,
@@ -323,6 +359,29 @@ class Archive:
         write_manifest_atomic(self.root / layout.MANIFEST_FILENAME, manifest)
 
         return evidence
+
+    def _persist_capture_cert_and_build_audit_params(
+        self,
+        capture_cert: CaptureCertificate | None,
+        size_bytes: int,
+    ) -> dict[str, str]:
+        """Persiste el cert como sidecar (idempotente) y devuelve los audit params.
+
+        Si ``capture_cert is None``: devuelve solo ``{"size_bytes": ...}``.
+        Si hay cert: escribe ``<archive>/capture-certificates/<cert_hash>.json``
+        si no existe, y añade ``capture_certificate_hash`` al dict — atando
+        la cadena hash-encadenada del audit log al certificate concreto.
+        """
+        audit_params: dict[str, str] = {"size_bytes": str(size_bytes)}
+        if capture_cert is None:
+            return audit_params
+        cert_dir = self.root / CAPTURE_CERTIFICATES_DIRNAME
+        cert_dir.mkdir(parents=True, exist_ok=True)
+        cert_target = cert_dir / f"{capture_cert.certificate_hash}.json"
+        if not cert_target.is_file():
+            atomic_write_text(cert_target, encode_certificate(capture_cert))
+        audit_params["capture_certificate_hash"] = capture_cert.certificate_hash
+        return audit_params
 
     # --- Show ----------------------------------------------------------
 
@@ -702,6 +761,90 @@ class Archive:
 
 
 # --------------------------------------------------------------------- helpers
+
+
+def _build_origin_step(
+    capture_cert: CaptureCertificate | None,
+) -> tuple[ProvenanceStep, str]:
+    """Construye el ``ProvenanceStep`` ORIGINAL_CAPTURE + selecciona el gap text.
+
+    Si ``capture_cert is None`` → step vacío + gap genérico (comportamiento V1
+    pre-Phase 2). Si hay cert → step enriquecido con operator/timestamp/cert_hash
+    + gap más específico ("intervalo entre captura firmada y ingestión").
+    """
+    if capture_cert is None:
+        return (
+            ProvenanceStep(step_id=1, kind=StepKind.ORIGINAL_CAPTURE),
+            DEFAULT_INGEST_GAP,
+        )
+    captured_ts = _parse_captured_at_to_tz_aware(capture_cert.captured_at)
+    capture_params: dict[str, str] = {
+        "capture_certificate_hash": capture_cert.certificate_hash,
+        "public_key_fingerprint": capture_cert.public_key_fingerprint,
+        "signature_algorithm": capture_cert.signature_algorithm,
+    }
+    if capture_cert.device_id:
+        capture_params["device_id"] = capture_cert.device_id
+    if capture_cert.location:
+        capture_params["location"] = capture_cert.location
+    step = ProvenanceStep(
+        step_id=1,
+        kind=StepKind.ORIGINAL_CAPTURE,
+        actor=capture_cert.operator_id,
+        timestamp=captured_ts,
+        parameters=capture_params,
+        notes=capture_cert.notes,
+    )
+    return step, SIGNED_CAPTURE_GAP
+
+
+def _parse_captured_at_to_tz_aware(iso: str) -> dt.datetime:
+    """Parsea ``captured_at`` ya validado (``YYYY-MM-DDTHH:MM:SSZ``) a tz-aware UTC.
+
+    ``CaptureCertificate`` valida el formato en ``__post_init__``, así que aquí
+    sólo convertimos. Si llegara algo mal-formado sería un bug aguas arriba.
+    """
+    return dt.datetime.fromisoformat(iso[:-1]).replace(tzinfo=dt.UTC)
+
+
+def _load_and_validate_capture_cert(
+    cert_path: Path, *, evidence_hash: str
+) -> CaptureCertificate:
+    """Carga, parsea y valida un :class:`CaptureCertificate` para ingest.
+
+    Tres checks (en orden):
+
+    1. **Parsing** — el fichero existe, es JSON válido y encaja el esquema.
+    2. **Self-hash** — ``compute_certificate_hash`` recomputa el valor declarado.
+       Falla → cert tampered.
+    3. **Bytes binding** — ``cert.evidence_sha256 == evidence_hash``. Falla → cert
+       fue firmado para un fichero distinto (cert swap / wrong file).
+
+    La verificación criptográfica ed25519 queda fuera: requiere la clave pública
+    del firmante, que es exógena. Se hace con ``aip capture verify --public-key``.
+    """
+    if not cert_path.is_file():
+        raise FileNotFoundError(f"capture certificate not found: {cert_path}")
+    try:
+        cert = decode_certificate(cert_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, KeyError, ValueError) as exc:
+        raise IntegrityError(
+            f"capture certificate at {cert_path} is malformed: {exc}"
+        ) from exc
+
+    if compute_certificate_hash(cert) != cert.certificate_hash:
+        raise IntegrityError(
+            f"capture certificate at {cert_path} self-hash mismatch — "
+            "the certificate has been tampered with."
+        )
+
+    if cert.evidence_sha256 != evidence_hash:
+        raise IntegrityError(
+            f"capture certificate at {cert_path} was signed for a different file "
+            f"(cert claims sha256:{cert.evidence_sha256}, actual is sha256:{evidence_hash})."
+        )
+
+    return cert
 
 
 def _resolve_hash(hash_or_uri: str) -> str:
