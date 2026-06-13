@@ -130,42 +130,6 @@ export interface CaseItem {
   updated_at: string | null
 }
 
-export interface AnalysisObject {
-  description: string
-  is_anomalous: boolean
-  conventional_match: string | null
-  location_in_image: string
-}
-
-export interface AnalysisAnomaly {
-  type: string
-  description: string
-  severity: 'high' | 'medium' | 'low'
-}
-
-export interface AnalysisPayload {
-  overall_assessment: 'anomalous' | 'conventional' | 'indeterminate'
-  confidence: 'high' | 'medium' | 'low'
-  image_quality: 'good' | 'fair' | 'poor'
-  objects_detected: AnalysisObject[]
-  anomalies: AnalysisAnomaly[]
-  conventional_explanations: string[]
-  analysis_notes: string
-  recommended_classification: string
-  recommended_investigation_steps: string[]
-  analyst_caveat: string
-  raw_response?: string
-  parse_error?: string
-}
-
-export interface AnalysisResult {
-  filename: string
-  size_bytes: number
-  media_type: string
-  model: string
-  analysis: AnalysisPayload
-}
-
 export interface TransparencyManifestSummary {
   sequence: number
   manifest_hash: string
@@ -258,16 +222,6 @@ export const api = {
   auditLog: (offset = 0, limit = 100) => get<AuditLogPage>(`/audit-log?offset=${offset}&limit=${limit}`),
   listAttestations: () => get<AttestationSummary[]>('/attestations'),
   getAttestation: (id: string) => get<Record<string, unknown>>(`/attestations/${id}`),
-  analyzeImage: async (file: File): Promise<AnalysisResult> => {
-    const form = new FormData()
-    form.append('file', file)
-    const res = await fetch(`${BASE}/analyze/image`, { method: 'POST', body: form })
-    if (!res.ok) {
-      const detail = await res.json().catch(() => ({ detail: res.statusText }))
-      throw new Error(detail?.detail ?? res.statusText)
-    }
-    return res.json()
-  },
   getInferenceProof:     (proofId: string) => get<Record<string, unknown>>(`/inference-proofs/${proofId}`),
   listInferenceProofs:   () => get<Record<string, unknown>[]>('/inference-proofs'),
   transparencyStatus:    () => get<TransparencyStatus>('/transparency/status'),

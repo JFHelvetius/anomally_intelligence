@@ -10,7 +10,6 @@ from fastapi.staticfiles import StaticFiles
 
 from aip._version import __version__
 from aip.api.routes import (
-    analyze,
     archive,
     attestations,
     audit,
@@ -42,7 +41,6 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(archive.router, prefix="/api")
-    app.include_router(analyze.router, prefix="/api")
     app.include_router(evidence.router, prefix="/api")
     app.include_router(audit.router, prefix="/api")
     app.include_router(attestations.router, prefix="/api")

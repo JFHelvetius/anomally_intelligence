@@ -57,10 +57,6 @@ web = [
     # Requerido por FastAPI para aceptar multipart/form-data (uploads de imagen).
     "python-multipart >=0.0.9",
 ]
-vision = [
-    # Claude Vision API para análisis de anomalías en imágenes (Phase B).
-    "anthropic >=0.30",
-]
 c2pa = [
     # ADR-0048: JUMBF auto-extraction from JPEG/PNG/MP4/HEIC/AVIF/DNG/PDF.
     # Native dep (Rust binding); we use it strictly as a parser, never as

@@ -20,7 +20,6 @@ const en = {
   'nav.group.investigation': 'Investigation',
   'nav.group.custody': 'Chain of custody',
   'nav.group.public': 'Public verification',
-  'nav.group.ai': 'AI tools',
 
   'nav.item.about': 'About',
   'nav.item.overview': 'Overview',
@@ -30,7 +29,6 @@ const en = {
   'nav.item.attestations': 'Attestations',
   'nav.item.derived': 'Analysis layers',
   'nav.item.portal': 'Transparency portal',
-  'nav.item.analyze': 'Anomaly detector',
 
   // ─── About / landing ───────────────────────────────────────────────────
   'about.pill.license': 'Apache 2.0',
@@ -311,7 +309,7 @@ const en = {
   'portal.manifests.empty.title': 'No manifests in this source',
   'portal.manifests.empty.body': 'Switch source or wait for the operator to publish.',
 
-  // Common operator pages (AuditLog, EvidenceList, EvidenceDetail, Cases, Attestations, Derived, Analyze)
+  // Common operator pages (AuditLog, EvidenceList, EvidenceDetail, Cases, Attestations, Derived)
   'common.search.placeholder': 'Search…',
   'common.actions.refresh': 'Refresh',
   'common.actions.copy': 'Copy',
@@ -466,34 +464,6 @@ const en = {
   'derived.section.snapshots.sub': '{n} snapshot(s) · Frozen workspace + timeline pair (ADR-0038)',
   'derived.section.justifications.sub': '{n} justification(s) · Deductive chain with declared conclusion (ADR-0040)',
   'derived.row.artefacts': 'artefacts',
-
-  // Analyze (Phase B — Claude Vision anomaly detector)
-  'analyze.title': 'Anomaly detector',
-  'analyze.subtitle': 'Upload an image. Claude Vision tags objects and flags anomalies. The model output is recorded with provenance, never used as ground truth.',
-  'analyze.upload.cta': 'Choose an image',
-  'analyze.upload.hint': 'JPG / PNG / WebP, up to 10 MB.',
-  'analyze.analyzing': 'Analysing…',
-  'analyze.results.objects': 'Objects detected',
-  'analyze.results.anomalies': 'Anomalies flagged',
-  'analyze.results.none': 'No objects detected.',
-  'analyze.classification.anomaly': 'Anomaly detected',
-  'analyze.classification.conventional': 'Conventional phenomenon',
-  'analyze.upload.tooLarge': 'File too large. Maximum {n} MB.',
-  'analyze.upload.drop': 'Drop the image here',
-  'analyze.upload.idle': 'Drag an image or click to select',
-  'analyze.upload.formats': 'JPEG · PNG · GIF · WebP · Max. 5 MB',
-  'analyze.description': 'Image analysis via Claude Vision. The system detects objects, anomalies, and suggests a classification — the analyst declares the final conclusion.',
-  'analyze.how.label': 'How it works:',
-  'analyze.how.body': 'The system visually inspects the scene looking for anomalies, unidentified objects, and visual artefacts.',
-  'analyze.placeholder': 'Select an image to start the analysis',
-  'analyze.detecting': 'Detecting objects and anomalies',
-  'analyze.error.title': 'Analysis error',
-  'analyze.position': 'Position:',
-  'analyze.anomalousBadge': 'anomalous',
-  'analyze.section.anomalies': 'Identified anomalies',
-  'analyze.section.investigationSteps': 'Recommended investigation steps',
-  'analyze.section.classification': 'Model-suggested classification',
-  'analyze.classification.note': 'The analyst must confirm or modify this classification in the investigation.',
 
   // Inference proof view
   'proof.heading': 'Inference proof',

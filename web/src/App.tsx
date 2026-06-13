@@ -8,7 +8,6 @@ import EvidenceDetail from './pages/EvidenceDetail'
 import AuditLog from './pages/AuditLog'
 import { AttestationsList, AttestationDetail } from './pages/Attestations'
 import Derived from './pages/Derived'
-import Analyze from './pages/Analyze'
 import Portal from './pages/Portal'
 import InferenceProofView from './pages/InferenceProofView'
 
@@ -30,7 +29,6 @@ export default function App() {
         <Route path="attestations" element={<AttestationsList />} />
         <Route path="attestations/:id" element={<AttestationDetail />} />
         <Route path="derived" element={<Derived />} />
-        <Route path="analyze" element={<Analyze />} />
         <Route path="portal"  element={<Portal />} />
         <Route path="proofs/:proof_id" element={<InferenceProofView />} />
       </Route>

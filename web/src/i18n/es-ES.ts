@@ -25,7 +25,6 @@ const esES: Dictionary = {
   'nav.group.investigation': 'Investigación',
   'nav.group.custody': 'Cadena de custodia',
   'nav.group.public': 'Verificación pública',
-  'nav.group.ai': 'Herramientas IA',
 
   'nav.item.about': 'Sobre AIP',
   'nav.item.overview': 'Resumen',
@@ -35,7 +34,6 @@ const esES: Dictionary = {
   'nav.item.attestations': 'Atestaciones',
   'nav.item.derived': 'Capas de análisis',
   'nav.item.portal': 'Portal de transparencia',
-  'nav.item.analyze': 'Detector de anomalías',
 
   // ─── About / landing ───────────────────────────────────────────────────
   'about.pill.license': 'Apache 2.0',
@@ -468,34 +466,6 @@ const esES: Dictionary = {
   'derived.section.snapshots.sub': '{n} snapshot(s) · Par congelado workspace + timeline (ADR-0038)',
   'derived.section.justifications.sub': '{n} justificación(es) · Cadena deductiva con conclusión declarada (ADR-0040)',
   'derived.row.artefacts': 'artefactos',
-
-  // Analyze
-  'analyze.title': 'Detector de anomalías',
-  'analyze.subtitle': 'Sube una imagen. Claude Vision etiqueta objetos y marca anomalías. La salida del modelo queda registrada con procedencia, no se usa como ground truth.',
-  'analyze.upload.cta': 'Elegir imagen',
-  'analyze.upload.hint': 'JPG / PNG / WebP, hasta 10 MB.',
-  'analyze.analyzing': 'Analizando…',
-  'analyze.results.objects': 'Objetos detectados',
-  'analyze.results.anomalies': 'Anomalías marcadas',
-  'analyze.results.none': 'No se detectaron objetos.',
-  'analyze.classification.anomaly': 'Anomalía detectada',
-  'analyze.classification.conventional': 'Fenómeno convencional',
-  'analyze.upload.tooLarge': 'Archivo demasiado grande. Máximo {n} MB.',
-  'analyze.upload.drop': 'Suelta la imagen aquí',
-  'analyze.upload.idle': 'Arrastra una imagen o haz clic para seleccionar',
-  'analyze.upload.formats': 'JPEG · PNG · GIF · WebP · Máx. 5 MB',
-  'analyze.description': 'Análisis de imágenes mediante Claude Vision. El sistema detecta objetos, anomalías y sugiere una clasificación — el analista declara la conclusión final.',
-  'analyze.how.label': 'Cómo funciona:',
-  'analyze.how.body': 'El sistema inspecciona visualmente la escena buscando anomalías, objetos no identificados y artefactos visuales.',
-  'analyze.placeholder': 'Selecciona una imagen para comenzar el análisis',
-  'analyze.detecting': 'Detectando objetos y anomalías',
-  'analyze.error.title': 'Error en el análisis',
-  'analyze.position': 'Posición:',
-  'analyze.anomalousBadge': 'anómalo',
-  'analyze.section.anomalies': 'Anomalías identificadas',
-  'analyze.section.investigationSteps': 'Pasos de investigación recomendados',
-  'analyze.section.classification': 'Clasificación sugerida por el modelo',
-  'analyze.classification.note': 'El analista debe confirmar o modificar esta clasificación en la investigación.',
 
   // Inference proof view
   'proof.heading': 'Inference proof',

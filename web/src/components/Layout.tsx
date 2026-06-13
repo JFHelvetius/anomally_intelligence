@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileText, Link2, Shield, Layers,
-  FolderSearch, ChevronRight, ScanSearch, Globe2, Info,
+  FolderSearch, ChevronRight, Globe2, Info,
 } from 'lucide-react'
 import { useT, useI18n } from '../i18n'
 import type { TKey } from '../i18n/en'
@@ -69,12 +69,6 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/portal', labelKey: 'nav.item.portal', icon: Globe2 },
     ],
   },
-  {
-    labelKey: 'nav.group.ai',
-    items: [
-      { to: '/analyze', labelKey: 'nav.item.analyze', icon: ScanSearch },
-    ],
-  },
 ]
 
 const CRUMB: Record<string, TKey> = {
@@ -86,7 +80,6 @@ const CRUMB: Record<string, TKey> = {
   'audit-log':    'nav.item.audit',
   'attestations': 'nav.item.attestations',
   'derived':      'nav.item.derived',
-  'analyze':      'nav.item.analyze',
   'portal':       'nav.item.portal',
 }
 

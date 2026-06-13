@@ -75,10 +75,19 @@ del archive.
 - `aip evidence ingest` acepta `--capture-cert <path>` para asociar un
   CaptureCertificate al ingest. Cambia el gap declarado del Provenance
   cuando se usa.
-- `pyproject.toml`: extras `web`, `vision`, `c2pa` añadidos; dev dep
+- `pyproject.toml`: extras `web`, `c2pa` añadidos; dev dep
   `jsonschema` para interop tests; entry point `aip-web`.
 - `.gitignore`: `dev_archive/`, `tmp/`, `web/node_modules/`,
   `web/dist/`.
+
+### Removed
+
+- Endpoint experimental `POST /api/analyze/image` (Claude Vision) y la
+  página frontend asociada. Devolvía un veredicto automático
+  (`overall_assessment: anomalous|conventional|indeterminate`) sobre
+  la imagen, lo cual es incompatible con ADR-0024 (AIP no emite
+  conclusiones automáticas). Si el caso de uso reaparece pertenece a
+  una herramienta separada, no al core.
 
 ### Notes
 
