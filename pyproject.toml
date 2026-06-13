@@ -1,6 +1,6 @@
 [project]
 name = "aip"
-version = "0.2.1"
+version = "0.3.0"
 description = "Anomaly Intelligence Platform — evidence-first archive with bit-by-bit traceability."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -44,10 +44,33 @@ dev = [
     # Property-based testing sobre invariantes de hashing y audit chain
     # (ADR-0031 §opcional; sin cambio de semántica del código de producción).
     "hypothesis >=6.100,<7",
+    # JSON Schema 2020-12 validator (tests only). Used by
+    # tests/unit/schemas/ to assert fixtures conform to the schemas in
+    # docs/schemas/ — protects the public interop surface from drift
+    # vs the canonical Python implementation. NOT a production dep.
+    "jsonschema >=4.20,<5",
+]
+web = [
+    # HTTP API layer (FastAPI + ASGI server).
+    "fastapi >=0.110,<1",
+    "uvicorn[standard] >=0.29",
+    # Requerido por FastAPI para aceptar multipart/form-data (uploads de imagen).
+    "python-multipart >=0.0.9",
+]
+vision = [
+    # Claude Vision API para análisis de anomalías en imágenes (Phase B).
+    "anthropic >=0.30",
+]
+c2pa = [
+    # ADR-0048: JUMBF auto-extraction from JPEG/PNG/MP4/HEIC/AVIF/DNG/PDF.
+    # Native dep (Rust binding); we use it strictly as a parser, never as
+    # a trust authority — X.509 verification stays in ADR-0047.
+    "c2pa-python >=0.30,<1",
 ]
 
 [project.scripts]
 aip = "aip.cli.main:main"
+aip-web = "aip.api.server:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -96,6 +119,19 @@ explicit_package_bases = true
 # pyarrow no expone marker py.typed (ADR-0024 §6.1: lo tratamos como punto
 # único de falla declarado). Ignoramos el missing-imports localmente.
 module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# opentimestamps tampoco expone py.typed. Mismo tratamiento que pyarrow:
+# punto único de falla declarado. Usado solo desde la capa de notarización.
+module = ["opentimestamps", "opentimestamps.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# jsonschema (dev dep) no trae stubs nativos. types-jsonschema existe pero
+# añadirlo doblaría la superficie sin beneficio: el módulo se usa solo en
+# tests/unit/schemas, donde los tests ya tienen overrides relajados.
+module = ["jsonschema", "jsonschema.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

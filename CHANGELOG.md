@@ -5,6 +5,101 @@ El proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.3.0] — 2026-06-12
+
+Expansión de las garantías de verificabilidad sin tocar la frontera
+epistemológica (ADR-0024: AIP nunca emite veredictos automáticos). Tres
+ejes nuevos: corroboración exógena del operador, capa industrial de
+captura (C2PA) sin endosar su PKI, y publicación pública del estado
+del archive.
+
+### Added
+
+- **Transparency log (Phase 1A/1B/1C)**: `src/aip/transparency/`. Publica
+  el estado del archive como manifests firmados encadenados. Witness
+  layer (1B) permite firma independiente externa; exporter (1C) produce
+  bundle estático auto-contenido servible.
+- **ADR-0043 — trust footprint via public key declaration**: el operador
+  declara dónde publica su clave (GitHub Pages, ENS, DNS TXT…); AIP lo
+  persiste para que un verificador externo lo contraste.
+- **ADR-0044 — cross-archive divergence detection**: `aip diff archives
+  A B` compara dos archives y reporta evidence compartida que difiere
+  estructuralmente. No concluye cuál es "el bueno".
+- **ADR-0045 — trust footprint cross-verification**: verifica
+  references declaradas contra fuentes externas y reporta
+  convergencia/divergencia. Cierra parcialmente la limitación "AIP no
+  puede atar signer a identidad real".
+- **ADR-0046 — C2PA capture attestation layer**: verifica C2PA Content
+  Credentials sobre evidence. No interpreta semánticamente assertions
+  (la cámara firma "captured at X,Y"; AIP confirma firma, no
+  veracidad).
+- **ADR-0047 — C2PA in-process X.509 verification**: cuando operador
+  suministra trust list + chain completa, AIP recorre la cadena
+  leaf→root in-process. Cierra el hueco "operator-supplied
+  chain_verified".
+- **ADR-0048 — C2PA JUMBF auto-extraction**: integración opcional con
+  `c2pa-python` (extra `aip[c2pa]`) para extraer manifests de
+  JPEG/PNG/MP4/etc. Lib usada SOLO como parser; el veredicto interno
+  se ignora (ADR-0047 sigue siendo autoritativo).
+- **Capture Phase 2 — signed capture certificates**: `src/aip/capture/`.
+  Extiende procedencia hacia atrás del ingest. Operador firma el
+  SHA-256 al momento de adquisición. El Provenance.gap se vuelve más
+  honesto cuando hay cert.
+- **OpenTimestamps Bitcoin anchoring**: `src/aip/notarize/`. Ancla
+  hashes a Bitcoin. Cierra el gap de "operator-supplied timestamps":
+  ni el propio operador puede backdatar sin reminar Bitcoin.
+- **Justification/logic — inference proofs**: `src/aip/justification/
+  logic/`. DAG estructural de razonamientos del analista; rules
+  deductive-only (sin estadísticas/inductivas para no abrir la puerta
+  a conclusiones automáticas). Verifica forma; no veracidad de
+  premises.
+- **HTTP API (FastAPI)**: `src/aip/api/`. Read+write endpoints sobre
+  el archive. Entry point `aip-web`. Extra `aip[web]`.
+- **Frontend portal (React + TS + Vite)**: `web/`. Verifier
+  criptográfico client-side compartido con el HTML report standalone
+  (misma lógica, sin fork). i18n EN/ES-ES built-in. Demo bundle
+  estático sin backend.
+- **Standalone HTML evidence report**: `aip evidence report` produce
+  HTML auto-contenido con verifier embebido. Receptor verifica offline
+  sin AIP.
+- **Public JSON Schemas v1**: `docs/schemas/` para audit/capture-cert/
+  inference-proof/key-declaration/transparency-manifest/witness-
+  attestation. Tests dev (`jsonschema`) protegen contra drift vs el
+  modelo Python.
+- **CI gate `web-tests`** (Vitest, Node 22): la lógica TS del verifier
+  ES la lógica embebida en el report HTML; sin este gate un cambio TS
+  puede romperla sin que la suite Python lo detecte.
+
+### Changed
+
+- `aip evidence ingest` acepta `--capture-cert <path>` para asociar un
+  CaptureCertificate al ingest. Cambia el gap declarado del Provenance
+  cuando se usa.
+- `pyproject.toml`: extras `web`, `vision`, `c2pa` añadidos; dev dep
+  `jsonschema` para interop tests; entry point `aip-web`.
+- `.gitignore`: `dev_archive/`, `tmp/`, `web/node_modules/`,
+  `web/dist/`.
+
+### Notes
+
+- **Epistemología intacta**: ninguna capa añadida emite veredictos.
+  C2PA, transparency, footprint, notarize y justification/logic son
+  todas verificaciones de *forma* o de *consistencia con fuentes
+  externas* — no de *verdad del contenido*.
+- AIP **no envía trust list por defecto** para C2PA: operador siempre
+  suministra; no endosamos la PKI de C2PA/Adobe implícitamente.
+- Subsistemas con deuda de tests dedicados (cubiertos transitivamente
+  por CLI/API tests): transparency Phase 1A/1B/1C, notarize
+  (submitter/store/verifier).
+
+### Metrics
+
+- 1105 tests Python (era 911 en v0.2.1) + 18 tests Vitest.
+- 17/17 pins reproducibility intactos.
+- 2/2 pins audit-chain base intactos.
+
+---
+
 ## [0.2.1] — 2026-06-08
 
 Patch UX descubierto durante el primer uso real del flujo de atestación

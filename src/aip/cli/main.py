@@ -20,14 +20,17 @@ from aip.cli.assessment_commands import (
     add_list_assessments_subparser,
 )
 from aip.cli.attestation_commands import add_attestation_subparser
+from aip.cli.capture_commands import add_capture_subparser
 from aip.cli.context_commands import add_context_subparser
 from aip.cli.diff_commands import add_diff_subparser
 from aip.cli.evidence_commands import add_evidence_subparser
 from aip.cli.graph_commands import add_graph_subparser
 from aip.cli.impact_commands import add_impact_subparser
 from aip.cli.justification_commands import add_justification_subparser
+from aip.cli.notarize_commands import add_notarize_subparser
 from aip.cli.snapshot_commands import add_snapshot_subparser
 from aip.cli.timeline_commands import add_timeline_subparser
+from aip.cli.transparency_commands import add_transparency_subparser
 from aip.cli.verify_commands import add_verify_subparser
 from aip.cli.workspace_commands import add_workspace_subparser
 from aip.errors import AIPError, UsageError
@@ -135,6 +138,18 @@ def build_parser() -> argparse.ArgumentParser:
     # criptográfica ed25519. Vincula artefactos a una clave operada por
     # el firmante; verificación exógena offline.
     add_attestation_subparser(subparsers)
+    # ``transparency`` es subgrupo (Phase 1A): publica manifests firmados
+    # del estado completo del archive a una cadena append-only para
+    # verificación pública sin necesidad de confiar en el operador.
+    add_transparency_subparser(subparsers, parents=[common])
+    # ``capture`` es subgrupo (Phase 2): firma el SHA-256 de un fichero al
+    # momento de adquisición con la clave ed25519 del operador. Extiende
+    # la cadena de procedencia hacia atrás en el tiempo, antes del ingest.
+    add_capture_subparser(subparsers, parents=[common])
+    # ``notarize`` (post-Phase 2): ancla hashes a la blockchain de Bitcoin
+    # via OpenTimestamps. Cierra el gap de timestamps operator-supplied —
+    # incluso el propio operador no puede backdatar sin reminar Bitcoin.
+    add_notarize_subparser(subparsers, parents=[common])
 
     return parser
 
