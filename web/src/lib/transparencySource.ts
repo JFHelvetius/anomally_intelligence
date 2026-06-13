@@ -229,7 +229,20 @@ export interface SourceConfig {
 }
 
 const STORAGE_KEY = 'aip-portal-source-v1'
-const DEFAULT_CONFIG: SourceConfig = { kind: 'backend', baseUrl: '/api/transparency' }
+
+// Pick the default fuente based on deployment context. When the SPA is
+// served from the FastAPI root ('/'), the backend lives at /api and
+// 'backend' is the right default. When served from a subpath (e.g.
+// GitHub Pages: '/anomally_intelligence/'), there is no backend — the
+// static bundle shipped with the SPA is the only fuente that can work
+// out of the box.
+function pickDefaultConfig(): SourceConfig {
+  const base = typeof import.meta !== 'undefined' ? import.meta.env.BASE_URL : '/'
+  if (base !== '/') {
+    return { kind: 'static', baseUrl: `${base}transparency-bundle` }
+  }
+  return { kind: 'backend', baseUrl: '/api/transparency' }
+}
 
 export function loadSourceConfig(): SourceConfig {
   // 1) URL query: ?log=URL forces static bundle mode.
@@ -253,7 +266,7 @@ export function loadSourceConfig(): SourceConfig {
       }
     } catch { /* ignore */ }
   }
-  return DEFAULT_CONFIG
+  return pickDefaultConfig()
 }
 
 export function saveSourceConfig(c: SourceConfig): void {
