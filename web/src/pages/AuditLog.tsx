@@ -78,8 +78,8 @@ export default function AuditLog() {
   const pageNum = Math.floor(offset / limit)
 
   const pillBase = 'px-3 py-1 rounded-full text-[11px] border transition-all duration-150 font-medium'
-  const pillActive = 'bg-violet-100 border-violet-400 text-violet-700'
-  const pillInactive = 'border-[#16203a] text-[#546175] hover:text-slate-700 hover:border-[#1d2d50] hover:bg-white/[0.03]'
+  const pillActive = 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)]'
+  const pillInactive = 'border-[#16203a] text-[#546175] hover:text-[var(--text2)] hover:border-[#1d2d50] hover:bg-white/[0.03]'
 
   return (
     <div className="space-y-5">
@@ -193,7 +193,7 @@ export default function AuditLog() {
                       </Badge>
 
                       {(e.result as string) === 'success'
-                        ? <CheckCircle2 size={12} className="text-emerald-500" />
+                        ? <CheckCircle2 size={12} className="text-[var(--green)]" />
                         : <XCircle size={12} className="text-red-500" />}
 
                       {/* Chain verification badge */}
@@ -251,18 +251,18 @@ export default function AuditLog() {
                     {/* Hash mismatch inspector */}
                     {isExpanded && hashOk === false && computedHash && (
                       <div className="mt-2 p-2.5 rounded bg-red-50 border border-red-200">
-                        <p className="text-[10px] font-bold text-red-800 uppercase tracking-wider mb-1.5">Hash mismatch</p>
+                        <p className="text-[10px] font-bold text-[var(--red)] uppercase tracking-wider mb-1.5">Hash mismatch</p>
                         <div className="space-y-1 text-[10.5px] font-mono">
                           <div>
-                            <span className="text-red-800 font-semibold">declared: </span>
+                            <span className="text-[var(--red)] font-semibold">declared: </span>
                             <span className="text-red-700 break-all">{e.entry_hash as string}</span>
                           </div>
                           <div>
-                            <span className="text-red-800 font-semibold">computed: </span>
+                            <span className="text-[var(--red)] font-semibold">computed: </span>
                             <span className="text-red-700 break-all">{computedHash}</span>
                           </div>
                         </div>
-                        <p className="text-[10.5px] text-red-800 mt-1.5">
+                        <p className="text-[10.5px] text-[var(--red)] mt-1.5">
                           The declared entry_hash does not match the SHA-256 of the canonical fields.
                           This entry has been tampered with or the audit log has been corrupted.
                         </p>
@@ -323,7 +323,7 @@ function ChainVerifyBanner({
   if (verifying && !report) {
     return (
       <div className="rounded-md border border-[var(--border)] bg-white px-4 py-3 flex items-center gap-3 card-shadow">
-        <Loader2 size={14} className="animate-spin text-violet-700" />
+        <Loader2 size={14} className="animate-spin text-[var(--accent)]" />
         <div className="text-[12.5px] text-[var(--muted2)]">
           {t('audit.verify.computing')}
         </div>
@@ -333,10 +333,10 @@ function ChainVerifyBanner({
   if (!report) return null
 
   const Icon = report.ok ? ShieldCheck : ShieldAlert
-  const accentBg = report.ok ? 'bg-emerald-50' : 'bg-red-50'
-  const accentBorder = report.ok ? 'border-emerald-200' : 'border-red-200'
-  const iconColor = report.ok ? 'text-emerald-700' : 'text-red-700'
-  const titleColor = report.ok ? 'text-emerald-800' : 'text-red-800'
+  const accentBg = report.ok ? 'bg-[var(--green-bg)]' : 'bg-red-50'
+  const accentBorder = report.ok ? 'border-[var(--green)]' : 'border-red-200'
+  const iconColor = report.ok ? 'text-[var(--green)]' : 'text-red-700'
+  const titleColor = report.ok ? 'text-[var(--green)]' : 'text-[var(--red)]'
 
   return (
     <div className={`rounded-md border ${accentBorder} ${accentBg} px-4 py-3.5 card-shadow`}>
@@ -352,7 +352,7 @@ function ChainVerifyBanner({
             {report.ok ? t('audit.verify.ok.body') : t('audit.verify.fail.body')}
           </p>
           {!report.ok && report.brokenLinkages.length > 0 && (
-            <ul className="mt-2 space-y-0.5 text-[11px] font-mono text-red-800">
+            <ul className="mt-2 space-y-0.5 text-[11px] font-mono text-[var(--red)]">
               {report.brokenLinkages.slice(0, 5).map((b, i) => (
                 <li key={i}>· seq {b.atSeq}: {b.reason}</li>
               ))}

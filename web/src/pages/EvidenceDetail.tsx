@@ -15,7 +15,7 @@ import {
   type EvidenceDetail as EvidenceDetailType,
   type CaptureCertificate as CaptureCertificateType,
 } from '../api/client'
-import { Card, Hash, Badge, Alert, Skeleton, InfoRow, SectionLabel } from '../components/ui'
+import { Card, Hash, Badge, Alert, Skeleton, InfoRow, SectionLabel, OfflineState } from '../components/ui'
 import { useT } from '../i18n'
 
 // ─── Trust Timeline ──────────────────────────────────────────────────────
@@ -46,10 +46,10 @@ const KIND_ICON: Record<TimelineEventKind, React.ElementType> = {
 }
 
 const KIND_COLOR: Record<TimelineEventKind, { bg: string; border: string; text: string; iconBg: string }> = {
-  capture:  { bg: 'bg-violet-50',  border: 'border-violet-200',  text: 'text-violet-700',  iconBg: 'bg-violet-100' },
-  ingest:   { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', iconBg: 'bg-emerald-100' },
-  manifest: { bg: 'bg-blue-50',    border: 'border-blue-200',    text: 'text-blue-700',    iconBg: 'bg-blue-100' },
-  bitcoin:  { bg: 'bg-orange-50',  border: 'border-orange-200',  text: 'text-orange-700',  iconBg: 'bg-orange-100' },
+  capture:  { bg: 'bg-[var(--accent-bg)]',  border: 'border-[var(--accent-line)]',  text: 'text-[var(--accent)]',  iconBg: 'bg-[var(--accent-bg)]' },
+  ingest:   { bg: 'bg-[var(--green-bg)]', border: 'border-[var(--green)]', text: 'text-[var(--green)]', iconBg: 'bg-[var(--green-bg)]' },
+  manifest: { bg: 'bg-[var(--blue-bg)]',    border: 'border-[var(--blue)]',    text: 'text-[var(--blue)]',    iconBg: 'bg-blue-100' },
+  bitcoin:  { bg: 'bg-[var(--amber-bg)]',  border: 'border-[var(--orange)]',  text: 'text-[var(--orange)]',  iconBg: 'bg-orange-100' },
   proof:    { bg: 'bg-purple-50',  border: 'border-purple-200',  text: 'text-purple-700',  iconBg: 'bg-purple-100' },
 }
 
@@ -210,11 +210,11 @@ function TimelineEventRow({ event }: { event: TimelineEvent }) {
           </div>
         )}
         {event.details && event.details.length > 0 && (
-          <div className="px-4 py-2 bg-white/60 divide-y divide-white/80">
+          <div className="px-4 py-2 bg-[var(--surface2)] divide-y divide-white/80">
             {event.details.map((d, i) => (
               <div key={i} className="py-1 flex items-start gap-3 text-[11px]">
                 <span className="text-[var(--muted)] font-bold uppercase tracking-wider w-32 shrink-0">{d.label}</span>
-                <span className={`flex-1 break-all ${d.mono ? 'font-mono text-[10.5px] text-slate-700' : 'text-slate-700'}`}>
+                <span className={`flex-1 break-all ${d.mono ? 'font-mono text-[10.5px] text-[var(--text2)]' : 'text-[var(--text2)]'}`}>
                   {d.value}
                 </span>
               </div>
@@ -263,9 +263,9 @@ function TrustTimeline({ data }: { data: EvidenceDetailType }) {
 }
 
 const STATUS_INFO: Record<string, { icon: typeof CheckCircle2; color: string; label: string }> = {
-  active:   { icon: CheckCircle2, color: 'text-emerald-700', label: 'Activo' },
+  active:   { icon: CheckCircle2, color: 'text-[var(--green)]', label: 'Activo' },
   inactive: { icon: XCircle,      color: 'text-[#546175]',   label: 'Inactivo' },
-  disputed: { icon: AlertCircle,  color: 'text-amber-700',   label: 'Disputado' },
+  disputed: { icon: AlertCircle,  color: 'text-[var(--amber)]',   label: 'Disputado' },
 }
 
 function Section({
@@ -324,12 +324,11 @@ export default function EvidenceDetail() {
 
   if (isError) {
     return (
-      <div className="max-w-3xl mx-auto space-y-4">
-        <Link to="/evidence" className="flex items-center gap-1.5 text-xs transition-colors hover:text-violet-700" style={{ color: 'var(--muted)' }}>
-          <ArrowLeft size={12} /> Volver a Evidence
-        </Link>
-        <Alert variant="error">{(error as Error).message}</Alert>
-      </div>
+      <OfflineState
+        title="No se pudo cargar la evidencia"
+        body="El detalle de cada pieza de evidence (hash, provenance, derived assessments) se sirve desde el archive AIP local vía `aip-web`."
+        detail={(error as Error)?.message}
+      />
     )
   }
   if (!data) return null
@@ -344,7 +343,7 @@ export default function EvidenceDetail() {
       {/* Back */}
       <Link
         to="/evidence"
-        className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-violet-700"
+        className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-[var(--accent)]"
         style={{ color: 'var(--muted)' }}
       >
         <ArrowLeft size={12} /> Volver a Evidence
@@ -366,7 +365,7 @@ export default function EvidenceDetail() {
           href={`/api/evidence/${e.hash}`}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:text-violet-700"
+          className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:text-[var(--accent)]"
           style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--muted2)' }}
         >
           Raw JSON <ExternalLink size={10} />
@@ -378,18 +377,18 @@ export default function EvidenceDetail() {
 
       {/* ── Captura firmada en origen (Phase 2) ─────────────────── */}
       {data.capture_certificate && (
-        <div className="rounded-lg border border-emerald-200 bg-white card-shadow overflow-hidden">
-          <div className="bg-emerald-50 px-5 py-3.5 border-b border-emerald-200 flex items-start gap-3">
-            <div className="w-10 h-10 rounded-md bg-white border border-emerald-200 flex items-center justify-center shrink-0">
-              <ShieldCheck size={18} className="text-emerald-700" />
+        <div className="rounded-lg border border-[var(--green)] bg-white card-shadow overflow-hidden">
+          <div className="bg-[var(--green-bg)] px-5 py-3.5 border-b border-[var(--green)] flex items-start gap-3">
+            <div className="w-10 h-10 rounded-md bg-white border border-[var(--green)] flex items-center justify-center shrink-0">
+              <ShieldCheck size={18} className="text-[var(--green)]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13.5px] font-bold text-emerald-800 tracking-tight">
+              <p className="text-[13.5px] font-bold text-[var(--green)] tracking-tight">
                 {t('evidence.detail.capture.title')}
               </p>
-              <p className="text-[12px] text-emerald-900/70 mt-0.5 leading-relaxed">
+              <p className="text-[12px] text-[var(--green)] mt-0.5 leading-relaxed">
                 {t('evidence.detail.capture.body')}{' '}
-                <code className="font-mono bg-white/60 px-1.5 py-0.5 rounded text-emerald-800">aip capture verify</code>.
+                <code className="font-mono bg-[var(--surface2)] px-1.5 py-0.5 rounded text-[var(--green)]">aip capture verify</code>.
               </p>
             </div>
             <Badge variant="green" dot>{t('evidence.detail.capture.signed')}</Badge>
@@ -401,13 +400,13 @@ export default function EvidenceDetail() {
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1.5 flex items-center gap-1">
                 <UserIcon size={9} /> {t('evidence.detail.capture.field.operator')}
               </p>
-              <p className="text-[13px] text-slate-900 font-medium truncate">{data.capture_certificate.operator_id}</p>
+              <p className="text-[13px] text-[var(--text)] font-medium truncate">{data.capture_certificate.operator_id}</p>
             </div>
             <div className="bg-white px-4 py-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1.5 flex items-center gap-1">
                 <ClockIcon size={9} /> {t('evidence.detail.capture.field.captured')}
               </p>
-              <p className="text-[12px] text-slate-900 font-mono truncate">
+              <p className="text-[12px] text-[var(--text)] font-mono truncate">
                 {data.capture_certificate.captured_at.replace('T', ' ').replace('Z', ' UTC')}
               </p>
             </div>
@@ -415,7 +414,7 @@ export default function EvidenceDetail() {
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1.5 flex items-center gap-1">
                 <Smartphone size={9} /> {t('evidence.detail.capture.field.device')}
               </p>
-              <p className="text-[13px] text-slate-900 font-medium truncate">
+              <p className="text-[13px] text-[var(--text)] font-medium truncate">
                 {data.capture_certificate.device_id ?? <span className="text-[var(--muted3)]">{t('evidence.detail.capture.field.notDeclared')}</span>}
               </p>
             </div>
@@ -423,7 +422,7 @@ export default function EvidenceDetail() {
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1.5 flex items-center gap-1">
                 <MapPin size={9} /> {t('evidence.detail.capture.field.location')}
               </p>
-              <p className="text-[13px] text-slate-900 font-medium truncate">
+              <p className="text-[13px] text-[var(--text)] font-medium truncate">
                 {data.capture_certificate.location ?? <span className="text-[var(--muted3)]">{t('evidence.detail.capture.field.notDeclared')}</span>}
               </p>
             </div>
@@ -472,10 +471,10 @@ export default function EvidenceDetail() {
             className="mb-4 mt-2 flex items-start gap-2.5 rounded-xl px-3.5 py-3"
             style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)' }}
           >
-            <AlertCircle size={13} className="text-amber-700 mt-0.5 shrink-0" />
+            <AlertCircle size={13} className="text-[var(--amber)] mt-0.5 shrink-0" />
             <div>
-              <p className="text-xs font-semibold text-amber-700 mb-1">Gaps declarados en la cadena</p>
-              <ul className="text-xs text-amber-700/70 space-y-0.5">
+              <p className="text-xs font-semibold text-[var(--amber)] mb-1">Gaps declarados en la cadena</p>
+              <ul className="text-xs text-[var(--amber)]/70 space-y-0.5">
                 {p.gaps.map((g, i) => <li key={i}>· {g}</li>)}
               </ul>
             </div>
@@ -506,7 +505,7 @@ export default function EvidenceDetail() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-700">{st.description}</p>
+                <p className="text-xs text-[var(--text2)]">{st.description}</p>
               </div>
             </div>
           ))}

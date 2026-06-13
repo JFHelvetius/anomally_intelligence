@@ -6,7 +6,7 @@ import {
   AlertTriangle, ExternalLink,
 } from 'lucide-react'
 import { api } from '../api/client'
-import { Card, CardHeader, Hash, Badge, PageHeader, Skeleton, Alert, InfoRow } from '../components/ui'
+import { Card, CardHeader, Hash, Badge, PageHeader, Skeleton, Alert, InfoRow, OfflineState } from '../components/ui'
 import { useT } from '../i18n'
 import {
   verifyProofHash, verifyStructural, isWeakRule,
@@ -319,7 +319,7 @@ function NodeDetail({
       <Card>
         <CardHeader title={`Premise · ${premise.id}`} sub={premise.kind} />
         <div className="p-5 space-y-3">
-          <p className="text-[13px] text-slate-700 leading-relaxed">{premise.text}</p>
+          <p className="text-[13px] text-[var(--text2)] leading-relaxed">{premise.text}</p>
           {premise.evidence_refs.length > 0 && (
             <div>
               <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2">
@@ -330,7 +330,7 @@ function NodeDetail({
                   <Link
                     key={ref}
                     to={`/evidence/${ref}`}
-                    className="block hover:bg-slate-50 -mx-1 px-1 py-0.5 rounded"
+                    className="block hover:bg-[var(--surface2)] -mx-1 px-1 py-0.5 rounded"
                   >
                     <Hash value={ref} />
                   </Link>
@@ -356,12 +356,12 @@ function NodeDetail({
           }
         />
         <div className="p-5 space-y-3">
-          <p className="text-[13px] text-slate-700 leading-relaxed">{inference.text}</p>
+          <p className="text-[13px] text-[var(--text2)] leading-relaxed">{inference.text}</p>
           <InfoRow label="Rule" mono>{inference.rule}</InfoRow>
           <InfoRow label="Inputs">
             <div className="flex flex-wrap gap-1.5">
               {inference.input_claim_ids.map(id => (
-                <span key={id} className="font-mono text-[10.5px] bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
+                <span key={id} className="font-mono text-[10.5px] bg-[var(--surface2)] border border-[var(--border)] px-1.5 py-0.5 rounded">
                   {id}
                 </span>
               ))}
@@ -382,7 +382,7 @@ function NodeDetail({
           action={isConclusion ? <Badge variant="green" dot>conclusion</Badge> : undefined}
         />
         <div className="p-5">
-          <p className="text-[13px] text-slate-700 leading-relaxed">{claim.text}</p>
+          <p className="text-[13px] text-[var(--text2)] leading-relaxed">{claim.text}</p>
         </div>
       </Card>
     )
@@ -428,12 +428,11 @@ export default function InferenceProofView() {
 
   if (isError || !proof) {
     return (
-      <div className="space-y-4">
-        <Link to="/derived" className="inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-violet-700">
-          <ArrowLeft size={12} /> Back
-        </Link>
-        <Alert variant="error">{(error as Error)?.message ?? 'Proof not found'}</Alert>
-      </div>
+      <OfflineState
+        title="Inference proof no encontrada"
+        body="Las inference proofs (DAG estructural de razonamiento del analista) se sirven desde el archive AIP local."
+        detail={(error as Error)?.message}
+      />
     )
   }
 
@@ -443,7 +442,7 @@ export default function InferenceProofView() {
 
   return (
     <div className="space-y-5 animate-in">
-      <Link to="/derived" className="inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-violet-700 font-medium">
+      <Link to="/derived" className="inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--accent)] font-medium">
         <ArrowLeft size={12} /> Back to Analysis Layers
       </Link>
 
@@ -456,14 +455,14 @@ export default function InferenceProofView() {
       {/* Verdict + metadata strip */}
       <div className="rounded-lg border border-[var(--border)] bg-white p-4 card-shadow flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
-          <VerdictIcon size={16} className={verdictOk ? 'text-emerald-700' : 'text-red-700'} />
+          <VerdictIcon size={16} className={verdictOk ? 'text-[var(--green)]' : 'text-red-700'} />
           <Badge variant={verdictVariant} dot>
             {hashOk === null ? 'Verifying…' : verdictOk ? 'Structurally valid' : 'Invalid'}
           </Badge>
         </div>
         <div className="flex items-center gap-2 text-[12px] text-[var(--muted)]">
           <Target size={11} /> target justification:
-          <span className="font-mono text-slate-700">{proof.target_justification_id}</span>
+          <span className="font-mono text-[var(--text2)]">{proof.target_justification_id}</span>
         </div>
         <div className="flex items-center gap-2 ml-auto">
           <Hash value={proof.proof_hash} />
@@ -471,7 +470,7 @@ export default function InferenceProofView() {
             href={`/api/inference-proofs/${proof.proof_id}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] text-[var(--muted)] hover:text-violet-700"
+            className="inline-flex items-center gap-1 text-[11px] text-[var(--muted)] hover:text-[var(--accent)]"
           >
             raw JSON <ExternalLink size={9} />
           </a>
@@ -488,9 +487,9 @@ export default function InferenceProofView() {
       )}
 
       {structural && structural.weak_inferences.length > 0 && (
-        <div className="flex items-start gap-3 rounded-md bg-amber-50 border border-amber-200 px-4 py-3">
-          <AlertTriangle size={14} className="text-amber-700 mt-0.5 shrink-0" />
-          <div className="text-[12.5px] text-amber-900 leading-relaxed">
+        <div className="flex items-start gap-3 rounded-md bg-[var(--amber-bg)] border border-[var(--amber)] px-4 py-3">
+          <AlertTriangle size={14} className="text-[var(--amber)] mt-0.5 shrink-0" />
+          <div className="text-[12.5px] text-[var(--amber)] leading-relaxed">
             <span className="font-semibold">{structural.weak_inferences.length} weak (non-deductive) inference{structural.weak_inferences.length !== 1 ? 's' : ''}.</span>
             {' '}Abduction premises don't <em>follow</em> from observations — they're the best available explanation, which could be wrong even if every input is true.
           </div>
@@ -505,10 +504,10 @@ export default function InferenceProofView() {
             sub={`${structural?.structure.premise_count ?? 0} premises · ${structural?.structure.inference_count ?? 0} inferences · ${structural?.structure.derived_claim_count ?? 0} derived claims`}
             action={
               <div className="flex items-center gap-1 text-[10px]">
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-violet-100 text-violet-700"><Brain size={9} /> premise</span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">deductive</span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">weak</span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">conclusion</span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--accent-bg)] text-[var(--accent)]"><Brain size={9} /> premise</span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-[var(--blue)]">deductive</span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--amber-bg)] text-[var(--amber)]">weak</span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--green-bg)] text-[var(--green)]">conclusion</span>
               </div>
             }
           />
@@ -542,7 +541,7 @@ export default function InferenceProofView() {
       </Card>
 
       {/* Reading hint */}
-      <div className="flex items-start gap-3 rounded-md bg-slate-50 border border-slate-200 px-4 py-3">
+      <div className="flex items-start gap-3 rounded-md bg-[var(--surface2)] border border-[var(--border)] px-4 py-3">
         <FileText size={13} className="text-[var(--muted)] mt-0.5 shrink-0" />
         <div className="text-[12px] text-[var(--muted2)] leading-relaxed">
           <span className="font-semibold">{t('proof.hint.verifiesLabel')}</span> {t('proof.hint.verifiesBody')}

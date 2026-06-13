@@ -58,7 +58,7 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: { value
   if (!active || !payload?.length) return null
   return (
     <div className="bg-white border border-[var(--border)] rounded-md px-2.5 py-1.5 text-[11px] shadow-sm">
-      <p className="text-slate-800 font-medium">{payload[0].value} entries</p>
+      <p className="text-[var(--text)] font-medium">{payload[0].value} entries</p>
     </div>
   )
 }
@@ -123,7 +123,7 @@ function StatCard({
 }) {
   const inner = (
     <div
-      className="rounded-lg border p-4 transition-colors hover:bg-slate-50"
+      className="rounded-lg border p-4 transition-colors hover:bg-[var(--surface2)]"
       style={{
         background: primary ? 'var(--accent-bg)' : 'var(--surface)',
         borderColor: primary ? 'var(--accent3)' : 'var(--border)',
@@ -362,18 +362,18 @@ export default function Dashboard() {
             <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
               {evidence.data.slice(0, 4).map((e) => (
                 <Link key={e.hash} to={`/evidence/${e.hash}`}
-                  className="flex items-center gap-4 px-5 py-3 hover:bg-slate-50 transition-colors group">
-                  <FileText size={14} className="text-slate-400 shrink-0" />
+                  className="flex items-center gap-4 px-5 py-3 hover:bg-[var(--surface2)] transition-colors group">
+                  <FileText size={14} className="text-[var(--muted3)] shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <Hash value={e.hash} />
                       <Badge variant="slate">{e.kind?.replace(/_/g, ' ')}</Badge>
                     </div>
-                    <p className="text-[11px] text-slate-500 font-mono">
+                    <p className="text-[11px] text-[var(--muted)] font-mono">
                       {e.ingested_by} · {e.ingested_at?.slice(0, 10)} · {(e.size_bytes / 1024).toFixed(1)} KB
                     </p>
                   </div>
-                  <ArrowRight size={12} className="text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
+                  <ArrowRight size={12} className="text-[var(--muted3)] group-hover:text-[var(--muted)] transition-colors shrink-0" />
                 </Link>
               ))}
             </div>
@@ -398,7 +398,7 @@ export default function Dashboard() {
                 className="rounded-lg border p-4"
                 style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <div className="flex items-start gap-3">
-                  <Icon size={14} className="text-slate-500 mt-0.5 shrink-0" />
+                  <Icon size={14} className="text-[var(--muted)] mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[10px] font-mono font-bold" style={{ color: 'var(--muted3)' }}>{s.step}</span>
@@ -426,14 +426,14 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {SECTIONS.map(({ to, icon: Icon, titleKey, bodyKey }) => (
             <Link key={to} to={to}
-              className="rounded-lg border p-4 flex items-start gap-3 transition-colors hover:bg-slate-50"
+              className="rounded-lg border p-4 flex items-start gap-3 transition-colors hover:bg-[var(--surface2)]"
               style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-              <Icon size={14} className="text-slate-500 mt-0.5 shrink-0" />
+              <Icon size={14} className="text-[var(--muted)] mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[12.5px] font-semibold mb-0.5" style={{ color: 'var(--text)' }}>{t(titleKey)}</p>
                 <p className="text-[11.5px] leading-relaxed" style={{ color: 'var(--muted)' }}>{t(bodyKey)}</p>
               </div>
-              <ArrowRight size={12} className="text-slate-300 shrink-0 mt-1" />
+              <ArrowRight size={12} className="text-[var(--muted3)] shrink-0 mt-1" />
             </Link>
           ))}
         </div>
@@ -476,7 +476,7 @@ function OfflineBanner() {
       style={{ background: 'var(--surface2)', borderColor: 'var(--border)' }}
     >
       <div className="flex items-start gap-3 mb-3">
-        <Database size={15} className="text-slate-500 mt-0.5 shrink-0" />
+        <Database size={15} className="text-[var(--muted)] mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
           <h3 className="text-[13px] font-semibold tracking-tight leading-snug" style={{ color: 'var(--text)' }}>
             {t('dashboard.offline.banner.title')}
@@ -512,7 +512,7 @@ function PreviewStats() {
       className="rounded-lg border border-dashed px-5 py-4 flex items-start gap-3"
       style={{ background: 'var(--bg2)', borderColor: 'var(--border2)' }}
     >
-      <Database size={14} className="text-slate-400 mt-0.5 shrink-0" />
+      <Database size={14} className="text-[var(--muted3)] mt-0.5 shrink-0" />
       <div className="min-w-0 flex-1">
         <h3 className="text-[12.5px] font-semibold leading-snug mb-1" style={{ color: 'var(--text2)' }}>
           {t('dashboard.offline.stats.title')}
@@ -532,7 +532,7 @@ function PreviewCard({ bodyKey }: { bodyKey: TKey }) {
       className="rounded-lg border border-dashed px-5 py-6 text-center"
       style={{ background: 'var(--bg2)', borderColor: 'var(--border2)' }}
     >
-      <Database size={18} strokeWidth={1.5} className="text-slate-400 mx-auto mb-3" />
+      <Database size={18} strokeWidth={1.5} className="text-[var(--muted3)] mx-auto mb-3" />
       <p className="text-[12px] leading-relaxed max-w-md mx-auto" style={{ color: 'var(--muted2)' }}>
         {t(bodyKey)}
       </p>

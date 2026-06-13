@@ -5,7 +5,7 @@ import {
   HelpCircle, AlertTriangle, FileText,
 } from 'lucide-react'
 import { api } from '../api/client'
-import { Card, CardHeader, Badge, PageHeader, EmptyState } from '../components/ui'
+import { Card, CardHeader, Badge, PageHeader, EmptyState, OfflineState } from '../components/ui'
 import { useT } from '../i18n'
 import type { TKey } from '../i18n/en'
 
@@ -47,11 +47,11 @@ const LAYERS: Array<{
   color: string
   bg: string
 }> = [
-  { key: 'justifications', labelKey: 'derived.layers.justification.label', descKey: 'derived.layers.justification.desc', icon: BookOpen,    color: 'text-amber-700',   bg: 'bg-amber-50 border-amber-200' },
-  { key: 'snapshots',      labelKey: 'derived.layers.snapshot.label',      descKey: 'derived.layers.snapshot.desc',      icon: Camera,      color: 'text-indigo-700',  bg: 'bg-indigo-50 border-indigo-200' },
-  { key: 'timelines',      labelKey: 'derived.layers.timeline.label',      descKey: 'derived.layers.timeline.desc',      icon: Clock,       color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200' },
-  { key: 'workspaces',     labelKey: 'derived.layers.workspace.label',     descKey: 'derived.layers.workspace.desc',     icon: FolderOpen,  color: 'text-violet-700',  bg: 'bg-violet-50 border-violet-200' },
-  { key: '_base',          labelKey: 'derived.layers.base.label',          descKey: 'derived.layers.base.desc',          icon: FileText,    color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
+  { key: 'justifications', labelKey: 'derived.layers.justification.label', descKey: 'derived.layers.justification.desc', icon: BookOpen,    color: 'text-[var(--amber)]',   bg: 'bg-[var(--amber-bg)] border-[var(--amber)]' },
+  { key: 'snapshots',      labelKey: 'derived.layers.snapshot.label',      descKey: 'derived.layers.snapshot.desc',      icon: Camera,      color: 'text-[var(--blue)]',  bg: 'bg-[var(--blue-bg)] border-[var(--blue)]' },
+  { key: 'timelines',      labelKey: 'derived.layers.timeline.label',      descKey: 'derived.layers.timeline.desc',      icon: Clock,       color: 'text-[var(--blue)]',    bg: 'bg-[var(--blue-bg)] border-[var(--blue)]' },
+  { key: 'workspaces',     labelKey: 'derived.layers.workspace.label',     descKey: 'derived.layers.workspace.desc',     icon: FolderOpen,  color: 'text-[var(--accent)]',  bg: 'bg-[var(--accent-bg)] border-[var(--accent-line)]' },
+  { key: '_base',          labelKey: 'derived.layers.base.label',          descKey: 'derived.layers.base.desc',          icon: FileText,    color: 'text-[var(--green)]', bg: 'bg-[var(--green-bg)] border-[var(--green)]' },
 ]
 
 function LayerStack({ counts }: { counts: Record<string, number> }) {
@@ -68,14 +68,14 @@ function LayerStack({ counts }: { counts: Record<string, number> }) {
               <Icon size={14} className={l.color} />
               <div className="flex-1">
                 <span className={`text-xs font-semibold ${l.color}`}>{t(l.labelKey)}</span>
-                <span className="text-[11px] text-slate-500 ml-2">{t(l.descKey)}</span>
+                <span className="text-[11px] text-[var(--muted)] ml-2">{t(l.descKey)}</span>
               </div>
               {n !== null && (
-                <span className="text-[11px] font-mono text-slate-500">{n}</span>
+                <span className="text-[11px] font-mono text-[var(--muted)]">{n}</span>
               )}
             </div>
             {i < LAYERS.length - 1 && (
-              <div className="w-px h-3 bg-[#1e2535]" />
+              <div className="w-px h-3 bg-[var(--border)]" />
             )}
           </div>
         )
@@ -102,12 +102,12 @@ function WorkspaceRow({ item }: { item: DerivedItem }) {
   const refs = (item.artifact_refs as string[] | undefined) ?? []
   return (
     <div className="flex items-center gap-4 px-5 py-3.5">
-      <div className="w-8 h-8 rounded-lg border bg-violet-50 border-violet-200 flex items-center justify-center shrink-0">
-        <FolderOpen size={13} className="text-violet-700" />
+      <div className="w-8 h-8 rounded-lg border bg-[var(--accent-bg)] border-[var(--accent-line)] flex items-center justify-center shrink-0">
+        <FolderOpen size={13} className="text-[var(--accent)]" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-800 font-mono truncate">{item.id}</p>
-        <div className="flex flex-wrap gap-3 mt-0.5 text-[11px] text-slate-500 font-mono">
+        <p className="text-sm text-[var(--text)] font-mono truncate">{item.id}</p>
+        <div className="flex flex-wrap gap-3 mt-0.5 text-[11px] text-[var(--muted)] font-mono">
           {refs.length > 0 && <span>{refs.length} {t('derived.row.artefacts')}</span>}
           {(item.generated_at || item.created_at) && (
             <span>{String(item.generated_at ?? item.created_at).slice(0, 10)}</span>
@@ -116,7 +116,7 @@ function WorkspaceRow({ item }: { item: DerivedItem }) {
         </div>
       </div>
       <a href={`/api/workspaces/${item.id}`} target="_blank" rel="noreferrer"
-        className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-violet-700 transition-colors">
+        className="flex items-center gap-1 text-[11px] text-[var(--muted2)] hover:text-[var(--accent)] transition-colors">
         JSON <ArrowRight size={10} />
       </a>
     </div>
@@ -127,12 +127,12 @@ function TimelineRow({ item }: { item: DerivedItem }) {
   const events = (item.events as unknown[] | undefined) ?? []
   return (
     <div className="flex items-center gap-4 px-5 py-3.5">
-      <div className="w-8 h-8 rounded-lg border bg-blue-50 border-blue-200 flex items-center justify-center shrink-0">
-        <Clock size={13} className="text-blue-700" />
+      <div className="w-8 h-8 rounded-lg border bg-[var(--blue-bg)] border-[var(--blue)] flex items-center justify-center shrink-0">
+        <Clock size={13} className="text-[var(--blue)]" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-800 font-mono truncate">{item.id}</p>
-        <div className="flex flex-wrap gap-3 mt-0.5 text-[11px] text-slate-500 font-mono">
+        <p className="text-sm text-[var(--text)] font-mono truncate">{item.id}</p>
+        <div className="flex flex-wrap gap-3 mt-0.5 text-[11px] text-[var(--muted)] font-mono">
           {events.length > 0 && <span>{events.length} evento{events.length !== 1 ? 's' : ''}</span>}
           {item.workspace_id && <span>ws: {String(item.workspace_id).slice(0, 16)}…</span>}
           {(item.generated_at || item.created_at) && (
@@ -141,7 +141,7 @@ function TimelineRow({ item }: { item: DerivedItem }) {
         </div>
       </div>
       <a href={`/api/timelines/${item.id}`} target="_blank" rel="noreferrer"
-        className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-violet-700 transition-colors">
+        className="flex items-center gap-1 text-[11px] text-[var(--muted2)] hover:text-[var(--accent)] transition-colors">
         JSON <ArrowRight size={10} />
       </a>
     </div>
@@ -151,12 +151,12 @@ function TimelineRow({ item }: { item: DerivedItem }) {
 function SnapshotRow({ item }: { item: DerivedItem }) {
   return (
     <div className="flex items-center gap-4 px-5 py-3.5">
-      <div className="w-8 h-8 rounded-lg border bg-indigo-50 border-indigo-200 flex items-center justify-center shrink-0">
-        <Camera size={13} className="text-indigo-700" />
+      <div className="w-8 h-8 rounded-lg border bg-[var(--blue-bg)] border-[var(--blue)] flex items-center justify-center shrink-0">
+        <Camera size={13} className="text-[var(--blue)]" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-800 font-mono truncate">{item.id}</p>
-        <div className="flex flex-wrap gap-3 mt-0.5 text-[11px] text-slate-500 font-mono">
+        <p className="text-sm text-[var(--text)] font-mono truncate">{item.id}</p>
+        <div className="flex flex-wrap gap-3 mt-0.5 text-[11px] text-[var(--muted)] font-mono">
           {item.workspace_id && <span>ws: {String(item.workspace_id).slice(0, 12)}…</span>}
           {item.timeline_id  && <span>tl: {String(item.timeline_id).slice(0, 12)}…</span>}
           {(item.generated_at || item.created_at) && (
@@ -165,7 +165,7 @@ function SnapshotRow({ item }: { item: DerivedItem }) {
         </div>
       </div>
       <a href={`/api/snapshots/${item.id}`} target="_blank" rel="noreferrer"
-        className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-violet-700 transition-colors">
+        className="flex items-center gap-1 text-[11px] text-[var(--muted2)] hover:text-[var(--accent)] transition-colors">
         JSON <ArrowRight size={10} />
       </a>
     </div>
@@ -175,15 +175,15 @@ function SnapshotRow({ item }: { item: DerivedItem }) {
 function JustificationRow({ item }: { item: DerivedItem }) {
   return (
     <div className="flex items-center gap-4 px-5 py-3.5">
-      <div className="w-8 h-8 rounded-lg border bg-amber-50 border-amber-200 flex items-center justify-center shrink-0">
-        <BookOpen size={13} className="text-amber-700" />
+      <div className="w-8 h-8 rounded-lg border bg-[var(--amber-bg)] border-[var(--amber)] flex items-center justify-center shrink-0">
+        <BookOpen size={13} className="text-[var(--amber)]" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
-          <p className="text-sm text-slate-800 font-mono truncate">{item.id}</p>
+          <p className="text-sm text-[var(--text)] font-mono truncate">{item.id}</p>
           <ConclusionBadge value={item.conclusion as string | null} />
         </div>
-        <div className="flex flex-wrap gap-3 mt-0.5 text-[11px] text-slate-500 font-mono">
+        <div className="flex flex-wrap gap-3 mt-0.5 text-[11px] text-[var(--muted)] font-mono">
           {item.workspace_id && <span>ws: {String(item.workspace_id).slice(0, 16)}…</span>}
           {(item.generated_at || item.created_at) && (
             <span>{String(item.generated_at ?? item.created_at).slice(0, 10)}</span>
@@ -191,7 +191,7 @@ function JustificationRow({ item }: { item: DerivedItem }) {
         </div>
       </div>
       <a href={`/api/justifications/${item.id}`} target="_blank" rel="noreferrer"
-        className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-violet-700 transition-colors">
+        className="flex items-center gap-1 text-[11px] text-[var(--muted2)] hover:text-[var(--accent)] transition-colors">
         JSON <ArrowRight size={10} />
       </a>
     </div>
@@ -214,6 +214,18 @@ export default function Derived() {
 
   const total   = ws.length + tl.length + sn.length + just.length
   const loading = [workspaces, timelines, snapshots, justifications].some(q => q.isLoading)
+  const allErrored = [workspaces, timelines, snapshots, justifications].every(q => q.isError)
+
+  // Sin backend, las 4 queries fallan. Mostrar OfflineState antes de
+  // pintar la página con ceros, para no confundir al visitor.
+  if (allErrored) {
+    return (
+      <OfflineState
+        title={t('derived.title')}
+        body="Las capas derivadas (workspaces · timelines · snapshots · justifications) se ensamblan a partir del archive AIP del operador. Sin backend `aip-web`, no hay capas que mostrar."
+      />
+    )
+  }
 
   const counts = {
     workspaces:     ws.length,
@@ -246,8 +258,8 @@ export default function Derived() {
           <div className="divide-y divide-[#1e2535]">
             {CLI_COMMANDS.map(({ labelKey, cmd }) => (
               <div key={labelKey} className="px-5 py-3">
-                <p className="text-[11px] text-slate-500 mb-1">{t(labelKey)}</p>
-                <code className="text-[11px] font-mono text-violet-700 bg-violet-50 px-2 py-1 rounded block overflow-x-auto">
+                <p className="text-[11px] text-[var(--muted)] mb-1">{t(labelKey)}</p>
+                <code className="text-[11px] font-mono text-[var(--accent)] bg-[var(--accent-bg)] px-2 py-1 rounded block overflow-x-auto">
                   {cmd}
                 </code>
               </div>
@@ -326,16 +338,16 @@ export default function Derived() {
       {!loading && total > 0 && (
         <div className="grid grid-cols-2 gap-3">
           {[
-            { show: ws.length === 0,   icon: FolderOpen, color: 'text-violet-700', title: 'Sin workspaces',    cmd: 'aip workspace create' },
-            { show: tl.length === 0,   icon: Clock,      color: 'text-blue-700',   title: 'Sin timelines',     cmd: 'aip timeline build --workspace-id <id>' },
-            { show: sn.length === 0,   icon: Camera,     color: 'text-indigo-700', title: 'Sin snapshots',     cmd: 'aip snapshot create --workspace-id <id> --timeline-id <id>' },
-            { show: just.length === 0, icon: BookOpen,   color: 'text-amber-700',  title: 'Sin justificaciones', cmd: 'aip justification declare --workspace-id <id> --conclusion unexplained' },
+            { show: ws.length === 0,   icon: FolderOpen, color: 'text-[var(--accent)]', title: 'Sin workspaces',    cmd: 'aip workspace create' },
+            { show: tl.length === 0,   icon: Clock,      color: 'text-[var(--blue)]',   title: 'Sin timelines',     cmd: 'aip timeline build --workspace-id <id>' },
+            { show: sn.length === 0,   icon: Camera,     color: 'text-[var(--blue)]', title: 'Sin snapshots',     cmd: 'aip snapshot create --workspace-id <id> --timeline-id <id>' },
+            { show: just.length === 0, icon: BookOpen,   color: 'text-[var(--amber)]',  title: 'Sin justificaciones', cmd: 'aip justification declare --workspace-id <id> --conclusion unexplained' },
           ].filter(s => s.show).map(({ icon: Icon, color, title, cmd }) => (
             <div key={title} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex items-start gap-3">
               <Icon size={14} className={`${color} mt-0.5 shrink-0`} />
               <div>
-                <p className="text-xs text-slate-400 font-medium mb-1">{title}</p>
-                <code className="text-[10px] font-mono text-slate-600">{cmd}</code>
+                <p className="text-xs text-[var(--muted3)] font-medium mb-1">{title}</p>
+                <code className="text-[10px] font-mono text-[var(--muted2)]">{cmd}</code>
               </div>
             </div>
           ))}

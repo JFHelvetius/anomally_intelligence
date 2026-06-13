@@ -1,18 +1,33 @@
 import { useState, ReactNode } from 'react'
-import { Copy, Check, AlertTriangle, AlertCircle, XCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Copy, Check, AlertTriangle, AlertCircle, XCircle, ServerCrash, ArrowRight, Terminal } from 'lucide-react'
 
-// ─── Badge — light theme, restrained ──────────────────────────────────────
+// ─── Badge — dark theme via translucent tint + colored border + colored text.
+//             Mantiene la API pública por variant pero todo via tokens. ────
 
 type BadgeVariant = 'green' | 'red' | 'amber' | 'blue' | 'purple' | 'orange' | 'slate'
 
+// Each variant maps to two CSS custom vars: a translucent bg tint + a
+// solid foreground color. Border uses the foreground at low alpha via
+// inline style below; the className here is layout only.
+const BADGE_TOKENS: Record<BadgeVariant, { bg: string; fg: string }> = {
+  green:  { bg: 'var(--green-bg)',  fg: 'var(--green)'  },
+  red:    { bg: 'var(--red-bg)',    fg: 'var(--red)'    },
+  amber:  { bg: 'var(--amber-bg)',  fg: 'var(--amber)'  },
+  blue:   { bg: 'var(--blue-bg)',   fg: 'var(--blue)'   },
+  purple: { bg: 'var(--accent-bg)', fg: 'var(--accent)' },
+  orange: { bg: 'var(--amber-bg)',  fg: 'var(--orange)' },
+  slate:  { bg: 'var(--surface2)',  fg: 'var(--text2)'  },
+}
+
 const BADGE: Record<BadgeVariant, string> = {
-  green:  'bg-emerald-50 text-emerald-700 border-emerald-200',
-  red:    'bg-red-50     text-red-700     border-red-200',
-  amber:  'bg-amber-50   text-amber-700   border-amber-200',
-  blue:   'bg-blue-50    text-blue-700    border-blue-200',
-  purple: 'bg-violet-50  text-violet-700  border-violet-200',
-  orange: 'bg-orange-50  text-orange-700  border-orange-200',
-  slate:  'bg-slate-100  text-slate-700   border-slate-200',
+  green:  '',
+  red:    '',
+  amber:  '',
+  blue:   '',
+  purple: '',
+  orange: '',
+  slate:  '',
 }
 
 export function Badge({
@@ -24,19 +39,16 @@ export function Badge({
   children: ReactNode
   dot?: boolean
 }) {
+  const tok = BADGE_TOKENS[variant]
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[3px] text-[10.5px] font-semibold uppercase tracking-wider border ${BADGE[variant]}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[3px] text-[10.5px] font-semibold uppercase tracking-wider border ${BADGE[variant]}`}
+      style={{ background: tok.bg, color: tok.fg, borderColor: tok.fg }}
+    >
       {dot && (
         <span
-          className={`w-1 h-1 rounded-full ${
-            variant === 'green'  ? 'bg-emerald-500' :
-            variant === 'amber'  ? 'bg-amber-500'   :
-            variant === 'red'    ? 'bg-red-500'     :
-            variant === 'blue'   ? 'bg-blue-500'    :
-            variant === 'purple' ? 'bg-violet-500'  :
-            variant === 'orange' ? 'bg-orange-500'  :
-            'bg-slate-500'
-          }`}
+          className="w-1 h-1 rounded-full"
+          style={{ background: tok.fg, boxShadow: `0 0 4px ${tok.fg}` }}
         />
       )}
       {children}
@@ -181,11 +193,13 @@ export function EmptyState({
 }
 
 // ─── Alert ────────────────────────────────────────────────────────────────
+// Calibrado para dark theme: borde + tint translúcido del color status,
+// texto del propio status. Sin chocar con el fondo oscuro.
 
 const ALERT_STYLES = {
-  error:   { bg: 'bg-red-50     border-red-200',     text: 'text-red-800',     Icon: XCircle },
-  warning: { bg: 'bg-amber-50   border-amber-200',   text: 'text-amber-800',   Icon: AlertTriangle },
-  info:    { bg: 'bg-blue-50    border-blue-200',    text: 'text-blue-800',    Icon: AlertCircle },
+  error:   { Icon: XCircle,       color: 'var(--red)',    bg: 'var(--red-bg)' },
+  warning: { Icon: AlertTriangle, color: 'var(--amber)',  bg: 'var(--amber-bg)' },
+  info:    { Icon: AlertCircle,   color: 'var(--blue)',   bg: 'var(--blue-bg)' },
 }
 
 export function Alert({
@@ -198,8 +212,11 @@ export function Alert({
   const s = ALERT_STYLES[variant]
   const Icon = s.Icon
   return (
-    <div className={`flex items-start gap-3 border rounded-lg px-4 py-3 text-[13px] ${s.bg} ${s.text}`}>
-      <Icon size={14} className="mt-0.5 shrink-0 opacity-85" />
+    <div
+      className="flex items-start gap-3 border rounded-lg px-4 py-3 text-[13px]"
+      style={{ background: s.bg, borderColor: s.color, color: s.color }}
+    >
+      <Icon size={14} className="mt-0.5 shrink-0 opacity-95" />
       <div className="leading-relaxed">{children}</div>
     </div>
   )
@@ -275,6 +292,120 @@ export function InfoRow({
       <span className={`text-[13px] text-[var(--text2)] break-all ${mono ? 'font-mono text-[11.5px] text-[var(--muted2)]' : ''}`}>
         {children ?? <span className="text-[var(--muted3)]">—</span>}
       </span>
+    </div>
+  )
+}
+
+// ─── OfflineState ─────────────────────────────────────────────────────────
+// Estado para páginas operator que requieren backend cuando se cargan
+// en GH Pages u otro entorno sin /api. Vibe cypherpunk: ServerCrash icon,
+// borde violet con glow, panel con el comando para arrancar aip-web,
+// CTA al portal público que sí funciona sin backend.
+
+export function OfflineState({
+  title,
+  body,
+  detail,
+}: {
+  title: string
+  body: string
+  detail?: string
+}) {
+  return (
+    <div className="max-w-2xl mx-auto py-12 animate-in">
+      <div
+        className="rounded-lg border p-7 relative overflow-hidden"
+        style={{
+          background: 'var(--surface)',
+          borderColor: 'var(--accent-line)',
+          boxShadow: '0 0 24px rgba(167,139,250,0.10), 0 0 0 1px rgba(167,139,250,0.05) inset',
+        }}
+      >
+        <div className="aurora-backdrop" style={{ opacity: 0.5 }} />
+
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-5">
+            <div
+              className="w-10 h-10 rounded-md flex items-center justify-center shrink-0"
+              style={{
+                background: 'var(--accent-bg)',
+                border: '1px solid var(--accent-line)',
+              }}
+            >
+              <ServerCrash size={18} style={{ color: 'var(--accent)' }} strokeWidth={1.8} />
+            </div>
+            <div>
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] mb-1" style={{ color: 'var(--accent)' }}>
+                no backend · offline
+              </p>
+              <h3 className="text-[15px] font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
+                {title}
+              </h3>
+            </div>
+          </div>
+
+          <p className="text-[13px] leading-relaxed mb-5" style={{ color: 'var(--text2)' }}>
+            {body}
+          </p>
+
+          {detail && (
+            <p className="text-[12px] leading-relaxed mb-5" style={{ color: 'var(--muted)' }}>
+              {detail}
+            </p>
+          )}
+
+          <div
+            className="rounded-md p-3 mb-6 font-mono text-[11.5px]"
+            style={{
+              background: 'var(--bg)',
+              border: '1px solid var(--border2)',
+              color: 'var(--text2)',
+            }}
+          >
+            <div className="flex items-center gap-1.5 mb-2 pb-2 border-b" style={{ borderColor: 'var(--border)' }}>
+              <Terminal size={11} style={{ color: 'var(--signal)' }} />
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+                arranca el backend local
+              </span>
+            </div>
+            <div className="space-y-1">
+              <div><span style={{ color: 'var(--muted)' }}># desde la raíz del repo</span></div>
+              <div>
+                <span style={{ color: 'var(--signal)' }}>$</span> <span style={{ color: 'var(--accent)' }}>pip install</span> <span>-e <span style={{ color: 'var(--green)' }}>'.[web]'</span></span>
+              </div>
+              <div>
+                <span style={{ color: 'var(--signal)' }}>$</span> <span style={{ color: 'var(--accent)' }}>aip-web</span> --archive <span style={{ color: 'var(--green)' }}>./docs/demo/demo_archive</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/portal"
+              className="group inline-flex items-center gap-2 px-3.5 py-2 rounded-md text-[12.5px] font-semibold transition-all border"
+              style={{
+                background: 'var(--accent2)',
+                borderColor: 'var(--accent)',
+                color: '#fff',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 20px rgba(167,139,250,0.5)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none' }}
+            >
+              ir al portal público
+              <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              to="/"
+              className="text-[12px] font-medium transition-colors"
+              style={{ color: 'var(--muted)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--muted)' }}
+            >
+              volver al inicio
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

@@ -4,7 +4,7 @@ import {
   HelpCircle, AlertTriangle, Clock, FileText, GitBranch,
 } from 'lucide-react'
 import { api, type CaseItem } from '../api/client'
-import { Card, CardHeader, Badge, PageHeader, EmptyState, Skeleton } from '../components/ui'
+import { Card, CardHeader, Badge, PageHeader, EmptyState, Skeleton, OfflineState } from '../components/ui'
 import { useT } from '../i18n'
 import type { TKey } from '../i18n/en'
 
@@ -26,36 +26,36 @@ const CONCLUSION_META: Record<Conclusion, {
     bodyKey: 'cases.conclusion.explained.body',
     variant: 'green',
     Icon: CheckCircle2,
-    bg: 'bg-emerald-50',
-    border: 'border-emerald-200',
-    iconColor: 'text-emerald-700',
+    bg: 'bg-[var(--green-bg)]',
+    border: 'border-[var(--green)]',
+    iconColor: 'text-[var(--green)]',
   },
   unexplained: {
     labelKey: 'cases.conclusion.unexplained.label',
     bodyKey: 'cases.conclusion.unexplained.body',
     variant: 'amber',
     Icon: AlertCircle,
-    bg: 'bg-amber-50',
-    border: 'border-amber-200',
-    iconColor: 'text-amber-700',
+    bg: 'bg-[var(--amber-bg)]',
+    border: 'border-[var(--amber)]',
+    iconColor: 'text-[var(--amber)]',
   },
   indeterminate: {
     labelKey: 'cases.conclusion.indeterminate.label',
     bodyKey: 'cases.conclusion.indeterminate.body',
     variant: 'blue',
     Icon: HelpCircle,
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    iconColor: 'text-blue-700',
+    bg: 'bg-[var(--blue-bg)]',
+    border: 'border-[var(--blue)]',
+    iconColor: 'text-[var(--blue)]',
   },
   contaminated: {
     labelKey: 'cases.conclusion.contaminated.label',
     bodyKey: 'cases.conclusion.contaminated.body',
     variant: 'orange',
     Icon: AlertTriangle,
-    bg: 'bg-orange-50',
-    border: 'border-orange-200',
-    iconColor: 'text-orange-700',
+    bg: 'bg-[var(--amber-bg)]',
+    border: 'border-[var(--orange)]',
+    iconColor: 'text-[var(--orange)]',
   },
 }
 
@@ -63,9 +63,9 @@ const OPEN_META = {
   labelKey: 'cases.tile.open' as TKey,
   variant: 'purple' as const,
   Icon: FolderSearch,
-  bg: 'bg-violet-50',
-  border: 'border-violet-200',
-  iconColor: 'text-violet-700',
+  bg: 'bg-[var(--accent-bg)]',
+  border: 'border-[var(--accent-line)]',
+  iconColor: 'text-[var(--accent)]',
 }
 
 function conclusionMeta(c: string | null) {
@@ -90,26 +90,26 @@ function CaseCard({ item }: { item: CaseItem }) {
       </div>
 
       {/* ID */}
-      <p className="text-sm font-mono text-slate-800 truncate mb-1">{item.id}</p>
+      <p className="text-sm font-mono text-[var(--text)] truncate mb-1">{item.id}</p>
       {item.description && (
-        <p className="text-xs text-slate-500 mb-3 truncate">{item.description}</p>
+        <p className="text-xs text-[var(--muted)] mb-3 truncate">{item.description}</p>
       )}
 
       {/* Stats row */}
-      <div className="flex items-center gap-3 text-[11px] text-slate-600 font-mono mt-3 pt-3 border-t border-[var(--border)]">
+      <div className="flex items-center gap-3 text-[11px] text-[var(--muted2)] font-mono mt-3 pt-3 border-t border-[var(--border)]">
         <span className="flex items-center gap-1">
-          <FileText size={10} className="text-slate-700" />
+          <FileText size={10} className="text-[var(--text2)]" />
           {item.evidence_count} artefacto{item.evidence_count !== 1 ? 's' : ''}
         </span>
         {item.has_timeline && (
           <span className="flex items-center gap-1">
-            <GitBranch size={10} className="text-slate-700" />
+            <GitBranch size={10} className="text-[var(--text2)]" />
             {item.timeline_count} timeline{item.timeline_count !== 1 ? 's' : ''}
           </span>
         )}
         {date && (
           <span className="flex items-center gap-1 ml-auto">
-            <Clock size={10} className="text-slate-700" />
+            <Clock size={10} className="text-[var(--text2)]" />
             {date.slice(0, 10)}
           </span>
         )}
@@ -154,11 +154,11 @@ export default function Cases() {
       {!isLoading && total > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {([
-            ['open',          t('cases.tile.open'),          'text-violet-700',  OPEN_META],
-            ['explained',     t('cases.tile.explained'),     'text-emerald-700', CONCLUSION_META.explained],
-            ['unexplained',   t('cases.tile.unexplained'),   'text-amber-700',   CONCLUSION_META.unexplained],
-            ['indeterminate', t('cases.tile.indeterminate'), 'text-blue-700',    CONCLUSION_META.indeterminate],
-            ['contaminated',  t('cases.tile.contaminated'),  'text-orange-700',  CONCLUSION_META.contaminated],
+            ['open',          t('cases.tile.open'),          'text-[var(--accent)]',  OPEN_META],
+            ['explained',     t('cases.tile.explained'),     'text-[var(--green)]', CONCLUSION_META.explained],
+            ['unexplained',   t('cases.tile.unexplained'),   'text-[var(--amber)]',   CONCLUSION_META.unexplained],
+            ['indeterminate', t('cases.tile.indeterminate'), 'text-[var(--blue)]',    CONCLUSION_META.indeterminate],
+            ['contaminated',  t('cases.tile.contaminated'),  'text-[var(--orange)]',  CONCLUSION_META.contaminated],
           ] as const).map(([key, label, color, meta]) => {
             const n = counts[key as FilterStatus]
             if (key !== 'open' && n === 0) return null
@@ -169,7 +169,7 @@ export default function Cases() {
                   <Icon size={13} className={meta.iconColor} />
                 </div>
                 <p className={`text-xl font-bold ${color}`}>{n}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">{label}</p>
+                <p className="text-[11px] text-[var(--muted)] mt-0.5">{label}</p>
               </div>
             )
           })}
@@ -190,9 +190,10 @@ export default function Cases() {
       )}
 
       {isError && (
-        <div className="bg-red-50 border border-red-300 rounded-xl p-4 text-sm text-red-700">
-          {t('cases.error')}
-        </div>
+        <OfflineState
+          title={t('cases.error')}
+          body="Las investigaciones (workspaces, timelines, snapshots, justifications) viven en el archive AIP local del operador. En el deploy público no hay archive; arranca el backend para verlas."
+        />
       )}
 
       {!isLoading && total === 0 && (
@@ -209,9 +210,9 @@ export default function Cases() {
           {/* Open cases */}
           {counts.open > 0 && (
             <section className="space-y-2">
-              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <h2 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider flex items-center gap-2">
                 <FolderSearch size={11} /> {t('cases.group.open')}
-                <span className="font-mono normal-case text-violet-700">{counts.open}</span>
+                <span className="font-mono normal-case text-[var(--accent)]">{counts.open}</span>
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {(data ?? []).filter(c => statusOf(c) === 'open').map(item => (
@@ -224,9 +225,9 @@ export default function Cases() {
           {/* Closed cases (have a conclusion) */}
           {(counts.explained + counts.unexplained + counts.indeterminate + counts.contaminated) > 0 && (
             <section className="space-y-2">
-              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <h2 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider flex items-center gap-2">
                 <CheckCircle2 size={11} /> {t('cases.group.closed')}
-                <span className="font-mono normal-case text-slate-400">
+                <span className="font-mono normal-case text-[var(--muted3)]">
                   {counts.explained + counts.unexplained + counts.indeterminate + counts.contaminated}
                 </span>
               </h2>
@@ -243,7 +244,7 @@ export default function Cases() {
       {/* Explainer */}
       <Card>
         <CardHeader title={t('cases.about.title')} />
-        <div className="px-5 pb-5 space-y-3 text-xs text-slate-400 leading-relaxed">
+        <div className="px-5 pb-5 space-y-3 text-xs text-[var(--muted3)] leading-relaxed">
           <p>{t('cases.about.body')}</p>
           <div className="grid grid-cols-2 gap-3 mt-3">
             {Object.entries(CONCLUSION_META).map(([key, m]) => {
@@ -252,8 +253,8 @@ export default function Cases() {
                 <div key={key} className={`flex items-start gap-2 p-3 rounded-lg border ${m.bg} ${m.border}`}>
                   <Icon size={13} className={`${m.iconColor} mt-0.5 shrink-0`} />
                   <div>
-                    <p className="font-medium text-slate-800">{t(m.labelKey)}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">{t(m.bodyKey)}</p>
+                    <p className="font-medium text-[var(--text)]">{t(m.labelKey)}</p>
+                    <p className="text-[11px] text-[var(--muted)] mt-0.5">{t(m.bodyKey)}</p>
                   </div>
                 </div>
               )
