@@ -1,0 +1,22 @@
+{
+  "declaration_type": "aip.transparency.key-declaration.v1",
+  "operator": {
+    "external_references": [
+      {
+        "kind": "github_user_keys",
+        "note": "DEMO ONLY: the operator's GitHub SSH keys. Compare fingerprint via: ssh-keygen -lf",
+        "uri": "https://github.com/JFHelvetius.keys"
+      },
+      {
+        "kind": "https_pem",
+        "note": "DEMO ONLY: this URL is the same key shipped in the report; trivially circular so it does NOT close the trust loop alone. Use github_user_keys above for a real cross-check.",
+        "uri": "https://raw.githubusercontent.com/JFHelvetius/aip/main/docs/demo/demo_archive/transparency/public-key.pem"
+      }
+    ],
+    "first_published_at": "2026-06-10T00:00:00Z",
+    "operator_id": "aip-demo-operator",
+    "public_key_fingerprint": "8c3bba9ab9fd16ede636ba77ab42f3a8e6fd4b2fc7da33164a58b5927b10c737"
+  },
+  "schema_version": "1",
+  "witnesses": []
+}

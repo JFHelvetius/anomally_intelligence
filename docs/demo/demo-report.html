@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>AIP Demo Report — Twining Memo 1947</title>
+  <style>
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+       background: #f6f7f9; color: #0f172a; line-height: 1.5; font-size: 14px; }
+.report-frame { max-width: 960px; margin: 0 auto; padding: 24px; }
+.report-header { background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+                 padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.report-header h1 { margin: 0 0 8px; font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.report-header .subtitle { color: #64748b; font-size: 13px; font-family: ui-monospace, monospace; word-break: break-all; }
+.report-header .meta { margin-top: 12px; font-size: 11.5px; color: #64748b;
+                        display: flex; gap: 16px; flex-wrap: wrap; font-family: ui-monospace, monospace; }
+.global-status { padding: 16px 24px; border-radius: 10px; margin-bottom: 24px;
+                  border: 1px solid; font-weight: 600; display: flex; align-items: center; gap: 12px; }
+.global-status .status-icon { font-size: 20px; }
+.global-status.status-ok { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+.global-status.status-warn { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+.global-status.status-err { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+.global-status.status-pending { background: #eef2ff; border-color: #c7d2fe; color: #3730a3; }
+
+.report-section { background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+                   padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.report-section.accent-violet { border-left: 4px solid #7c3aed; }
+.report-section.accent-emerald { border-left: 4px solid #10b981; }
+.report-section.accent-blue { border-left: 4px solid #3b82f6; }
+.report-section.accent-purple { border-left: 4px solid #a855f7; }
+.report-section.accent-amber { border-left: 4px solid #d97706; }
+.trust-warn { background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 10px 14px; margin: 10px 0; color: #78350f; font-size: 13px; }
+.trust-warn ul { margin: 6px 0 0 18px; padding: 0; }
+.trust-block { border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; margin: 8px 0; background: #fdfcfa; }
+.trust-subgroup { margin-top: 12px; }
+.ref-list { margin: 6px 0 0 0; padding: 0; list-style: none; }
+.ref-list li { padding: 6px 10px; border: 1px solid #f1f5f9; border-radius: 4px; margin-bottom: 4px; background: white; }
+.ref-kind { display: inline-block; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; font-size: 11px; margin-right: 8px; color: #475569; }
+.ref-uri { font-size: 12px; }
+.ref-note { margin-top: 2px; }
+.report-section h2 { margin: 0 0 12px; font-size: 17px; font-weight: 700; letter-spacing: -0.015em;
+                      display: flex; align-items: center; gap: 8px; }
+.report-section h3 { margin: 16px 0 8px; font-size: 14.5px; font-weight: 700; }
+.report-section h4 { margin: 12px 0 6px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+                      letter-spacing: 0.08em; color: #64748b; display: flex; align-items: center; gap: 8px; }
+.phase-tag { font-size: 10px; font-weight: 600; padding: 2px 6px; background: #f1f5f9; color: #475569;
+              border: 1px solid #e2e8f0; border-radius: 3px; letter-spacing: 0.05em; }
+.muted { color: #64748b; font-size: 12.5px; }
+.small { font-size: 11.5px; }
+.tiny { font-size: 10.5px; }
+.mono { font-family: ui-monospace, 'JetBrains Mono', monospace; }
+.break { word-break: break-all; }
+
+dl.kv { display: grid; grid-template-columns: 160px 1fr; gap: 4px 16px; margin: 12px 0 0; }
+dl.kv dt { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+            font-weight: 600; padding-top: 2px; }
+dl.kv dd { margin: 0; font-size: 12.5px; color: #1e293b; }
+
+.badges-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 4px;
+          font-size: 10.5px; font-weight: 600; border: 1px solid; text-transform: uppercase;
+          letter-spacing: 0.05em; }
+.badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+.badge-pending { background: #f1f5f9; border-color: #cbd5e1; color: #475569; }
+.badge-pending .dot { background: #94a3b8; animation: pulse 1.5s infinite; }
+.badge-ok { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+.badge-ok .dot { background: #10b981; }
+.badge-fail { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
+.badge-fail .dot { background: #ef4444; }
+.badge-weak { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+.badge-weak .dot { background: #f59e0b; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.audit-list { display: flex; flex-direction: column; gap: 8px; }
+.audit-entry { padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
+.audit-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.audit-header .seq { font-weight: 700; color: #64748b; font-size: 11.5px; }
+.audit-header .action { font-size: 11.5px; padding: 2px 6px; background: #dbeafe; color: #1e40af;
+                         border: 1px solid #bfdbfe; border-radius: 3px; font-weight: 600; }
+.audit-header .actor { font-size: 11px; color: #64748b; }
+.audit-meta { font-size: 10.5px; color: #475569; line-height: 1.6; }
+.audit-meta .hash { color: #1e293b; }
+
+.manifest-block, .proof-block { background: #fafbfc; border: 1px solid #e2e8f0; border-radius: 8px;
+                                  padding: 16px; margin: 12px 0; }
+.witnesses-block, .ots-block, .proof-subsection { margin-top: 14px; padding-top: 12px;
+                                                    border-top: 1px solid #e2e8f0; }
+.witness-row, .anchor-row { display: flex; align-items: center; gap: 12px; padding: 6px 0;
+                              font-size: 12px; flex-wrap: wrap; }
+.anchor-icon { font-size: 16px; }
+
+.claim-list { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-direction: column; gap: 4px; }
+.claim-list li { padding: 6px 10px; background: white; border: 1px solid #e2e8f0; border-radius: 4px;
+                  font-size: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.claim-id { font-weight: 700; min-width: 32px; color: #475569; font-size: 11.5px; }
+.claim-kind { font-size: 10px; padding: 1px 5px; background: #e0e7ff; color: #4338ca;
+               border-radius: 3px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+.claim-text { flex: 1; color: #1e293b; min-width: 0; }
+.rule { font-size: 10.5px; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+.rule-deductive { background: #dbeafe; color: #1e40af; }
+.rule-weak { background: #fef3c7; color: #92400e; }
+
+footer.report-footer { text-align: center; color: #94a3b8; font-size: 11px; padding: 24px 0; line-height: 1.7; }
+</style>
+</head>
+<body>
+  <div class="report-frame">
+    <div class="report-header">
+      <h1>AIP Demo Report — Twining Memo 1947</h1>
+      <div class="subtitle">sha256:65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1</div>
+      <div class="meta">
+        <span>archive: demo_archive</span>
+        <span>generated: 2026-06-11T02:53:47Z</span>
+        <span>format: aip.evidence-report.v1</span>
+      </div>
+    </div>
+
+    <div id="global-status" class="global-status status-pending">
+      <span class="status-icon">⏳</span>
+      <span>Recomputing hashes via WebCrypto…</span>
+    </div>
+
+    
+<section class="report-section" id="section-evidence">
+  <h2>Evidence</h2>
+  <dl class="kv">
+    <dt>Hash</dt><dd class="mono break">65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1</dd>
+    <dt>Kind</dt><dd>document_scan</dd>
+    <dt>MIME</dt><dd class="mono">application/pdf</dd>
+    <dt>Size</dt><dd class="mono">250022 bytes</dd>
+    <dt>Ingested at</dt><dd class="mono">2026-06-11T02:53:45+00:00</dd>
+    <dt>Ingested by</dt><dd class="mono">@aip-demo</dd>
+    <dt>Source</dt><dd>NARA — Twining Memo 1947-09-23 (nara-twining-memo-1947)</dd>
+    <dt>Authority</dt><dd>secondary</dd>
+  </dl>
+</section>
+
+<section class="report-section accent-emerald" id="section-audit">
+  <h2>Audit chain <span class="phase-tag">Phase 1A foundation</span></h2>
+  <p class="muted">Cadena append-only hash-encadenada. Cada entry recomputa SHA-256(JCS(canonical_fields)) client-side.</p>
+  <div class="audit-list">
+    
+<div class="audit-entry">
+  <div class="audit-header">
+    <span class="seq mono">#0</span>
+    <span class="action mono">archive_bootstrap</span>
+    <span class="actor mono">@aip-demo</span>
+    <span class="badge badge-pending" data-verify="audit-entry" data-target="0"><span class="dot"></span>hash</span>
+    <span class="badge badge-pending" data-verify="audit-link" data-target="0"><span class="dot"></span>linkage</span>
+  </div>
+  <div class="audit-meta mono break">
+    target: aip:archive/bootstrap<br>
+    timestamp: 2026-06-11T02:53:45Z<br>
+    entry_hash: <span class="hash">a5a1032695f2fb49df5a9a267756a52e16ca1d572c8c3ec4d321175f1222dbc5</span>
+  </div>
+</div>
+
+<div class="audit-entry">
+  <div class="audit-header">
+    <span class="seq mono">#1</span>
+    <span class="action mono">ingest_evidence</span>
+    <span class="actor mono">@aip-demo</span>
+    <span class="badge badge-pending" data-verify="audit-entry" data-target="1"><span class="dot"></span>hash</span>
+    <span class="badge badge-pending" data-verify="audit-link" data-target="1"><span class="dot"></span>linkage</span>
+  </div>
+  <div class="audit-meta mono break">
+    target: aip:evidence/sha256:65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1<br>
+    timestamp: 2026-06-11T02:53:45Z<br>
+    entry_hash: <span class="hash">f707fa28465a7ceb41a43a10716ceaff374941efe893080d8bbba4ee6cc374a4</span>
+  </div>
+</div>
+
+  </div>
+</section>
+
+<section class="report-section accent-blue" id="section-manifests">
+  <h2>Coverage manifests <span class="phase-tag">Phase 1A</span></h2>
+  <p class="muted">Transparency manifests whose audit_entry_count covers this evidence's audit seq.</p>
+  
+<div class="manifest-block">
+  <h3>Transparency manifest seq 0</h3>
+  <div class="badges-row">
+    <span class="badge badge-pending" data-verify="manifest" data-target="31d03105ca47f9d71f9343ef7debdc25d931773323b0eadae5c2d24b41beaedf"><span class="dot"></span>self-hash</span>
+    <span class="badge badge-pending" data-verify="manifest-sig" data-target="31d03105ca47f9d71f9343ef7debdc25d931773323b0eadae5c2d24b41beaedf"><span class="dot"></span>ed25519</span>
+  </div>
+  <dl class="kv">
+    <dt>Operator</dt><dd>aip-demo-operator</dd>
+    <dt>Signed at</dt><dd class="mono">2026-06-11T02:53:46Z</dd>
+    <dt>Manifest hash</dt><dd class="mono break">31d03105ca47f9d71f9343ef7debdc25d931773323b0eadae5c2d24b41beaedf</dd>
+    <dt>Previous</dt><dd class="mono break">0000000000000000000000000000000000000000000000000000000000000000</dd>
+    <dt>Audit head</dt><dd class="mono break">f707fa28465a7ceb41a43a10716ceaff374941efe893080d8bbba4ee6cc374a4</dd>
+    <dt>Audit entries pinned</dt><dd class="mono">2</dd>
+    <dt>Signature</dt><dd class="mono break tiny">bb371d6f107924afff8b3e9fff32d48f4e2452894bc6fb49905c5874570ac5862fc4ba2d599f6d0783acdf6fbc00601656695b2268d1b3e1655eee1f0f88be02</dd>
+  </dl>
+  <div class="witnesses-block">
+    <h4>Witnesses (0) <span class="phase-tag">Door #3</span></h4>
+    <p class="muted small">No witnesses on this manifest.</p>
+  </div>
+  
+</div>
+
+</section>
+
+<section class="report-section accent-amber" id="section-trust-footprint">
+  <h2>Signer trust footprint</h2>
+  <p class="muted">Cross-check at least one external reference per key against an independent source. The browser already verifies the signatures inside this report; this section closes the key-to-identity binding.</p>
+  
+  
+<div class="trust-block">
+  <h3>Operator key</h3>
+  <dl class="kv">
+    <dt>Operator id</dt><dd class="mono">aip-demo-operator</dd>
+    <dt>Fingerprint (SHA-256 of DER SPKI)</dt><dd class="mono break">8c3bba9ab9fd16ede636ba77ab42f3a8e6fd4b2fc7da33164a58b5927b10c737</dd>
+    <dt>First published</dt><dd class="mono">2026-06-10T00:00:00Z</dd>
+  </dl>
+  <h4>External references (2)</h4>
+  <ul class="ref-list"><li><span class="ref-kind mono">github_user_keys</span>
+                  <span class="ref-uri mono break">https://github.com/JFHelvetius.keys</span>
+                  <div class='ref-note muted tiny'>DEMO ONLY: the operator's GitHub SSH keys. Compare fingerprint via: ssh-keygen -lf</div></li><li><span class="ref-kind mono">https_pem</span>
+                  <span class="ref-uri mono break">https://raw.githubusercontent.com/JFHelvetius/aip/main/docs/demo/demo_archive/transparency/public-key.pem</span>
+                  <div class='ref-note muted tiny'>DEMO ONLY: this URL is the same key shipped in the report; trivially circular so it does NOT close the trust loop alone. Use github_user_keys above for a real cross-check.</div></li></ul>
+</div>
+  
+</section>
+
+
+    <footer class="report-footer">
+      <div>Generated by <b>AIP</b> — Anomaly Intelligence Platform · evidence-first archive</div>
+      <div>Verification runs 100% client-side. Hashes via SHA-256(JCS); ed25519 sigs via SubtleCrypto; Bitcoin anchors via embedded 80-byte block headers (merkle-root match).</div>
+      <div>Witness signatures verify when the operator embedded their public keys; Bitcoin anchors verify when the operator embedded the block headers — otherwise badged "key unknown" / "header not embedded".</div>
+      <div>The block header itself is trusted by source (block explorer or your own bitcoin-cli); PoW chain verification requires a Bitcoin node.</div>
+    </footer>
+  </div>
+
+  <script id="report-data" type="application/json">{
+  "schema_version": "1",
+  "report_type": "aip.evidence-report.v1",
+  "generated_at": "2026-06-11T02:53:47Z",
+  "archive_label": "demo_archive",
+  "evidence": {
+    "hash": "65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1",
+    "kind": "document_scan",
+    "mime_type": "application/pdf",
+    "size_bytes": 250022,
+    "content_uri": "objects/sha256/65/539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1",
+    "ingested_at": "2026-06-11T02:53:45+00:00",
+    "ingested_by": "@aip-demo",
+    "source_id": "nara-twining-memo-1947",
+    "notes": null,
+    "status": "active"
+  },
+  "source": {
+    "id": "nara-twining-memo-1947",
+    "name": "NARA — Twining Memo 1947-09-23",
+    "kind": "government_archive",
+    "authority_level": "secondary",
+    "jurisdiction": "US",
+    "license": null
+  },
+  "capture_certificate": null,
+  "audit_entry": {
+    "seq": 1,
+    "prev_hash": "a5a1032695f2fb49df5a9a267756a52e16ca1d572c8c3ec4d321175f1222dbc5",
+    "timestamp": "2026-06-11T02:53:45Z",
+    "actor": "@aip-demo",
+    "action": "ingest_evidence",
+    "target": "aip:evidence/sha256:65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1",
+    "parameters": {
+      "size_bytes": "250022"
+    },
+    "result": "success",
+    "schema_version": "0.1.0",
+    "entry_hash": "f707fa28465a7ceb41a43a10716ceaff374941efe893080d8bbba4ee6cc374a4"
+  },
+  "audit_chain": [
+    {
+      "seq": 0,
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "timestamp": "2026-06-11T02:53:45Z",
+      "actor": "@aip-demo",
+      "action": "archive_bootstrap",
+      "target": "aip:archive/bootstrap",
+      "parameters": {},
+      "result": "success",
+      "schema_version": "0.1.0",
+      "entry_hash": "a5a1032695f2fb49df5a9a267756a52e16ca1d572c8c3ec4d321175f1222dbc5"
+    },
+    {
+      "seq": 1,
+      "prev_hash": "a5a1032695f2fb49df5a9a267756a52e16ca1d572c8c3ec4d321175f1222dbc5",
+      "timestamp": "2026-06-11T02:53:45Z",
+      "actor": "@aip-demo",
+      "action": "ingest_evidence",
+      "target": "aip:evidence/sha256:65539d95ca5fe1a2270e7eeea3931cf9dc01055f6c27fafe94f627e6ebcfade1",
+      "parameters": {
+        "size_bytes": "250022"
+      },
+      "result": "success",
+      "schema_version": "0.1.0",
+      "entry_hash": "f707fa28465a7ceb41a43a10716ceaff374941efe893080d8bbba4ee6cc374a4"
+    }
+  ],
+  "coverage_manifests": [
+    {
+      "archive_manifest_hash": "b70a349b22332356b8f04def902fb1ae19ea7a4b454611f91457c3bb0104aa59",
+      "attestation_count": 0,
+      "audit_chain_head_hash": "f707fa28465a7ceb41a43a10716ceaff374941efe893080d8bbba4ee6cc374a4",
+      "audit_entry_count": 2,
+      "evidence_count": 1,
+      "justification_count": 0,
+      "manifest_hash": "31d03105ca47f9d71f9343ef7debdc25d931773323b0eadae5c2d24b41beaedf",
+      "manifest_type": "aip.transparency.manifest.v1",
+      "operator_id": "aip-demo-operator",
+      "previous_manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "public_key_fingerprint": "8c3bba9ab9fd16ede636ba77ab42f3a8e6fd4b2fc7da33164a58b5927b10c737",
+      "schema_version": "1",
+      "sequence": 0,
+      "signature": "bb371d6f107924afff8b3e9fff32d48f4e2452894bc6fb49905c5874570ac5862fc4ba2d599f6d0783acdf6fbc00601656695b2268d1b3e1655eee1f0f88be02",
+      "signature_algorithm": "ed25519-v1",
+      "signed_at": "2026-06-11T02:53:46Z",
+      "snapshot_count": 0,
+      "timeline_count": 0,
+      "workspace_count": 0
+    }
+  ],
+  "witnesses_by_manifest_sequence": {},
+  "notarization_by_manifest_sequence": {},
+  "inference_proofs": [],
+  "inference_proof_rules": [
+    {
+      "name": "abduction_to_best_explanation",
+      "min_inputs": 1,
+      "max_inputs": null,
+      "classification": "weak"
+    },
+    {
+      "name": "conjunction_intro",
+      "min_inputs": 2,
+      "max_inputs": null,
+      "classification": "deductive"
+    },
+    {
+      "name": "elimination_by_contradiction",
+      "min_inputs": 2,
+      "max_inputs": 2,
+      "classification": "deductive"
+    },
+    {
+      "name": "inference_to_specific_instance",
+      "min_inputs": 2,
+      "max_inputs": 2,
+      "classification": "deductive"
+    },
+    {
+      "name": "modus_ponens",
+      "min_inputs": 2,
+      "max_inputs": 2,
+      "classification": "deductive"
+    }
+  ],
+  "key_declaration": {
+    "declaration_type": "aip.transparency.key-declaration.v1",
+    "operator": {
+      "external_references": [
+        {
+          "kind": "github_user_keys",
+          "note": "DEMO ONLY: the operator's GitHub SSH keys. Compare fingerprint via: ssh-keygen -lf",
+          "uri": "https://github.com/JFHelvetius.keys"
+        },
+        {
+          "kind": "https_pem",
+          "note": "DEMO ONLY: this URL is the same key shipped in the report; trivially circular so it does NOT close the trust loop alone. Use github_user_keys above for a real cross-check.",
+          "uri": "https://raw.githubusercontent.com/JFHelvetius/aip/main/docs/demo/demo_archive/transparency/public-key.pem"
+        }
+      ],
+      "first_published_at": "2026-06-10T00:00:00Z",
+      "operator_id": "aip-demo-operator",
+      "public_key_fingerprint": "8c3bba9ab9fd16ede636ba77ab42f3a8e6fd4b2fc7da33164a58b5927b10c737"
+    },
+    "schema_version": "1",
+    "witnesses": []
+  },
+  "operator_public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAqLV8uXaJ8FBz1qmrH4dWMgOHTM4poP9n3Dic5IgBvEs=\n-----END PUBLIC KEY-----\n",
+  "witness_public_keys": {},
+  "bitcoin_block_headers": {}
+}</script>
+  <script>
+// ─── JCS canonicalize (subset RFC 8785) ──────────────────────────────────
+function jsonString(s) {
+  let out = '"';
+  for (const ch of s) {
+    const cp = ch.codePointAt(0);
+    if (ch === '"') out += '\\"';
+    else if (ch === '\\') out += '\\\\';
+    else if (cp < 0x20) {
+      switch (ch) {
+        case '\b': out += '\\b'; break;
+        case '\f': out += '\\f'; break;
+        case '\n': out += '\\n'; break;
+        case '\r': out += '\\r'; break;
+        case '\t': out += '\\t'; break;
+        default: out += '\\u' + cp.toString(16).padStart(4, '0');
+      }
+    } else out += ch;
+  }
+  return out + '"';
+}
+function jcsSerialize(value) {
+  if (value === null) return 'null';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') {
+    if (!Number.isInteger(value)) throw new Error('only integers supported');
+    return value.toString();
+  }
+  if (typeof value === 'string') return jsonString(value);
+  if (Array.isArray(value)) {
+    return '[' + value.map(jcsSerialize).join(',') + ']';
+  }
+  if (typeof value === 'object') {
+    const keys = Object.keys(value).sort();
+    return '{' + keys.map(k => jsonString(k) + ':' + jcsSerialize(value[k])).join(',') + '}';
+  }
+  throw new Error('unsupported type: ' + typeof value);
+}
+function jcsCanonicalize(value) {
+  return new TextEncoder().encode(jcsSerialize(value));
+}
+async function sha256Hex(bytes) {
+  const buf = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ─── Hash-specific verifiers ────────────────────────────────────────────
+async function verifyAuditEntry(entry) {
+  const canonical = {
+    seq: entry.seq, prev_hash: entry.prev_hash, timestamp: entry.timestamp,
+    actor: entry.actor, action: entry.action, target: entry.target,
+    parameters: entry.parameters, result: entry.result,
+    schema_version: entry.schema_version,
+  };
+  return (await sha256Hex(jcsCanonicalize(canonical))) === entry.entry_hash;
+}
+async function verifyManifest(m) {
+  const dict = { ...m };
+  delete dict.manifest_hash;
+  return (await sha256Hex(jcsCanonicalize(dict))) === m.manifest_hash;
+}
+async function verifyCaptureCert(c) {
+  const dict = { ...c };
+  delete dict.certificate_hash;
+  return (await sha256Hex(jcsCanonicalize(dict))) === c.certificate_hash;
+}
+async function verifyWitness(w) {
+  const dict = { ...w };
+  delete dict.attestation_hash;
+  return (await sha256Hex(jcsCanonicalize(dict))) === w.attestation_hash;
+}
+async function verifyInferenceProof(p) {
+  const dict = { ...p };
+  delete dict.proof_hash;
+  return (await sha256Hex(jcsCanonicalize(dict))) === p.proof_hash;
+}
+
+// ─── Inference proof DAG structural verification ──────────────────────
+// Mirrors aip.justification.logic.verifier.verify_structural and is a
+// near-clone of `web/src/lib/inferenceLogic.ts::verifyStructural` — that TS
+// version is the canonical implementation (tested by `npm test` in /web).
+// Keep the two algorithms aligned when touching either. The standalone
+// HTML report cannot import the TS module because the report is fully
+// self-contained, so this copy lives here intentionally.
+function verifyInferenceProofStructure(proof, rules) {
+  const errors = [];
+  const weak = [];
+  const ruleByName = Object.fromEntries((rules || []).map(r => [r.name, r]));
+
+  const premises = proof.premises || [];
+  const inferences = proof.inferences || [];
+  const derived = proof.derived_claims || [];
+
+  const premiseIds = new Set(premises.map(p => p.id));
+  const derivedById = Object.fromEntries(derived.map(c => [c.id, c]));
+  const inferenceById = Object.fromEntries(inferences.map(i => [i.id, i]));
+  const allClaimIds = new Set([...premiseIds, ...Object.keys(derivedById)]);
+
+  // Per-inference: vocabulary, arity, references, output back-reference.
+  for (const inf of inferences) {
+    const spec = ruleByName[inf.rule];
+    if (!spec) {
+      errors.push('inference ' + JSON.stringify(inf.id) + ': rule ' + JSON.stringify(inf.rule) + ' not in allowed vocabulary.');
+      continue;
+    }
+    const arity = (inf.input_claim_ids || []).length;
+    if (arity < spec.min_inputs) {
+      errors.push('inference ' + JSON.stringify(inf.id) + ': rule ' + JSON.stringify(inf.rule) + ' requires >= ' + spec.min_inputs + ' inputs; got ' + arity + '.');
+    }
+    if (spec.max_inputs !== null && spec.max_inputs !== undefined && arity > spec.max_inputs) {
+      errors.push('inference ' + JSON.stringify(inf.id) + ': rule ' + JSON.stringify(inf.rule) + ' admits <= ' + spec.max_inputs + ' inputs; got ' + arity + '.');
+    }
+    for (const inId of (inf.input_claim_ids || [])) {
+      if (!allClaimIds.has(inId)) {
+        errors.push('inference ' + JSON.stringify(inf.id) + ': input_claim_id ' + JSON.stringify(inId) + ' does not exist.');
+      }
+    }
+    if (!derivedById[inf.output_claim_id]) {
+      errors.push('inference ' + JSON.stringify(inf.id) + ': output_claim_id ' + JSON.stringify(inf.output_claim_id) + ' is not declared in derived_claims.');
+    } else if (derivedById[inf.output_claim_id].inferred_by !== inf.id) {
+      errors.push('inference ' + JSON.stringify(inf.id) + ': output claim has inferred_by=' + JSON.stringify(derivedById[inf.output_claim_id].inferred_by) + ', expected ' + JSON.stringify(inf.id) + '.');
+    }
+    if (spec.classification === 'weak') {
+      weak.push({ inference_id: inf.id, rule: inf.rule, output_claim_id: inf.output_claim_id });
+    }
+  }
+  // Each derived claim's inferred_by must reference an existing inference.
+  for (const c of derived) {
+    if (!inferenceById[c.inferred_by]) {
+      errors.push('derived claim ' + JSON.stringify(c.id) + ': inferred_by ' + JSON.stringify(c.inferred_by) + ' references unknown inference.');
+    }
+  }
+  // Build forward adjacency: input claim X → output claim Y of inferences that consume X.
+  const adj = {};
+  for (const inf of inferences) {
+    for (const inId of (inf.input_claim_ids || [])) {
+      (adj[inId] = adj[inId] || []).push(inf.output_claim_id);
+    }
+  }
+  // Cycle detection (3-color DFS).
+  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const color = {};
+  let cyclePath = null;
+  function dfs(node, stack) {
+    color[node] = GRAY;
+    stack.push(node);
+    for (const nxt of (adj[node] || [])) {
+      const c = color[nxt] || WHITE;
+      if (c === GRAY) {
+        const idx = stack.indexOf(nxt);
+        cyclePath = (idx >= 0 ? stack.slice(idx) : [node]).concat([nxt]).join(' → ');
+        return true;
+      }
+      if (c === WHITE && dfs(nxt, stack)) return true;
+    }
+    color[node] = BLACK;
+    stack.pop();
+    return false;
+  }
+  for (const start of [...Object.keys(adj), ...derived.map(c => c.id)]) {
+    if ((color[start] || WHITE) === WHITE) {
+      if (dfs(start, [])) break;
+    }
+  }
+  if (cyclePath) errors.push('cycle detected in DAG: ' + cyclePath + '.');
+
+  // Conclusion existence + reachability from premises.
+  if (!allClaimIds.has(proof.conclusion_claim_id)) {
+    errors.push('conclusion_claim_id ' + JSON.stringify(proof.conclusion_claim_id) + ' is not declared as premise or derived claim.');
+  } else if (!premiseIds.has(proof.conclusion_claim_id) && errors.length === 0) {
+    const visited = new Set();
+    const stack = [...premiseIds];
+    let reachable = false;
+    while (stack.length) {
+      const n = stack.pop();
+      if (visited.has(n)) continue;
+      visited.add(n);
+      if (n === proof.conclusion_claim_id) { reachable = true; break; }
+      for (const nxt of (adj[n] || [])) stack.push(nxt);
+    }
+    if (!reachable) {
+      errors.push('conclusion ' + JSON.stringify(proof.conclusion_claim_id) + ' is not reachable from premises via the inference DAG.');
+    }
+  }
+
+  return { ok: errors.length === 0, errors, weakInferences: weak };
+}
+
+// ─── ed25519 verification via SubtleCrypto native (Chrome 137+, FF 130+, Safari 17+) ──
+function pemToSpkiBytes(pem) {
+  const body = pem
+    .replace(/-----BEGIN [^-]+-----/g, '')
+    .replace(/-----END [^-]+-----/g, '')
+    .replace(/\s+/g, '');
+  const binary = atob(body);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+  return out;
+}
+function hexToBytes(hex) {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return out;
+}
+async function _verifyEd25519(payloadBytes, signatureHex, publicKeyPem, expectedFp) {
+  const der = pemToSpkiBytes(publicKeyPem);
+  let key;
+  try {
+    key = await crypto.subtle.importKey('spki', der, { name: 'Ed25519' }, false, ['verify']);
+  } catch (e) {
+    return { ok: false, unsupported: true, reason: e.message };
+  }
+  const computedFp = await sha256Hex(der);
+  if (computedFp !== expectedFp) {
+    return { ok: false, reason: 'public_key_fingerprint mismatch' };
+  }
+  const sigBytes = hexToBytes(signatureHex);
+  const ok = await crypto.subtle.verify('Ed25519', key, sigBytes, payloadBytes);
+  return { ok, unsupported: false };
+}
+async function verifyManifestSig(manifest, publicKeyPem) {
+  const payload = { ...manifest };
+  delete payload.signature;
+  delete payload.manifest_hash;
+  return _verifyEd25519(jcsCanonicalize(payload), manifest.signature, publicKeyPem, manifest.public_key_fingerprint);
+}
+async function verifyCaptureCertSig(cert, publicKeyPem) {
+  const payload = { ...cert };
+  delete payload.signature;
+  delete payload.certificate_hash;
+  return _verifyEd25519(jcsCanonicalize(payload), cert.signature, publicKeyPem, cert.public_key_fingerprint);
+}
+async function verifyWitnessSig(witness, publicKeyPem) {
+  const payload = { ...witness };
+  delete payload.signature;
+  delete payload.attestation_hash;
+  return _verifyEd25519(jcsCanonicalize(payload), witness.signature, publicKeyPem, witness.witness_public_key_fingerprint);
+}
+
+// ─── Bitcoin block-header merkle-root verification ──────────────────────
+// Format: 80 bytes total. Offsets: version[0..4), prev_hash[4..36),
+// merkle_root[36..68), timestamp[68..72), bits[72..76), nonce[76..80).
+// The merkle_root inside the header is in internal byte order (little-endian).
+function extractMerkleRootLeHex(headerHex) {
+  if (headerHex.length !== 160) {
+    throw new Error('block header must be 80 bytes (160 hex chars); got ' + headerHex.length);
+  }
+  return headerHex.substring(72, 136).toLowerCase();
+}
+function verifyBitcoinAnchor(claim, headerHex) {
+  if (!headerHex) return { ok: false, missing: true };
+  let extracted;
+  try {
+    extracted = extractMerkleRootLeHex(headerHex);
+  } catch (e) {
+    return { ok: false, malformed: true, reason: e.message };
+  }
+  const claimed = claim.expected_merkle_root_le_hex.toLowerCase();
+  return { ok: extracted === claimed, missing: false, claimed, extracted };
+}
+
+// ─── Badge updater ───────────────────────────────────────────────────────
+function setBadge(el, ok) {
+  el.classList.remove('badge-pending');
+  el.classList.add(ok ? 'badge-ok' : 'badge-fail');
+  const dot = el.querySelector('.dot');
+  if (dot) dot.style.animation = 'none';
+  el.lastChild.textContent = ok ? ' verified' : ' MISMATCH';
+}
+
+// ─── Main runner ─────────────────────────────────────────────────────────
+function setBadgeUnsupported(el) {
+  el.classList.remove('badge-pending');
+  el.classList.add('badge-weak');
+  const dot = el.querySelector('.dot');
+  if (dot) dot.style.animation = 'none';
+  el.lastChild.textContent = ' browser unsupported';
+}
+function setBadgeKeyUnknown(el) {
+  el.classList.remove('badge-pending');
+  el.classList.add('badge-weak');
+  const dot = el.querySelector('.dot');
+  if (dot) dot.style.animation = 'none';
+  el.lastChild.textContent = ' key unknown';
+}
+function setBadgeHeaderMissing(el) {
+  el.classList.remove('badge-pending');
+  el.classList.add('badge-weak');
+  const dot = el.querySelector('.dot');
+  if (dot) dot.style.animation = 'none';
+  el.lastChild.textContent = ' header not embedded';
+}
+function setBadgeStructureOk(el, weakCount) {
+  el.classList.remove('badge-pending');
+  el.classList.add(weakCount > 0 ? 'badge-weak' : 'badge-ok');
+  const dot = el.querySelector('.dot');
+  if (dot) dot.style.animation = 'none';
+  el.lastChild.textContent = weakCount > 0
+    ? ' valid · ' + weakCount + ' weak inf.'
+    : ' valid';
+}
+function setBadgeStructureFail(el, errorCount) {
+  el.classList.remove('badge-pending');
+  el.classList.add('badge-fail');
+  const dot = el.querySelector('.dot');
+  if (dot) dot.style.animation = 'none';
+  el.lastChild.textContent = ' INVALID DAG · ' + errorCount + ' err';
+}
+
+async function runVerification() {
+  const dataEl = document.getElementById('report-data');
+  if (!dataEl) return;
+  const data = JSON.parse(dataEl.textContent);
+
+  const results = { ok: 0, fail: 0, total: 0 };
+  const sigResults = { ok: 0, fail: 0, unsupported: 0, total: 0 };
+  const anchorResults = { ok: 0, fail: 0, missing: 0, total: 0 };
+  const structResults = { ok: 0, fail: 0, weak: 0, total: 0 };
+
+  // Audit entries
+  const auditByseq = Object.fromEntries(data.audit_chain.map(e => [String(e.seq), e]));
+  for (const el of document.querySelectorAll('[data-verify="audit-entry"]')) {
+    const seq = el.getAttribute('data-target');
+    const entry = auditByseq[seq];
+    if (!entry) continue;
+    const ok = await verifyAuditEntry(entry);
+    setBadge(el, ok);
+    results.total++; ok ? results.ok++ : results.fail++;
+  }
+  // Audit linkage
+  const sortedAudit = [...data.audit_chain].sort((a, b) => a.seq - b.seq);
+  for (const el of document.querySelectorAll('[data-verify="audit-link"]')) {
+    const seq = parseInt(el.getAttribute('data-target'), 10);
+    const idx = sortedAudit.findIndex(e => e.seq === seq);
+    let ok = false;
+    if (idx === 0) {
+      ok = sortedAudit[0].prev_hash === '0'.repeat(64);
+    } else if (idx > 0) {
+      ok = sortedAudit[idx].prev_hash === sortedAudit[idx - 1].entry_hash;
+    }
+    setBadge(el, ok);
+    results.total++; ok ? results.ok++ : results.fail++;
+  }
+  // Manifests
+  const manifestByhash = Object.fromEntries((data.coverage_manifests || []).map(m => [m.manifest_hash, m]));
+  for (const el of document.querySelectorAll('[data-verify="manifest"]')) {
+    const hash = el.getAttribute('data-target');
+    const m = manifestByhash[hash];
+    if (!m) continue;
+    const ok = await verifyManifest(m);
+    setBadge(el, ok);
+    results.total++; ok ? results.ok++ : results.fail++;
+  }
+  // Manifest ed25519 signatures (if operator key is embedded).
+  if (data.operator_public_key_pem) {
+    for (const el of document.querySelectorAll('[data-verify="manifest-sig"]')) {
+      const hash = el.getAttribute('data-target');
+      const m = manifestByhash[hash];
+      if (!m) continue;
+      const r = await verifyManifestSig(m, data.operator_public_key_pem);
+      sigResults.total++;
+      if (r.unsupported) { setBadgeUnsupported(el); sigResults.unsupported++; }
+      else { setBadge(el, r.ok); r.ok ? sigResults.ok++ : sigResults.fail++; }
+    }
+  } else {
+    // No operator key embedded — flag every manifest-sig badge as unsupported.
+    for (const el of document.querySelectorAll('[data-verify="manifest-sig"]')) {
+      setBadgeUnsupported(el);
+      sigResults.total++; sigResults.unsupported++;
+    }
+  }
+  // Capture cert
+  if (data.capture_certificate) {
+    const certByhash = { [data.capture_certificate.certificate_hash]: data.capture_certificate };
+    for (const el of document.querySelectorAll('[data-verify="capture-cert"]')) {
+      const hash = el.getAttribute('data-target');
+      const c = certByhash[hash];
+      if (!c) continue;
+      const ok = await verifyCaptureCert(c);
+      setBadge(el, ok);
+      results.total++; ok ? results.ok++ : results.fail++;
+    }
+    // Capture cert ed25519 signature: assume operator key is the signer
+    // (typical case — operator captures evidence). If fingerprint mismatch,
+    // the verifier itself reports it.
+    for (const el of document.querySelectorAll('[data-verify="capture-cert-sig"]')) {
+      const hash = el.getAttribute('data-target');
+      const c = certByhash[hash];
+      if (!c) continue;
+      if (!data.operator_public_key_pem) { setBadgeKeyUnknown(el); sigResults.total++; sigResults.unsupported++; continue; }
+      const r = await verifyCaptureCertSig(c, data.operator_public_key_pem);
+      sigResults.total++;
+      if (r.unsupported) { setBadgeUnsupported(el); sigResults.unsupported++; }
+      else { setBadge(el, r.ok); r.ok ? sigResults.ok++ : sigResults.fail++; }
+    }
+  }
+  // Witnesses
+  const allWitnesses = Object.values(data.witnesses_by_manifest_sequence || {}).flat();
+  const witnessByhash = Object.fromEntries(allWitnesses.map(w => [w.attestation_hash, w]));
+  for (const el of document.querySelectorAll('[data-verify="witness"]')) {
+    const hash = el.getAttribute('data-target');
+    const w = witnessByhash[hash];
+    if (!w) continue;
+    const ok = await verifyWitness(w);
+    setBadge(el, ok);
+    results.total++; ok ? results.ok++ : results.fail++;
+  }
+  // Witness ed25519 signatures: look up each witness pubkey by fingerprint
+  // in the embedded registry. If absent, badge says "key unknown".
+  const witnessKeys = data.witness_public_keys || {};
+  for (const el of document.querySelectorAll('[data-verify="witness-sig"]')) {
+    const hash = el.getAttribute('data-target');
+    const w = witnessByhash[hash];
+    if (!w) continue;
+    const pem = witnessKeys[w.witness_public_key_fingerprint];
+    if (!pem) { setBadgeKeyUnknown(el); sigResults.total++; sigResults.unsupported++; continue; }
+    const r = await verifyWitnessSig(w, pem);
+    sigResults.total++;
+    if (r.unsupported) { setBadgeUnsupported(el); sigResults.unsupported++; }
+    else { setBadge(el, r.ok); r.ok ? sigResults.ok++ : sigResults.fail++; }
+  }
+  // Bitcoin anchors — verify merkle root from embedded block header matches OTS claim.
+  // Build a map: claimed merkle (LE hex) → {height, claim} so we can look up by data-target.
+  const anchorsByHeight = {};
+  for (const [seq, ots] of Object.entries(data.notarization_by_manifest_sequence || {})) {
+    for (const anchor of (ots.bitcoin_anchors || [])) {
+      anchorsByHeight[String(anchor.height)] = anchor;
+    }
+  }
+  const headers = data.bitcoin_block_headers || {};
+  for (const el of document.querySelectorAll('[data-verify="bitcoin-merkle"]')) {
+    const height = el.getAttribute('data-target');
+    const anchor = anchorsByHeight[height];
+    if (!anchor) continue;
+    const headerHex = headers[height];
+    anchorResults.total++;
+    if (!headerHex) {
+      setBadgeHeaderMissing(el);
+      anchorResults.missing++;
+      continue;
+    }
+    const r = verifyBitcoinAnchor(anchor, headerHex);
+    if (r.malformed) {
+      setBadge(el, false);
+      anchorResults.fail++;
+    } else {
+      setBadge(el, r.ok);
+      r.ok ? anchorResults.ok++ : anchorResults.fail++;
+    }
+  }
+
+  // Inference proofs — self-hash AND DAG structure.
+  const proofByhash = Object.fromEntries((data.inference_proofs || []).map(p => [p.proof_hash, p]));
+  for (const el of document.querySelectorAll('[data-verify="inference-proof"]')) {
+    const hash = el.getAttribute('data-target');
+    const p = proofByhash[hash];
+    if (!p) continue;
+    const ok = await verifyInferenceProof(p);
+    setBadge(el, ok);
+    results.total++; ok ? results.ok++ : results.fail++;
+  }
+  const rules = data.inference_proof_rules || [];
+  for (const el of document.querySelectorAll('[data-verify="inference-proof-structure"]')) {
+    const hash = el.getAttribute('data-target');
+    const p = proofByhash[hash];
+    if (!p) continue;
+    const r = verifyInferenceProofStructure(p, rules);
+    structResults.total++;
+    if (r.ok) {
+      structResults.ok++;
+      if (r.weakInferences.length > 0) structResults.weak += r.weakInferences.length;
+      setBadgeStructureOk(el, r.weakInferences.length);
+    } else {
+      structResults.fail++;
+      setBadgeStructureFail(el, r.errors.length);
+      el.title = r.errors.join('\n');
+    }
+  }
+
+  // Global status banner
+  const banner = document.getElementById('global-status');
+  const sigsPart = sigResults.total > 0
+    ? (sigResults.fail > 0
+        ? ' · ' + sigResults.fail + ' of ' + sigResults.total + ' signatures FAILED'
+        : sigResults.unsupported === sigResults.total
+          ? ' · ' + sigResults.unsupported + ' ed25519 sigs (browser unsupported — see CLI footer)'
+          : ' · ' + sigResults.ok + ' of ' + sigResults.total + ' signatures verify ed25519' +
+            (sigResults.unsupported > 0 ? ' (' + sigResults.unsupported + ' browser-unsupported)' : '')
+      )
+    : '';
+  const anchorsPart = anchorResults.total > 0
+    ? (anchorResults.fail > 0
+        ? ' · ' + anchorResults.fail + ' Bitcoin anchors MISMATCH'
+        : anchorResults.missing === anchorResults.total
+          ? ' · ' + anchorResults.missing + ' Bitcoin anchors (header not embedded)'
+          : ' · ' + anchorResults.ok + ' of ' + anchorResults.total + ' Bitcoin anchors verify' +
+            (anchorResults.missing > 0 ? ' (' + anchorResults.missing + ' missing header)' : '')
+      )
+    : '';
+  const structPart = structResults.total > 0
+    ? (structResults.fail > 0
+        ? ' · ' + structResults.fail + ' inference DAG(s) INVALID'
+        : ' · ' + structResults.ok + ' inference DAG(s) structurally valid' +
+          (structResults.weak > 0 ? ' (' + structResults.weak + ' weak inference' + (structResults.weak === 1 ? '' : 's') + ')' : '')
+      )
+    : '';
+
+  if (results.total === 0) {
+    banner.className = 'global-status status-warn';
+    banner.innerHTML = '<span class="status-icon">!</span><span>No verifiable hashes in this report.</span>';
+  } else if (results.fail === 0 && sigResults.fail === 0 && anchorResults.fail === 0 && structResults.fail === 0) {
+    banner.className = 'global-status status-ok';
+    banner.innerHTML = '<span class="status-icon">✓</span><span><b>All ' + results.total + ' hashes verify' + sigsPart + anchorsPart + structPart + '.</b> Recomputed in this browser via WebCrypto — no backend trust required.</span>';
+  } else {
+    banner.className = 'global-status status-err';
+    const reasons = [];
+    if (results.fail > 0) reasons.push(results.fail + ' of ' + results.total + ' hashes failed');
+    if (sigResults.fail > 0) reasons.push(sigResults.fail + ' ed25519 signatures failed');
+    if (anchorResults.fail > 0) reasons.push(anchorResults.fail + ' Bitcoin anchor merkle MISMATCH');
+    if (structResults.fail > 0) reasons.push(structResults.fail + ' inference DAG(s) INVALID');
+    banner.innerHTML = '<span class="status-icon">✗</span><span><b>' + reasons.join(' · ') + '.</b> This report has been tampered with or is malformed.</span>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', runVerification);
+</script>
+</body>
+</html>

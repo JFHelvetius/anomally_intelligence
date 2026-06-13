@@ -1,0 +1,42 @@
+{
+  "schema_version": "0.1.0",
+  "software_version": "0.2.1",
+  "generated_at": "2026-06-11T02:53:45Z",
+  "tables": {
+    "authentication_assessments": {
+      "partition_hashes": [],
+      "row_count": 0,
+      "schema_hash": "2d7384f43a897a2c8ec21fc9669a5835cc61e056c4f780c8cfdcb1c9c3b231df"
+    },
+    "evidence": {
+      "partition_hashes": [
+        "8f8be238426985ca0fda311ba54eab4c38344b84be6d92fad63cd07fa502dff2"
+      ],
+      "row_count": 1,
+      "schema_hash": "1f9d805d58d29e9e2b8a3bd8dbd81c5430dfba7aec9b336adb702571025bac05"
+    },
+    "provenance": {
+      "partition_hashes": [
+        "0f7e6609a8239d9077e1de79c4f8bb26fcca21653a2b4b3c401d23f1f50bd93c"
+      ],
+      "row_count": 1,
+      "schema_hash": "62e34b42370a7c9a5c7df8aa52e5100bad9f8246f4153758f78288097c8d7c0e"
+    },
+    "provenance_steps": {
+      "partition_hashes": [
+        "9802eddb49d34eb37f627389a469f846ecae5a69c959b98ae93f3de953594bf3"
+      ],
+      "row_count": 1,
+      "schema_hash": "d69877b26c7ca994e40f09890eba477f18bda48071f37e78f05419b2162ceaac"
+    },
+    "sources": {
+      "partition_hashes": [
+        "cdca5d89c18bf61118be803fa822b9d80b05fd8ce29c7855604e79b8d8309b92"
+      ],
+      "row_count": 1,
+      "schema_hash": "617381c20880539a9283c112460e310dc7e92be2066e9b7b7d44018f182f4683"
+    }
+  },
+  "blobs_root": "7acd778e1f1222750079d2e852f03506d2aea7c1dab707219c82a851e838566d",
+  "notes": null
+}

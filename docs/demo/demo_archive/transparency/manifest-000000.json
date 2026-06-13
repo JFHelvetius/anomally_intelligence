@@ -1,0 +1,21 @@
+{
+  "archive_manifest_hash": "b70a349b22332356b8f04def902fb1ae19ea7a4b454611f91457c3bb0104aa59",
+  "attestation_count": 0,
+  "audit_chain_head_hash": "f707fa28465a7ceb41a43a10716ceaff374941efe893080d8bbba4ee6cc374a4",
+  "audit_entry_count": 2,
+  "evidence_count": 1,
+  "justification_count": 0,
+  "manifest_hash": "31d03105ca47f9d71f9343ef7debdc25d931773323b0eadae5c2d24b41beaedf",
+  "manifest_type": "aip.transparency.manifest.v1",
+  "operator_id": "aip-demo-operator",
+  "previous_manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "public_key_fingerprint": "8c3bba9ab9fd16ede636ba77ab42f3a8e6fd4b2fc7da33164a58b5927b10c737",
+  "schema_version": "1",
+  "sequence": 0,
+  "signature": "bb371d6f107924afff8b3e9fff32d48f4e2452894bc6fb49905c5874570ac5862fc4ba2d599f6d0783acdf6fbc00601656695b2268d1b3e1655eee1f0f88be02",
+  "signature_algorithm": "ed25519-v1",
+  "signed_at": "2026-06-11T02:53:46Z",
+  "snapshot_count": 0,
+  "timeline_count": 0,
+  "workspace_count": 0
+}
