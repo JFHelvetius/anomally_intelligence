@@ -45,3 +45,11 @@ desktop.ini
 # User archives — never commit
 .aip/
 *.aip.archive/
+
+# Local dev/test artifacts — never commit
+dev_archive/
+tmp/
+
+# Frontend
+web/node_modules/
+web/dist/
