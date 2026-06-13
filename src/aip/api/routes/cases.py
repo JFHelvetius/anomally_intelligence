@@ -60,7 +60,11 @@ def list_cases(archive: ArchiveDep) -> list[dict]:
             "conclusion": just.get("conclusion") if just else None,
             "justification_id": (just.get("justification_id") or just.get("_id")) if just else None,
             "created_at": ws.get("generated_at") or ws.get("created_at"),
-            "updated_at": (just.get("created_at") or just.get("generated_at")) if just else (ws.get("generated_at") or ws.get("created_at")),
+            "updated_at": (
+                (just.get("created_at") or just.get("generated_at"))
+                if just
+                else (ws.get("generated_at") or ws.get("created_at"))
+            ),
         })
 
     return cases

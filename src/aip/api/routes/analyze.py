@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import os
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
@@ -24,8 +24,10 @@ Base ALL findings strictly on visual evidence — do not speculate beyond what i
 
 Focus on:
 1. All identifiable objects, shapes, and phenomena in the image.
-2. Visual anomalies: unusual luminosity, shape irregularities, motion blur, lens artifacts, atmospheric effects.
-3. Conventional explanations for each element (aircraft, birds, balloons, stars, drones, weather, reflections, etc.).
+2. Visual anomalies: unusual luminosity, shape irregularities, motion blur,
+   lens artifacts, atmospheric effects.
+3. Conventional explanations for each element (aircraft, birds, balloons,
+   stars, drones, weather, reflections, etc.).
 4. Image quality and conditions that affect confidence.
 
 CONSTRAINTS:
@@ -64,7 +66,9 @@ _USER = "Analyze this image for UAP phenomena and visual anomalies. Return ONLY 
 
 
 @router.post("/analyze/image")
-async def analyze_image(file: UploadFile = File(...)) -> dict[str, Any]:
+async def analyze_image(
+    file: Annotated[UploadFile, File(...)],
+) -> dict[str, Any]:
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         raise HTTPException(

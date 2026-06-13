@@ -22,7 +22,7 @@ from unittest import mock
 import pytest
 
 from aip.errors import AIPError
-from aip.notarize import header_fetcher  # noqa: F401  — keep import path discoverable
+from aip.notarize import header_fetcher
 
 # Real block 953027 header (confirmed via mempool.space + blockstream.info,
 # 2026-06-09). Merkle root LE: c2e668…6b564a.

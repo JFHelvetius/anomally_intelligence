@@ -40,7 +40,10 @@ def _list_artifacts(archive_root: Path, kind: str) -> list[dict]:
 def _get_artifact(archive_root: Path, kind: str, artifact_id: str) -> dict:
     path = archive_root / _ARTIFACT_DIRS[kind] / f"{artifact_id}.json"
     if not path.is_file():
-        raise HTTPException(status_code=404, detail=f"{kind[:-1].capitalize()} '{artifact_id}' not found.")
+        raise HTTPException(
+            status_code=404,
+            detail=f"{kind[:-1].capitalize()} '{artifact_id}' not found.",
+        )
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:

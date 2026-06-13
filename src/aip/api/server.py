@@ -32,7 +32,7 @@ def main(argv: list[str] | None = None) -> None:
     os.environ["AIP_ARCHIVE_PATH"] = str(archive_path)
 
     try:
-        import uvicorn
+        import uvicorn  # noqa: PLC0415 — optional dep loaded only at server start
     except ImportError:
         print(
             "error: uvicorn not installed. Run: pip install 'aip[web]'",

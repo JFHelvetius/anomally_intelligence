@@ -19,11 +19,19 @@ def archive_status(archive: ArchiveDep) -> dict:
     manifest_path: Path = archive.root / MANIFEST_FILENAME
     audit_path: Path = archive.root / AUDIT_LOG_FILENAME
 
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.is_file() else None
+    manifest = (
+        json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest_path.is_file()
+        else None
+    )
 
     audit_entries = 0
     if audit_path.is_file():
-        audit_entries = sum(1 for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip())
+        audit_entries = sum(
+            1
+            for line in audit_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        )
 
     return {
         "root": str(archive.root),

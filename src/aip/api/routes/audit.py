@@ -23,7 +23,9 @@ def list_audit_entries(
     if not path.is_file():
         return {"total": 0, "entries": []}
 
-    lines = [l for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    lines = [
+        ln for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()
+    ]
     total = len(lines)
     page = lines[offset: offset + limit]
 
