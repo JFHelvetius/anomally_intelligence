@@ -8,7 +8,9 @@ import { useT } from '../i18n'
 import type { TKey } from '../i18n/en'
 
 const REPO_URL = 'https://github.com/JFHelvetius/anomally_intelligence'
-const DEMO_REPORT_URL = '/demo-report.html'
+// Static asset path — resolve against SPA base so it works both at the
+// FastAPI-served root ('/') and at the GH Pages subpath ('/<repo>/').
+const DEMO_REPORT_URL = `${import.meta.env.BASE_URL}demo-report.html`
 const SCHEMAS_URL = `${REPO_URL}/tree/main/docs/schemas`
 const ADRS_URL = `${REPO_URL}/tree/main/docs/adr`
 
