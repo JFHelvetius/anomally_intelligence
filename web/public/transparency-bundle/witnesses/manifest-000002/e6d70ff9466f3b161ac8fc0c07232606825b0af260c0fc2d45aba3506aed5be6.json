@@ -1,0 +1,14 @@
+{
+  "attestation_hash": "e6d70ff9466f3b161ac8fc0c07232606825b0af260c0fc2d45aba3506aed5be6",
+  "attestation_type": "aip.transparency.witness.v1",
+  "schema_version": "1",
+  "signature": "2ceba4f69290f43ea482244b03687d3eaa9bd04b337a26071a3538ba6d95b5eb0cf109a96006fa947c3a00b9fe0e3c9587d6f75dfaadb22ae7fe8355ed71ba07",
+  "signature_algorithm": "ed25519-v1",
+  "statement": "second observation from bobby",
+  "target_manifest_hash": "5fb8b009ed959a2880b7e0c3ceb09754511ba38196b99be92094469595eae928",
+  "target_manifest_sequence": 2,
+  "target_operator_id": "jmm-evergreen",
+  "witness_operator_id": "bobby-osint-observer",
+  "witness_public_key_fingerprint": "a760ab56f4468e36e7be9f97dae7899d01d04669f67baf7d7fe59eb9e5860669",
+  "witnessed_at": "2026-06-09T22:30:00Z"
+}

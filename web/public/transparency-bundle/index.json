@@ -1,0 +1,118 @@
+{
+  "$type": "aip.transparency.bundle.v1",
+  "bitcoin_anchored_count": 1,
+  "exported_at": "2026-06-10T02:59:09Z",
+  "head": {
+    "audit_chain_head_hash": "2bdfb68eff437cfc0ec40ef8c329b32defa6b2848ff63402082f48512a3a570f",
+    "manifest_hash": "5fb8b009ed959a2880b7e0c3ceb09754511ba38196b99be92094469595eae928",
+    "sequence": 2,
+    "signed_at": "2026-06-09T16:02:42Z"
+  },
+  "manifests": [
+    {
+      "attestation_count": 0,
+      "audit_chain_head_hash": "2bdfb68eff437cfc0ec40ef8c329b32defa6b2848ff63402082f48512a3a570f",
+      "audit_entry_count": 2,
+      "evidence_count": 1,
+      "filename": "manifest-000000.json",
+      "justification_count": 0,
+      "manifest_hash": "81f9a6552ce97012167118246277e64bb937bfb912948f3d3c174e5ea5f62970",
+      "notarization": null,
+      "operator_id": "jmm-evergreen",
+      "previous_manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "public_key_fingerprint": "c8a9c6d4e10c7e644be9310806b65a3405cdfedac642974df0b9b362c93a0f55",
+      "sequence": 0,
+      "signed_at": "2026-06-09T15:58:01Z",
+      "snapshot_count": 0,
+      "timeline_count": 0,
+      "witness_count": 0,
+      "witnesses": [],
+      "workspace_count": 0
+    },
+    {
+      "attestation_count": 0,
+      "audit_chain_head_hash": "2bdfb68eff437cfc0ec40ef8c329b32defa6b2848ff63402082f48512a3a570f",
+      "audit_entry_count": 2,
+      "evidence_count": 1,
+      "filename": "manifest-000001.json",
+      "justification_count": 0,
+      "manifest_hash": "173753cf992474c767ff7fd29d96a613827c434444f35d8a4dedb43df1e2f6b2",
+      "notarization": null,
+      "operator_id": "jmm-evergreen",
+      "previous_manifest_hash": "81f9a6552ce97012167118246277e64bb937bfb912948f3d3c174e5ea5f62970",
+      "public_key_fingerprint": "c8a9c6d4e10c7e644be9310806b65a3405cdfedac642974df0b9b362c93a0f55",
+      "sequence": 1,
+      "signed_at": "2026-06-09T15:58:24Z",
+      "snapshot_count": 0,
+      "timeline_count": 0,
+      "witness_count": 0,
+      "witnesses": [],
+      "workspace_count": 0
+    },
+    {
+      "attestation_count": 0,
+      "audit_chain_head_hash": "2bdfb68eff437cfc0ec40ef8c329b32defa6b2848ff63402082f48512a3a570f",
+      "audit_entry_count": 2,
+      "evidence_count": 1,
+      "filename": "manifest-000002.json",
+      "justification_count": 0,
+      "manifest_hash": "5fb8b009ed959a2880b7e0c3ceb09754511ba38196b99be92094469595eae928",
+      "notarization": {
+        "bitcoin_anchors": [
+          {
+            "expected_merkle_root_le_hex": "c2e668837a85409d4b5bcc80976ebbc592f71249ed8289905ff033c4666b564a",
+            "height": 953027
+          },
+          {
+            "expected_merkle_root_le_hex": "c2e668837a85409d4b5bcc80976ebbc592f71249ed8289905ff033c4666b564a",
+            "height": 953027
+          }
+        ],
+        "leaf_sha256": "69d09dcbf2e0c0e6d439d709732b2281d83ec45db18e8d5c9bc8d3829d6612d2",
+        "ots_filename": "manifest-000002.json.ots",
+        "pending_calendars": [
+          "https://bob.btc.calendar.opentimestamps.org",
+          "https://finney.calendar.eternitywall.com",
+          "https://alice.btc.calendar.opentimestamps.org"
+        ],
+        "pending_count": 3
+      },
+      "operator_id": "jmm-evergreen",
+      "previous_manifest_hash": "173753cf992474c767ff7fd29d96a613827c434444f35d8a4dedb43df1e2f6b2",
+      "public_key_fingerprint": "c8a9c6d4e10c7e644be9310806b65a3405cdfedac642974df0b9b362c93a0f55",
+      "sequence": 2,
+      "signed_at": "2026-06-09T16:02:42Z",
+      "snapshot_count": 0,
+      "timeline_count": 0,
+      "witness_count": 2,
+      "witnesses": [
+        {
+          "attestation_hash": "93e157972c0f5ba6c0a2a04620520af5fef6ee90e65c995d2a35be03ff1190e2",
+          "filename": "witnesses/manifest-000002/93e157972c0f5ba6c0a2a04620520af5fef6ee90e65c995d2a35be03ff1190e2.json",
+          "statement": "independent third-party verification",
+          "witness_operator_id": "carla-archive-observer",
+          "witness_public_key_fingerprint": "d9e0099ea9d1cf512cda033257de54e1741f09f08fd7935fbc1b66d4e2ffaf15",
+          "witnessed_at": "2026-06-09T22:19:59Z"
+        },
+        {
+          "attestation_hash": "e6d70ff9466f3b161ac8fc0c07232606825b0af260c0fc2d45aba3506aed5be6",
+          "filename": "witnesses/manifest-000002/e6d70ff9466f3b161ac8fc0c07232606825b0af260c0fc2d45aba3506aed5be6.json",
+          "statement": "second observation from bobby",
+          "witness_operator_id": "bobby-osint-observer",
+          "witness_public_key_fingerprint": "a760ab56f4468e36e7be9f97dae7899d01d04669f67baf7d7fe59eb9e5860669",
+          "witnessed_at": "2026-06-09T22:30:00Z"
+        }
+      ],
+      "workspace_count": 0
+    }
+  ],
+  "manifests_with_witnesses": 1,
+  "notarized_count": 1,
+  "operator": {
+    "id": "jmm-evergreen",
+    "public_key_file": "public-key.pem",
+    "public_key_fingerprint": "c8a9c6d4e10c7e644be9310806b65a3405cdfedac642974df0b9b362c93a0f55"
+  },
+  "schema_version": "1",
+  "total_witnesses": 2
+}

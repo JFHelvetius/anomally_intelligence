@@ -1,0 +1,21 @@
+{
+  "archive_manifest_hash": "0e75e9fe6ac2c45611bf06db938571c963ed6ed04a04c680ea8512309c9145de",
+  "attestation_count": 0,
+  "audit_chain_head_hash": "2bdfb68eff437cfc0ec40ef8c329b32defa6b2848ff63402082f48512a3a570f",
+  "audit_entry_count": 2,
+  "evidence_count": 1,
+  "justification_count": 0,
+  "manifest_hash": "81f9a6552ce97012167118246277e64bb937bfb912948f3d3c174e5ea5f62970",
+  "manifest_type": "aip.transparency.manifest.v1",
+  "operator_id": "jmm-evergreen",
+  "previous_manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "public_key_fingerprint": "c8a9c6d4e10c7e644be9310806b65a3405cdfedac642974df0b9b362c93a0f55",
+  "schema_version": "1",
+  "sequence": 0,
+  "signature": "34492571c7d6989911af831a01a578d038211544608412ba4c90a61127f5c2899236c0e94a18b56c8d984d150ab2e23333e0abf9b1c6f57e386f884f75929800",
+  "signature_algorithm": "ed25519-v1",
+  "signed_at": "2026-06-09T15:58:01Z",
+  "snapshot_count": 0,
+  "timeline_count": 0,
+  "workspace_count": 0
+}

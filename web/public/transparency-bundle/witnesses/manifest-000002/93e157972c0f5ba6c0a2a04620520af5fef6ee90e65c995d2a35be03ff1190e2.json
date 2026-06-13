@@ -1,0 +1,14 @@
+{
+  "attestation_hash": "93e157972c0f5ba6c0a2a04620520af5fef6ee90e65c995d2a35be03ff1190e2",
+  "attestation_type": "aip.transparency.witness.v1",
+  "schema_version": "1",
+  "signature": "b8d5b691a5bd05ff2ba6fe9d45b5904cbae8be48a7f05f5b28180472d6b53a645042cf6cdedb5335a3b5e6211e812f8262475be3f5c505b4bb4cc693395e2302",
+  "signature_algorithm": "ed25519-v1",
+  "statement": "independent third-party verification",
+  "target_manifest_hash": "5fb8b009ed959a2880b7e0c3ceb09754511ba38196b99be92094469595eae928",
+  "target_manifest_sequence": 2,
+  "target_operator_id": "jmm-evergreen",
+  "witness_operator_id": "carla-archive-observer",
+  "witness_public_key_fingerprint": "d9e0099ea9d1cf512cda033257de54e1741f09f08fd7935fbc1b66d4e2ffaf15",
+  "witnessed_at": "2026-06-09T22:19:59Z"
+}
