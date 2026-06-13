@@ -60,8 +60,8 @@ export function StatusDot({ ok, label }: { ok: boolean; label?: string }) {
 type CardVariant = 'default' | 'elevated' | 'inset'
 
 const CARD_STYLES: Record<CardVariant, string> = {
-  default:  'bg-white border border-[var(--border)] card-shadow',
-  elevated: 'bg-white border border-[var(--border)] card-shadow-lg',
+  default:  'bg-[var(--surface)] border border-[var(--border)] card-shadow',
+  elevated: 'bg-[var(--surface)] border border-[var(--border)] card-shadow-lg',
   inset:    'bg-[var(--surface2)] border border-[var(--border)]',
 }
 

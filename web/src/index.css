@@ -6,69 +6,71 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 }
 
-/* ─── Design tokens — institutional with depth ────────────────────────────
-   The previous palette was too flat. This revision keeps the light main
-   content area (good for data legibility) but introduces a dark sidebar
-   anchor + stronger borders + tinted hero surfaces so the eye has
-   somewhere to rest. */
+/* ─── Design tokens — cypherpunk dark, data-as-poetry ────────────────────
+   Dark default. The point is to feel like infrastructure people *use* to
+   verify things: terminal-like surfaces, monospace as a first-class
+   citizen, restrained color (violet accent + cyan signal). Generous
+   contrast for code/data; quiet contrast for prose. */
 :root {
-  /* Main content — light area where data lives */
-  --bg:         #f5f6fa;            /* page bg — cool off-white with subtle blue */
-  --bg2:        #ffffff;            /* topbar + content frame */
-  --surface:    #ffffff;            /* card body */
-  --surface2:   #f5f7fb;            /* hover / inset / hero block */
-  --surface3:   #eef1f7;            /* strong hover */
-  --surface-tint: #f8f7ff;          /* faint violet wash for hero accents */
+  /* Main content — deep neutral base, never pure black */
+  --bg:         #08090e;            /* page bg — near-black, slight blue tilt */
+  --bg2:        #0b0c14;            /* topbar + content frame */
+  --surface:    #11141d;            /* card body */
+  --surface2:   #161a25;            /* hover / inset / hero block */
+  --surface3:   #1c2030;            /* strong hover */
+  --surface-tint: #14102a;          /* faint violet wash for hero accents */
 
-  /* Sidebar — DARK to break the all-white feeling and anchor the eye */
-  --sidebar-bg:        #0f172a;     /* slate-900 */
-  --sidebar-bg-hover:  #1e293b;     /* slate-800 */
-  --sidebar-bg-active: rgba(124, 58, 237, 0.18);
-  --sidebar-border:    #1e293b;
-  --sidebar-text:      #e2e8f0;     /* slate-200 */
-  --sidebar-muted:     #94a3b8;     /* slate-400 */
-  --sidebar-muted2:    #64748b;     /* slate-500 */
-  --sidebar-active:    #c4b5fd;     /* violet-300 */
+  /* Sidebar — even deeper to read as the anchor */
+  --sidebar-bg:        #05060a;
+  --sidebar-bg-hover:  #11141d;
+  --sidebar-bg-active: rgba(139, 92, 246, 0.16);
+  --sidebar-border:    #11141d;
+  --sidebar-text:      #c8ccd9;
+  --sidebar-muted:     #6e7387;
+  --sidebar-muted2:    #4d5163;
+  --sidebar-active:    #c4b5fd;
 
-  /* Borders — visible, not vanishing */
-  --border:     #dfe3ea;            /* default — a touch darker than slate-200 */
-  --border2:    #c7cdd6;            /* hover / structural */
-  --border3:    #94a3b8;            /* strong */
+  /* Borders — visible at low contrast, decisive at high */
+  --border:     #1f2330;
+  --border2:    #2a2f3d;
+  --border3:    #3a4053;
 
-  /* Text — high contrast on light bg */
-  --text:       #0f172a;            /* slate-900 — body */
-  --text2:      #1e293b;            /* slate-800 — secondary */
-  --muted:      #64748b;            /* slate-500 — muted */
-  --muted2:     #475569;            /* slate-600 */
-  --muted3:     #94a3b8;            /* slate-400 — weakest */
+  /* Text — high contrast for reading, mid for data labels */
+  --text:       #e8ebf4;
+  --text2:      #c8ccd9;
+  --muted:      #7c8094;
+  --muted2:     #9aa0b3;
+  --muted3:     #5d6275;
 
-  /* Accent — violet brand, slightly stronger */
-  --accent:      #6d28d9;           /* violet-700 */
-  --accent2:     #5b21b6;           /* violet-800 */
-  --accent3:     #ddd6fe;           /* violet-200 */
-  --accent-bg:   #f5f3ff;           /* violet-50 */
-  --accent-line: rgba(109, 40, 217, 0.55);
+  /* Accent — violet primary, cyan secondary signal */
+  --accent:      #a78bfa;           /* violet-400 — readable on dark */
+  --accent2:     #8b5cf6;           /* violet-500 — solid CTA */
+  --accent3:     #c4b5fd;           /* violet-300 — highlight */
+  --accent-bg:   rgba(139, 92, 246, 0.10);
+  --accent-line: rgba(167, 139, 250, 0.45);
+  --signal:      #22d3ee;           /* cyan-400 — live/ok signal */
+  --signal-bg:   rgba(34, 211, 238, 0.08);
 
-  /* Status — visible against the surfaces */
-  --green:      #047857;
-  --green-bg:   #ecfdf5;
-  --red:        #b91c1c;
-  --red-bg:     #fef2f2;
-  --amber:      #b45309;
-  --amber-bg:   #fffbeb;
-  --blue:       #1d4ed8;
-  --blue-bg:    #eff6ff;
-  --orange:     #c2410c;
+  /* Status — calibrated for dark bg */
+  --green:      #4ade80;
+  --green-bg:   rgba(74, 222, 128, 0.10);
+  --red:        #f87171;
+  --red-bg:     rgba(248, 113, 113, 0.10);
+  --amber:      #fbbf24;
+  --amber-bg:   rgba(251, 191, 36, 0.10);
+  --blue:       #60a5fa;
+  --blue-bg:    rgba(96, 165, 250, 0.10);
+  --orange:     #fb923c;
 }
 
 /* ─── Reset ─────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 html { height: 100%; }
 
-::selection { background: #ddd6fe; color: #1e1b4b; }
+::selection { background: rgba(167, 139, 250, 0.35); color: #fff; }
 
 :focus-visible {
-  outline: 2px solid rgba(124, 58, 237, 0.55);
+  outline: 2px solid rgba(167, 139, 250, 0.65);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -90,6 +92,13 @@ body {
 /* ─── Typography hierarchy ──────────────────────────────────────────────── */
 h1, h2, h3, h4 { letter-spacing: -0.018em; color: var(--text); }
 
+/* Display heading uses mono for the cypherpunk hero feel. */
+.display-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  letter-spacing: -0.02em;
+  font-variant-ligatures: none;
+}
+
 code, pre, .font-mono, kbd {
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   font-variant-ligatures: none;
@@ -97,23 +106,26 @@ code, pre, .font-mono, kbd {
   letter-spacing: -0.01em;
 }
 
-/* ─── Scrollbar — visible but discreet ──────────────────────────────────── */
+/* ─── Scrollbar — discreet dark ─────────────────────────────────────────── */
 ::-webkit-scrollbar             { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track       { background: transparent; }
-::-webkit-scrollbar-thumb       { background: #d1d5db; border-radius: 99px; border: 2px solid var(--bg); }
-::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+::-webkit-scrollbar-thumb       { background: #2a2f3d; border-radius: 99px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: #3a4053; }
 
 /* ─── Animations ────────────────────────────────────────────────────────── */
-@keyframes fadeUp   { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes fadeIn   { from { opacity: 0; }                              to { opacity: 1; } }
-@keyframes scaleIn  { from { opacity: 0; transform: scale(0.98); }     to { opacity: 1; transform: scale(1); } }
-@keyframes spin     { from { transform: rotate(0deg); }                 to { transform: rotate(360deg); } }
-@keyframes shimmer  { from { background-position: -600px 0; }          to { background-position: 600px 0; } }
-@keyframes liveDot  { 0%,100% { opacity: 1; } 50% { opacity: 0.40; } }
+@keyframes fadeUp     { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn     { from { opacity: 0; }                              to { opacity: 1; } }
+@keyframes scaleIn    { from { opacity: 0; transform: scale(0.98); }     to { opacity: 1; transform: scale(1); } }
+@keyframes spin       { from { transform: rotate(0deg); }                 to { transform: rotate(360deg); } }
+@keyframes shimmer    { from { background-position: -600px 0; }          to { background-position: 600px 0; } }
+@keyframes liveDot    { 0%,100% { opacity: 1; } 50% { opacity: 0.40; } }
+@keyframes caretBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes glowPulse  { 0%,100% { box-shadow: 0 0 0 0 rgba(167,139,250,0.0); } 50% { box-shadow: 0 0 24px 0 rgba(167,139,250,0.25); } }
 
 .animate-in    { animation: fadeUp  0.20s ease-out both; }
 .animate-fade  { animation: fadeIn  0.18s ease-out both; }
 .animate-scale { animation: scaleIn 0.16s ease-out both; }
+.animate-glow  { animation: glowPulse 4.0s ease-in-out infinite; }
 
 .stagger > *:nth-child(1) { animation-delay:   0ms; }
 .stagger > *:nth-child(2) { animation-delay:  40ms; }
@@ -122,15 +134,18 @@ code, pre, .font-mono, kbd {
 .stagger > *:nth-child(5) { animation-delay: 160ms; }
 .stagger > *:nth-child(6) { animation-delay: 200ms; }
 
+/* Blinking caret used in terminal-style hero. */
+.caret { display: inline-block; width: 0.55em; background: var(--accent); height: 1em; vertical-align: -0.12em; margin-left: 2px; animation: caretBlink 1.05s steps(1) infinite; }
+
 /* ─── Skeleton ──────────────────────────────────────────────────────────── */
 .skeleton {
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, #14182230 25%, #1c213330 50%, #14182230 75%);
   background-size: 600px 100%;
   animation: shimmer 1.6s ease-in-out infinite;
   border-radius: 4px;
 }
 
-/* ─── Sidebar nav — items on dark surface ───────────────────────────────── */
+/* ─── Sidebar nav — items on darkest surface ────────────────────────────── */
 .nav-item {
   position: relative;
   color: var(--sidebar-text);
@@ -152,34 +167,35 @@ code, pre, .font-mono, kbd {
   width: 2px;
   border-radius: 2px;
   background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
 }
 .nav-active svg { color: var(--sidebar-active) !important; }
 .nav-active span { color: var(--sidebar-active) !important; }
 
-/* ─── Card shadows — subtle, professional ───────────────────────────────── */
+/* ─── Card shadows — subtle, depth via shadow + tint ────────────────────── */
 .card-shadow {
   box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 1px 3px rgba(15, 23, 42, 0.03);
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .card-shadow-lg {
   box-shadow:
-    0 2px 4px rgba(15, 23, 42, 0.04),
-    0 6px 16px rgba(15, 23, 42, 0.06);
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.35);
 }
 .card-shadow-elevated {
   box-shadow:
-    0 4px 8px rgba(15, 23, 42, 0.04),
-    0 12px 32px rgba(15, 23, 42, 0.08);
+    0 4px 8px rgba(0, 0, 0, 0.4),
+    0 16px 48px rgba(0, 0, 0, 0.5);
 }
 
 /* ─── Mono pill ─────────────────────────────────────────────────────────── */
 .mono-pill {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  color: #475569;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
   padding: 2px 6px;
   border-radius: 3px;
   font-weight: 500;
@@ -187,3 +203,45 @@ code, pre, .font-mono, kbd {
 
 /* ─── Status live dot ───────────────────────────────────────────────────── */
 .status-live { animation: liveDot 2.4s ease-in-out infinite; }
+
+/* ─── Cypherpunk terminal hero ──────────────────────────────────────────── */
+/* Subtle grid backdrop, like CRT phosphor traces but cooler. */
+.grid-backdrop {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(167, 139, 250, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167, 139, 250, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at top, black 0%, transparent 70%);
+  pointer-events: none;
+}
+/* Soft glow from violet → cyan behind the hero. */
+.aurora-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 10%, rgba(139, 92, 246, 0.20), transparent 60%),
+    radial-gradient(ellipse 50% 30% at 80% 30%, rgba(34, 211, 238, 0.12), transparent 60%);
+  pointer-events: none;
+}
+/* The chrome around the terminal box. */
+.terminal-frame {
+  border: 1px solid var(--border2);
+  background: linear-gradient(180deg, rgba(17,20,29,0.96), rgba(11,12,20,0.96));
+  backdrop-filter: blur(8px);
+  border-radius: 6px;
+  position: relative;
+  box-shadow:
+    0 0 0 1px rgba(167, 139, 250, 0.05) inset,
+    0 30px 80px rgba(0, 0, 0, 0.55);
+}
+.terminal-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(167,139,250,0.10), transparent 30%);
+  opacity: 0.6;
+}

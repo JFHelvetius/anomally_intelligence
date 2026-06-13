@@ -82,82 +82,100 @@ export default function About() {
 
   return (
     <div className="max-w-5xl">
-      {/* ── Hero — tinted block with violet accent line ────────────── */}
-      <header
-        className="relative overflow-hidden rounded-xl border mb-14 px-9 py-10"
-        style={{
-          background: 'linear-gradient(135deg, var(--surface-tint) 0%, var(--bg2) 60%)',
-          borderColor: 'var(--border)',
-        }}
-      >
-        {/* Left accent rail */}
-        <div
-          className="absolute left-0 top-6 bottom-6 w-[3px] rounded-r-sm"
-          style={{ background: 'var(--accent)' }}
-        />
+      {/* ── Hero — cypherpunk terminal frame ────────────────────────── */}
+      <header className="relative mb-14">
+        {/* Aurora glow + faint phosphor grid backdrop, behind everything. */}
+        <div className="aurora-backdrop" />
+        <div className="grid-backdrop" />
 
-        {/* Decorative gradient orb (subtle, behind the title) */}
-        <div
-          className="absolute -top-24 -right-16 w-72 h-72 rounded-full opacity-50 pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(124,58,237,0.10) 0%, rgba(124,58,237,0) 70%)',
-          }}
-        />
+        <div className="terminal-frame relative px-8 pt-5 pb-10 sm:px-10 sm:pt-6 sm:pb-12 animate-glow">
+          {/* Mac-style window dots, restyled cypherpunk: violet / cyan / muted. */}
+          <div className="flex items-center justify-between mb-7">
+            <div className="flex items-center gap-1.5">
+              <span className="block w-2.5 h-2.5 rounded-full" style={{ background: '#f87171', boxShadow: '0 0 6px rgba(248,113,113,0.6)' }} />
+              <span className="block w-2.5 h-2.5 rounded-full" style={{ background: '#fbbf24', boxShadow: '0 0 6px rgba(251,191,36,0.55)' }} />
+              <span className="block w-2.5 h-2.5 rounded-full" style={{ background: 'var(--signal)', boxShadow: '0 0 6px rgba(34,211,238,0.55)' }} />
+            </div>
+            <div className="font-mono text-[10.5px] tracking-wider uppercase" style={{ color: 'var(--muted)' }}>
+              ~/anomaly-intelligence-platform &nbsp;·&nbsp; main
+            </div>
+          </div>
 
-        <div className="relative">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="font-mono text-[11.5px] mb-5" style={{ color: 'var(--muted)' }}>
+            <span style={{ color: 'var(--signal)' }}>$</span>{' '}
+            <span style={{ color: 'var(--text2)' }}>aip</span>{' '}
+            <span>--what-is-this</span>
+          </div>
+
+          {/* Pills — tight, monospace, like terminal flags. */}
+          <div className="flex flex-wrap items-center gap-2 mb-6">
             <span
-              className="text-[10.5px] font-bold uppercase tracking-[0.18em]"
-              style={{ color: 'var(--accent2)' }}
+              className="font-mono text-[10.5px] px-2 py-0.5 rounded-sm border"
+              style={{
+                background: 'rgba(167,139,250,0.10)',
+                borderColor: 'var(--accent-line)',
+                color: 'var(--accent)',
+              }}
             >
-              v0.2.1
+              v0.3.0
             </span>
-            <span style={{ color: 'var(--muted3)' }}>·</span>
-            <span className="text-[10.5px] font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--muted2)' }}>
+            <span className="font-mono text-[10.5px] px-2 py-0.5 rounded-sm border" style={{ background: 'var(--surface)', borderColor: 'var(--border2)', color: 'var(--text2)' }}>
               {t('about.pill.license')}
             </span>
-            <span style={{ color: 'var(--muted3)' }}>·</span>
-            <span className="text-[10.5px] font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--muted2)' }}>
+            <span className="font-mono text-[10.5px] px-2 py-0.5 rounded-sm border" style={{ background: 'var(--surface)', borderColor: 'var(--border2)', color: 'var(--text2)' }}>
               {t('about.pill.adrs')}
+            </span>
+            <span className="font-mono text-[10.5px] px-2 py-0.5 rounded-sm border flex items-center gap-1.5" style={{ background: 'var(--signal-bg)', borderColor: 'rgba(34,211,238,0.35)', color: 'var(--signal)' }}>
+              <span className="block w-1.5 h-1.5 rounded-full status-live" style={{ background: 'var(--signal)', boxShadow: '0 0 6px var(--signal)' }} />
+              live demo
             </span>
           </div>
 
           <h1
-            className="text-[32px] font-semibold tracking-tight leading-[1.1] mb-4 max-w-3xl"
+            className="display-mono text-[34px] sm:text-[42px] font-semibold leading-[1.08] tracking-tight mb-5 max-w-3xl"
             style={{ color: 'var(--text)' }}
           >
             {t('about.hero.title')}
+            <span className="caret" aria-hidden="true" />
           </h1>
 
           <p
             className="text-[15.5px] leading-relaxed max-w-2xl mb-3"
-            style={{ color: 'var(--muted2)' }}
+            style={{ color: 'var(--text2)' }}
           >
             {t('about.hero.lead')}{' '}
-            <span style={{ color: 'var(--text)', fontWeight: 600 }}>
+            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
               {t('about.hero.leadStrong')}
             </span>
             {t('about.hero.leadTail')}
           </p>
 
           <p
-            className="text-[13.5px] leading-relaxed max-w-2xl"
+            className="text-[13.5px] leading-relaxed max-w-2xl mb-8"
             style={{ color: 'var(--muted)' }}
           >
             {t('about.hero.sub')}
           </p>
 
-          <div className="flex flex-wrap items-center gap-1 mt-8">
+          {/* CTA row — violet glowing primary + ghost links. */}
+          <div className="flex flex-wrap items-center gap-2.5">
             <a
               href={DEMO_REPORT_URL}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md text-[13px] font-semibold transition-colors mr-2 shadow-sm hover:shadow-md"
-              style={{ background: 'var(--accent)', color: '#fff' }}
+              className="group inline-flex items-center gap-2 px-4 py-2.5 rounded-md text-[13px] font-semibold transition-all border"
+              style={{
+                background: 'var(--accent2)',
+                borderColor: 'var(--accent)',
+                color: '#fff',
+                boxShadow: '0 0 0 0 rgba(167,139,250,0)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 24px rgba(167,139,250,0.55)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 0 0 0 rgba(167,139,250,0)' }}
             >
               <Eye size={13} strokeWidth={2.25} />
               {t('about.hero.cta.demo')}
-              <ArrowRight size={12} />
+              <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
             </a>
             <TextLink href={ADRS_URL} external icon={BookOpen}>
               {t('about.hero.cta.adrs')}
@@ -165,6 +183,17 @@ export default function About() {
             <TextLink href={REPO_URL} external icon={Code2}>
               {t('about.hero.cta.github')}
             </TextLink>
+          </div>
+
+          {/* Status strip — looks like ps/tail output. */}
+          <div
+            className="mt-10 pt-5 border-t font-mono text-[11px] flex flex-wrap items-center gap-x-5 gap-y-2"
+            style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
+          >
+            <span><span style={{ color: 'var(--green)' }}>●</span> 1105 tests passing</span>
+            <span><span style={{ color: 'var(--signal)' }}>●</span> 18 ADRs shipped</span>
+            <span><span style={{ color: 'var(--accent)' }}>●</span> ed25519 · sha256 · OTS · X.509</span>
+            <span><span style={{ color: 'var(--amber)' }}>●</span> evidence-first · zero conclusions</span>
           </div>
         </div>
       </header>
@@ -343,7 +372,7 @@ function TextLink({
       href={href}
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
-      className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-md text-[13px] font-medium transition-colors hover:bg-slate-100"
+      className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-md text-[13px] font-medium transition-colors hover:bg-[var(--surface2)]"
       style={{ color: 'var(--text2)' }}
     >
       <Icon size={13} strokeWidth={1.75} />
@@ -549,7 +578,7 @@ function TryCard({
       </span>
     </>
   )
-  const cls = 'rounded-lg border p-5 flex flex-col transition-colors hover:bg-slate-50'
+  const cls = 'rounded-lg border p-5 flex flex-col transition-colors hover:bg-[var(--surface2)]'
   const sty = { background: 'var(--surface)', borderColor: 'var(--border)' } as const
   return external ? (
     <a href={href} target="_blank" rel="noreferrer" className={cls} style={sty}>
@@ -577,7 +606,7 @@ function InternalLink({
   return (
     <Link
       to={to}
-      className="rounded-lg border p-4 flex items-start gap-3 transition-colors hover:bg-slate-50"
+      className="rounded-lg border p-4 flex items-start gap-3 transition-colors hover:bg-[var(--surface2)]"
       style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
     >
       <Icon size={15} strokeWidth={1.75} style={{ color: 'var(--text2)', marginTop: 2 }} />
