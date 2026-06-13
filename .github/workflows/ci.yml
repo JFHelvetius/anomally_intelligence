@@ -122,3 +122,39 @@ jobs:
             .pytest_cache/
           retention-days: 7
           if-no-files-found: ignore
+
+  # ---- BLOQUEANTE: frontend tests (vitest) -------------------------------
+  # El reporte HTML standalone y el portal React comparten la lógica de
+  # verificación criptográfica client-side (`web/src/lib/inferenceLogic.ts`,
+  # `jcs.ts`, `auditChain.ts`). Vitest cubre `verifyStructural` y
+  # `verifyProofHash` con casos de tampering canónicos. Sin este gate, un
+  # cambio en la lógica TS puede romper el verifier embebido en builder.py
+  # sin que la suite Python lo detecte.
+  #
+  # ESLint NO se ejecuta aquí (todavía): el repo tiene errores pre-
+  # existentes en Portal.tsx que no son de ningún PR reciente. Se añadirá
+  # como gate separado cuando esos errores estén resueltos.
+  web-tests:
+    name: web tests (Node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install (frozen)
+        run: npm ci
+
+      - name: Vitest
+        run: npm test
