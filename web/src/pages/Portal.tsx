@@ -121,9 +121,13 @@ function SettingsPanel({
 
   // Preset URLs stay untranslated (they're literal paths). Only the
   // human-facing label uses the dictionary.
+  // Resolve the static bundle path against the SPA base. In local
+  // FastAPI-served mode the base is '/'; on GitHub Pages it is the repo
+  // subpath. BASE_URL always ends with '/'.
+  const staticBundleUrl = `${import.meta.env.BASE_URL}transparency-bundle`
   const presetSamples = [
     { label: t('portal.source.backend.label'), kind: 'backend' as const, url: '/api/transparency' },
-    { label: t('portal.source.static.label'),  kind: 'static'  as const, url: '/transparency-bundle' },
+    { label: t('portal.source.static.label'),  kind: 'static'  as const, url: staticBundleUrl },
   ]
 
   const handleTest = async () => {

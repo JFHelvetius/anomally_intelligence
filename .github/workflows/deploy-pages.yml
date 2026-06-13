@@ -1,0 +1,76 @@
+name: Deploy SPA to GitHub Pages
+
+# Despliega el portal/landing pública de AIP en GitHub Pages.
+#
+# Páginas funcionales sin backend: About (landing) y Portal (verifica
+# transparency-bundle estático). Las páginas operator-side (Dashboard,
+# EvidenceList, AuditLog, etc.) intentarán llamar al API y mostrarán
+# error — esperado: son solo para uso local con `aip-web`.
+#
+# El base path se inyecta vía VITE_BASE_PATH para que el SPA funcione
+# en `https://<user>.github.io/<repo>/` en lugar de la raíz del dominio.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+# Required by the deploy-pages action.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Single concurrent deploy, cancel pending.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install (frozen)
+        run: npm ci
+
+      - name: Build
+        # VITE_BASE_PATH must include leading + trailing slash so Vite
+        # generates correct asset URLs for the repo subpath.
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
