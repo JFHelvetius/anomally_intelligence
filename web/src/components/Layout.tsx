@@ -37,12 +37,17 @@ interface NavItem {
 
 interface NavGroup {
   labelKey: TKey
+  // Color por grupo: tinta el icono del header y los iconos de cada item.
+  // Mantiene la jerarquía visual sin saturar — el accent violet del estado
+  // active sigue siendo el más fuerte.
+  accent: string
   items: NavItem[]
 }
 
 const NAV_GROUPS: NavGroup[] = [
   {
     labelKey: 'nav.group.archive',
+    accent: 'var(--accent)',          // violet
     items: [
       { to: '/',          labelKey: 'nav.item.about',    icon: Info,            end: true },
       { to: '/dashboard', labelKey: 'nav.item.overview', icon: LayoutDashboard },
@@ -50,6 +55,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     labelKey: 'nav.group.investigation',
+    accent: 'var(--amber)',           // amber — búsqueda/activo
     items: [
       { to: '/cases',    labelKey: 'nav.item.cases',    icon: FolderSearch },
       { to: '/evidence', labelKey: 'nav.item.evidence', icon: FileText },
@@ -57,6 +63,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     labelKey: 'nav.group.custody',
+    accent: 'var(--green)',           // green — integridad
     items: [
       { to: '/audit-log',    labelKey: 'nav.item.audit',        icon: Link2 },
       { to: '/attestations', labelKey: 'nav.item.attestations', icon: Shield },
@@ -65,6 +72,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     labelKey: 'nav.group.public',
+    accent: 'var(--signal)',          // cyan — transparencia
     items: [
       { to: '/portal', labelKey: 'nav.item.portal', icon: Globe2 },
     ],
@@ -139,25 +147,40 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-4 px-3 overflow-y-auto space-y-4">
+        {/* Nav — más padding lateral (centra ópticamente), títulos más
+            destacados, color por grupo en iconos y en el marcador
+            izquierdo del título. */}
+        <nav className="flex-1 py-5 px-5 overflow-y-auto space-y-5">
           {NAV_GROUPS.map(group => (
             <div key={group.labelKey}>
-              <p
-                className="text-[9.5px] font-bold uppercase tracking-[0.14em] px-2 mb-1.5"
-                style={{ color: 'var(--sidebar-muted2)' }}
-              >
-                {t(group.labelKey)}
-              </p>
+              <div className="flex items-center gap-2 px-1 mb-2.5">
+                <span
+                  className="block w-1 h-3 rounded-sm shrink-0"
+                  style={{
+                    background: group.accent,
+                    boxShadow: `0 0 8px ${group.accent}`,
+                  }}
+                />
+                <p
+                  className="text-[11px] font-bold uppercase tracking-[0.16em]"
+                  style={{ color: group.accent, opacity: 0.95 }}
+                >
+                  {t(group.labelKey)}
+                </p>
+                <span
+                  className="flex-1 h-px"
+                  style={{ background: 'var(--sidebar-border)' }}
+                />
+              </div>
 
-              <div className="space-y-px">
+              <div className="space-y-0.5">
                 {group.items.map(({ to, labelKey, icon: Icon, end }) => (
                   <NavLink
                     key={to}
                     to={to}
                     end={end}
                     className={({ isActive }) =>
-                      `nav-item flex items-center gap-2.5 px-2 py-1.5 rounded-[5px] text-[12.5px] cursor-pointer select-none ${
+                      `nav-item flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] cursor-pointer select-none ${
                         isActive ? 'nav-active' : ''
                       }`
                     }
@@ -165,9 +188,12 @@ export default function Layout() {
                     {({ isActive }) => (
                       <>
                         <Icon
-                          size={13}
-                          strokeWidth={isActive ? 2 : 1.75}
-                          style={{ color: isActive ? 'var(--sidebar-active)' : 'var(--sidebar-muted)' }}
+                          size={14}
+                          strokeWidth={isActive ? 2.25 : 1.85}
+                          style={{
+                            color: isActive ? 'var(--sidebar-active)' : group.accent,
+                            opacity: isActive ? 1 : 0.85,
+                          }}
                         />
                         <span
                           className="leading-none"
@@ -210,8 +236,8 @@ export default function Layout() {
             className="flex items-center justify-between text-[9.5px] font-mono mb-2.5"
             style={{ color: 'var(--sidebar-muted2)' }}
           >
-            <span>v0.2.1</span>
-            <span>ADR-0042</span>
+            <span>v0.3.0</span>
+            <span>ADR-0048</span>
           </div>
           <div
             className="pt-2.5 border-t"
