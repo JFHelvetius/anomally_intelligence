@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aip.example/schemas/inference-proof.v1.schema.json",
+  "title": "AIP Inference Proof (v1)",
+  "description": "Machine-checkable DAG attesting a conclusion derived from premises via a closed vocabulary of inference rules (ADR-0040, Phase 5). The verifier checks structure only: rule vocabulary, arity, reference integrity, acyclicity, reachability. It does NOT verify the truth of premises or that an output text follows semantically from its inputs.",
+  "type": "object",
+  "required": [
+    "proof_type",
+    "schema_version",
+    "proof_id",
+    "target_justification_id",
+    "target_justification_hash",
+    "premises",
+    "inferences",
+    "derived_claims",
+    "conclusion_claim_id",
+    "proof_hash"
+  ],
+  "properties": {
+    "proof_type": {
+      "type": "string",
+      "const": "aip.justification.inference-proof.v1"
+    },
+    "schema_version": { "type": "string", "const": "1" },
+    "proof_id": { "$ref": "#/$defs/id" },
+    "target_justification_id": { "type": "string", "minLength": 1 },
+    "target_justification_hash": { "$ref": "#/$defs/sha256Hex" },
+    "premises": {
+      "type": "array",
+      "description": "Anchored facts. The verifier requires canonical sort by id and unique ids.",
+      "items": { "$ref": "#/$defs/premise" }
+    },
+    "inferences": {
+      "type": "array",
+      "description": "Steps that produce derived claims. Sorted by id, unique ids.",
+      "items": { "$ref": "#/$defs/inferenceStep" }
+    },
+    "derived_claims": {
+      "type": "array",
+      "description": "Claims produced by exactly one inference. Sorted by id, unique ids; share namespace with premises.",
+      "items": { "$ref": "#/$defs/derivedClaim" }
+    },
+    "conclusion_claim_id": {
+      "$ref": "#/$defs/id",
+      "description": "Must equal the id of a premise or a derived claim and must be reachable from at least one premise via the inference DAG."
+    },
+    "proof_hash": {
+      "$ref": "#/$defs/sha256Hex",
+      "description": "SHA-256 hex of JCS(proof minus proof_hash itself). Recomputed by verifiers."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9._\\-]+$",
+      "description": "Identifier restricted to [A-Za-z0-9._-]."
+    },
+    "sha256Hex": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "Lowercase SHA-256 hex (64 chars)."
+    },
+    "premiseKind": {
+      "type": "string",
+      "enum": [
+        "observation",
+        "documentary",
+        "expert_assertion",
+        "domain_axiom"
+      ],
+      "description": "Closed taxonomy. Adding a kind requires ADR."
+    },
+    "ruleName": {
+      "type": "string",
+      "enum": [
+        "modus_ponens",
+        "conjunction_intro",
+        "inference_to_specific_instance",
+        "elimination_by_contradiction",
+        "abduction_to_best_explanation"
+      ],
+      "description": "Closed v1 vocabulary (ADR-0040). Adding a rule requires ADR. 'abduction_to_best_explanation' is non-deductive ('weak'); the verifier flags it but does not reject the proof."
+    },
+    "premise": {
+      "type": "object",
+      "required": ["id", "text", "evidence_refs", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "text": { "type": "string", "minLength": 1 },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sha256Hex" },
+          "description": "Lowercase SHA-256 hex of Evidence rows in the archive. The structural verifier does NOT check existence — that is a separate concern."
+        },
+        "kind": { "$ref": "#/$defs/premiseKind" }
+      },
+      "additionalProperties": false
+    },
+    "inferenceStep": {
+      "type": "object",
+      "required": [
+        "id",
+        "rule",
+        "input_claim_ids",
+        "output_claim_id",
+        "text"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "rule": { "$ref": "#/$defs/ruleName" },
+        "input_claim_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/id" },
+          "description": "Ids of premises or derived claims consumed. Cardinality must satisfy the rule's arity."
+        },
+        "output_claim_id": {
+          "$ref": "#/$defs/id",
+          "description": "Must be the id of a declared derived_claim whose 'inferred_by' equals this inference's id."
+        },
+        "text": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "derivedClaim": {
+      "type": "object",
+      "required": ["id", "text", "inferred_by"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "text": { "type": "string", "minLength": 1 },
+        "inferred_by": {
+          "$ref": "#/$defs/id",
+          "description": "Id of the InferenceStep that produces this claim. Exactly one producer per derived claim."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

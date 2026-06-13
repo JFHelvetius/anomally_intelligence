@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aip.example/schemas/witness-attestation.v1.schema.json",
+  "title": "AIP Witness Attestation (v1)",
+  "description": "Third-party signed statement that a transparency manifest of another operator was observed (Door #3). A witness signs the (target_operator_id, target_manifest_sequence, target_manifest_hash, statement, witnessed_at) tuple with their own ed25519 key; receptors recompute 'attestation_hash' as SHA-256(JCS(attestation minus 'attestation_hash' and 'signature')) and verify the signature against the witness public key whose SHA-256(DER SPKI) equals 'witness_public_key_fingerprint'. The witness key is independent of the target operator's key — that is the entire point of witnessing.",
+  "type": "object",
+  "required": [
+    "attestation_type",
+    "schema_version",
+    "witness_operator_id",
+    "witness_public_key_fingerprint",
+    "target_operator_id",
+    "target_manifest_sequence",
+    "target_manifest_hash",
+    "witnessed_at",
+    "statement",
+    "signature_algorithm",
+    "signature",
+    "attestation_hash"
+  ],
+  "properties": {
+    "attestation_type": {
+      "type": "string",
+      "const": "aip.transparency.witness.v1"
+    },
+    "schema_version": { "type": "string", "const": "1" },
+    "witness_operator_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identifier of the witness operator. Different from target_operator_id."
+    },
+    "witness_public_key_fingerprint": {
+      "$ref": "#/$defs/sha256Hex",
+      "description": "SHA-256 hex of the DER SPKI of the witness's ed25519 public key."
+    },
+    "target_operator_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Operator whose manifest is being witnessed."
+    },
+    "target_manifest_sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "target_manifest_hash": {
+      "$ref": "#/$defs/sha256Hex",
+      "description": "manifest_hash of the witnessed manifest. The witness is binding their statement to this exact content; if the manifest is later modified, the witness signature no longer matches."
+    },
+    "witnessed_at": { "$ref": "#/$defs/iso8601UtcSeconds" },
+    "statement": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Free-text witness statement (e.g. 'independent third-party verification'). Included in 'attestation_hash'."
+    },
+    "signature_algorithm": {
+      "type": "string",
+      "const": "ed25519-v1"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{128}$",
+      "description": "ed25519 signature by the witness over JCS(attestation minus 'attestation_hash' and 'signature'). 128 hex chars."
+    },
+    "attestation_hash": {
+      "$ref": "#/$defs/sha256Hex",
+      "description": "SHA-256 hex of JCS(attestation minus 'attestation_hash'). Recomputed by verifiers."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256Hex": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "iso8601UtcSeconds": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    }
+  }
+}

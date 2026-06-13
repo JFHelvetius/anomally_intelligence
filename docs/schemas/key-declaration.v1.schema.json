@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aip.example/schemas/key-declaration.v1.schema.json",
+  "title": "AIP Key Declaration (v1)",
+  "description": "External-publication references for operator + witness public keys (ADR-0043). Operator-supplied; AIP does not verify the references. Receptor cross-checks at least one reference against an independent source to close the key-to-identity binding.",
+  "type": "object",
+  "required": ["declaration_type", "schema_version", "operator"],
+  "properties": {
+    "declaration_type": {
+      "type": "string",
+      "const": "aip.transparency.key-declaration.v1",
+      "description": "Discriminator. Readers reject unknown types."
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "operator": { "$ref": "#/$defs/operatorEntry" },
+    "witnesses": {
+      "type": "array",
+      "description": "Witness key entries. May be empty.",
+      "items": { "$ref": "#/$defs/witnessEntry" },
+      "default": []
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "fingerprint": {
+      "type": "string",
+      "description": "SHA-256 hex (lowercase) of the DER SubjectPublicKeyInfo bytes of the public key. 64 hex chars.",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "iso8601UtcSeconds": {
+      "type": "string",
+      "description": "ISO-8601 UTC timestamp with second precision and trailing 'Z' (no microseconds, no offset notation).",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "externalReference": {
+      "type": "object",
+      "description": "One external publication channel for a key. Receptors cross-check the URI against the fingerprint by an independent route.",
+      "required": ["kind", "uri"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Channel kind. Common values (open vocabulary): github_user_keys, https_pem, dns_txt, git_signing_key, verbal_in_person."
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Locator. Format depends on kind: URL, DNS name, git ref, etc."
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional human-readable instructions (e.g. how to extract+compare the fingerprint from the channel)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "operatorEntry": {
+      "type": "object",
+      "required": ["operator_id", "public_key_fingerprint", "external_references"],
+      "properties": {
+        "operator_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Operator identifier as used in the transparency manifest (e.g. 'jmm-evergreen'). Operator-supplied, not authenticated by itself."
+        },
+        "public_key_fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "first_published_at": { "$ref": "#/$defs/iso8601UtcSeconds" },
+        "external_references": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/externalReference" },
+          "description": "May be empty; an empty list yields a visible 'no external references declared' warning in the report."
+        }
+      },
+      "additionalProperties": false
+    },
+    "witnessEntry": {
+      "type": "object",
+      "required": [
+        "witness_operator_id",
+        "public_key_fingerprint",
+        "external_references"
+      ],
+      "properties": {
+        "witness_operator_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "public_key_fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "external_references": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/externalReference" }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

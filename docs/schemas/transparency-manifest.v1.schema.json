@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aip.example/schemas/transparency-manifest.v1.schema.json",
+  "title": "AIP Transparency Manifest (v1)",
+  "description": "One signed entry in the per-archive transparency chain (ADR-0019, Phase 1A). Each manifest pins a snapshot of the archive's audit chain head and counts of derived artifacts, and is linked to the previous manifest by 'previous_manifest_hash'. The first manifest's previous_manifest_hash is 64 zeros. Manifests are signed ed25519 by the operator; receptors verify the signature against the operator's public key whose SHA-256(DER SPKI) must equal 'public_key_fingerprint'.",
+  "type": "object",
+  "required": [
+    "manifest_type",
+    "schema_version",
+    "sequence",
+    "operator_id",
+    "signed_at",
+    "previous_manifest_hash",
+    "audit_chain_head_hash",
+    "archive_manifest_hash",
+    "audit_entry_count",
+    "evidence_count",
+    "attestation_count",
+    "justification_count",
+    "snapshot_count",
+    "timeline_count",
+    "workspace_count",
+    "public_key_fingerprint",
+    "signature_algorithm",
+    "signature",
+    "manifest_hash"
+  ],
+  "properties": {
+    "manifest_type": {
+      "type": "string",
+      "const": "aip.transparency.manifest.v1"
+    },
+    "schema_version": { "type": "string", "const": "1" },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "0-based index in this archive's transparency chain."
+    },
+    "operator_id": { "type": "string", "minLength": 1 },
+    "signed_at": { "$ref": "#/$defs/iso8601UtcSeconds" },
+    "previous_manifest_hash": {
+      "$ref": "#/$defs/sha256HexOrZero",
+      "description": "manifest_hash of the previous manifest in this chain, or 64 zeros for sequence=0."
+    },
+    "audit_chain_head_hash": {
+      "$ref": "#/$defs/sha256Hex",
+      "description": "entry_hash of the last audit entry covered by this manifest."
+    },
+    "archive_manifest_hash": {
+      "$ref": "#/$defs/sha256Hex",
+      "description": "Hash of the archive's internal manifest.json at the time of publication."
+    },
+    "audit_entry_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of audit log entries covered by this manifest."
+    },
+    "evidence_count": { "type": "integer", "minimum": 0 },
+    "attestation_count": { "type": "integer", "minimum": 0 },
+    "justification_count": { "type": "integer", "minimum": 0 },
+    "snapshot_count": { "type": "integer", "minimum": 0 },
+    "timeline_count": { "type": "integer", "minimum": 0 },
+    "workspace_count": { "type": "integer", "minimum": 0 },
+    "public_key_fingerprint": {
+      "$ref": "#/$defs/sha256Hex",
+      "description": "SHA-256 hex of the DER SPKI of the operator's ed25519 public key."
+    },
+    "signature_algorithm": {
+      "type": "string",
+      "const": "ed25519-v1",
+      "description": "Closed v1; future algorithms require a new manifest schema version."
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{128}$",
+      "description": "ed25519 signature over JCS(manifest minus 'manifest_hash' and 'signature'). 128 hex chars."
+    },
+    "manifest_hash": {
+      "$ref": "#/$defs/sha256Hex",
+      "description": "SHA-256 hex of JCS(manifest minus 'manifest_hash'). Recomputed by verifiers."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256Hex": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sha256HexOrZero": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 hex, OR 64 zeros for the first manifest's prev pointer."
+    },
+    "iso8601UtcSeconds": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "ISO-8601 UTC, second precision, trailing 'Z'. No microseconds."
+    }
+  }
+}

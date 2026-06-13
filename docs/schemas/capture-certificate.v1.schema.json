@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aip.example/schemas/capture-certificate.v1.schema.json",
+  "title": "AIP Capture Certificate (v1)",
+  "description": "Operator-signed declaration of the in-field conditions under which a piece of evidence was captured (Phase 2 / Door #2). Embeds the evidence's SHA-256, the capture time, device id, location, and the operator's signature. Verifiers recompute 'certificate_hash' as SHA-256(JCS(cert minus 'certificate_hash' and 'signature')) and verify 'signature' against the ed25519 public key whose SHA-256(DER SPKI) equals 'public_key_fingerprint'.",
+  "type": "object",
+  "required": [
+    "certificate_type",
+    "schema_version",
+    "evidence_sha256",
+    "captured_at",
+    "device_id",
+    "operator_id",
+    "public_key_fingerprint",
+    "signature_algorithm",
+    "signature",
+    "certificate_hash"
+  ],
+  "properties": {
+    "certificate_type": {
+      "type": "string",
+      "const": "aip.capture.certificate.v1"
+    },
+    "schema_version": { "type": "string", "const": "1" },
+    "evidence_sha256": {
+      "$ref": "#/$defs/sha256Hex",
+      "description": "SHA-256 hex of the captured evidence bytes."
+    },
+    "captured_at": { "$ref": "#/$defs/iso8601UtcSeconds" },
+    "device_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Operator-supplied capture-device identifier. Not authenticated."
+    },
+    "operator_id": { "type": "string", "minLength": 1 },
+    "location": {
+      "type": "string",
+      "description": "Optional, operator-supplied. No format enforced (e.g. 'MX-19.43,-99.13', 'Hangar B', UTM, etc.). Not verified against any external geolocation source."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional free text. Will be included in 'certificate_hash'; editing changes the hash."
+    },
+    "public_key_fingerprint": {
+      "$ref": "#/$defs/sha256Hex",
+      "description": "SHA-256 hex of the DER SPKI of the operator's ed25519 public key."
+    },
+    "signature_algorithm": {
+      "type": "string",
+      "const": "ed25519-v1"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{128}$",
+      "description": "ed25519 signature over JCS(cert minus 'certificate_hash' and 'signature'). 128 hex chars."
+    },
+    "certificate_hash": {
+      "$ref": "#/$defs/sha256Hex",
+      "description": "SHA-256 hex of JCS(cert minus 'certificate_hash'). Recomputed by verifiers."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256Hex": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "iso8601UtcSeconds": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    }
+  }
+}
