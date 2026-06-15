@@ -32,7 +32,7 @@ dependencies = [
     # mantenida por la PSF y la Open Tech Fund. Rolling-our-own ed25519
     # es un anti-patrón de seguridad — la dep es load-bearing para la
     # garantía de atestación criptográfica.
-    "cryptography >=42,<46",
+    "cryptography >=42,<50",
 ]
 
 [project.optional-dependencies]
