@@ -22,7 +22,7 @@ dependencies = [
     # Modelo de datos con validación (ADR-0006, ADR-0007 diferido, ADR-0029).
     "pydantic >=2.7,<3",
     # Almacenamiento columnar canónico (ADR-0015).
-    "pyarrow >=15,<20",
+    "pyarrow >=15,<25",
     # IANA tz database. Requerida en Windows porque Python no la trae nativa;
     # se usa para timestamps UTC con tz explícita (ADR-0012 diferido pero los
     # timestamps del audit log y de Evidence.ingested_at son tz-aware desde V1).
